@@ -1,0 +1,188 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Dark mode follows the device setting. To add a manual toggle later,
+   switch this to a class-based variant (shadcn's `.dark`) with next-themes. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+/*
+  SEES design tokens. Owner: Fortune.
+  Raw colour values live ONLY in this file. Everywhere else use the
+  Tailwind utilities (bg-primary, bg-brand, text-muted-foreground, ...).
+  Brand guide palette: #013f31 (green), #95fde2 (mint), #e8fff7 (mint tint), #ffb703 (amber).
+  shadcn components read the standard names (primary, secondary, accent, ...),
+  which are mapped to the SEES palette below.
+*/
+:root {
+  --radius: 0.75rem;
+
+  /* Surfaces and text */
+  --background: #ffffff;
+  --foreground: #0f0f0f;
+  --card: #ffffff;
+  --card-foreground: #0f0f0f;
+  --popover: #ffffff;
+  --popover-foreground: #0f0f0f;
+  --muted: #f7faf8;
+  --muted-foreground: #5d6c65;
+  --border: #dce6df;
+  --input: #c5d5cc;
+  --ring: #2f8f75;
+
+  /* shadcn semantic colours, mapped to SEES */
+  --primary: #013f31;
+  --primary-foreground: #ffffff;
+  --secondary: #e8fff7;
+  --secondary-foreground: #013f31;
+  --accent: #e8fff7;
+  --accent-foreground: #013f31;
+  --destructive: #a32332;
+
+  /* SEES extras */
+  --brand: #013f31;
+  --brand-foreground: #ffffff;
+  --brand-light: #95fde2;
+  --highlight: #ffb703;
+  --highlight-foreground: #0f0f0f;
+  --live: #d92d20;
+  --success: #176249;
+  --warning: #ffb703;
+  --info: #215f76;
+
+  /* Charts */
+  --chart-1: #013f31;
+  --chart-2: #2f8f75;
+  --chart-3: #95fde2;
+  --chart-4: #ffb703;
+  --chart-5: #215f76;
+
+  /* Sidebar (admin portal) */
+  --sidebar: #f7faf8;
+  --sidebar-foreground: #0f0f0f;
+  --sidebar-primary: #013f31;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8fff7;
+  --sidebar-accent-foreground: #013f31;
+  --sidebar-border: #dce6df;
+  --sidebar-ring: #2f8f75;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #101b17;
+    --foreground: #edf8f2;
+    --card: #17251f;
+    --card-foreground: #edf8f2;
+    --popover: #17251f;
+    --popover-foreground: #edf8f2;
+    --muted: #192b22;
+    --muted-foreground: #b3c8bc;
+    --border: #405c4e;
+    --input: #617c6d;
+    --ring: #95fde2;
+
+    --primary: #95fde2;
+    --primary-foreground: #013f31;
+    --secondary: #22382d;
+    --secondary-foreground: #edf8f2;
+    --accent: #22382d;
+    --accent-foreground: #edf8f2;
+    --destructive: #ffb5bd;
+
+    --brand: #95fde2;
+    --brand-foreground: #013f31;
+    --brand-light: #013f31;
+    --live: #ff6b5e;
+    --success: #a5e6bb;
+    --info: #a8d8ef;
+
+    --chart-1: #95fde2;
+    --chart-2: #5fd3b3;
+    --chart-3: #2f8f75;
+    --chart-4: #ffb703;
+    --chart-5: #a8d8ef;
+
+    --sidebar: #17251f;
+    --sidebar-foreground: #edf8f2;
+    --sidebar-primary: #95fde2;
+    --sidebar-primary-foreground: #013f31;
+    --sidebar-accent: #22382d;
+    --sidebar-accent-foreground: #edf8f2;
+    --sidebar-border: #405c4e;
+    --sidebar-ring: #95fde2;
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-oswald);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-light: var(--brand-light);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-live: var(--live);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
