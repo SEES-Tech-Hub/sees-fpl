@@ -25,7 +25,7 @@ Product spec: `docs/PRD.md` (live version: https://claude.ai/artifact/5vxb7y7RGN
 - **The database enforces roles.** Every table has row-level security. Hiding something in the UI is not authorization.
 - `proxy.ts` only refreshes sessions. Don't put authorization in it.
 - **`match_events` is the single record of what happened in a match.** Scores, standings, `player_match_stats` and fantasy points are all calculated from it. Never write them by hand.
-- **The fantasy engine reads only `player_match_stats`**, never `match_events`. Keep scoring as plain functions (in `lib/fantasy/`) with tests built from Henry's worked examples.
+- **The fantasy engine reads only `player_match_stats`**, never `match_events`. Keep scoring as plain functions (in `lib/fantasy/`) with tests built from Akeem's worked examples.
 - Fantasy rule values (budget, squad shape, points) come from the rules config table. Never hard-code them.
 - All times are shown in WAT (`Africa/Lagos`).
 
@@ -50,9 +50,10 @@ Product spec: `docs/PRD.md` (live version: https://claude.ai/artifact/5vxb7y7RGN
 | Area | Owner | Where |
 | --- | --- | --- |
 | Setup, sign-in, roles, RLS, deploys | Tayo | `proxy.ts`, `app/login`, `app/auth`, `lib/supabase`, `supabase/migrations` |
-| Admin portal | Akeem | `app/admin` |
+| Admin portal pages (UI) | Tayo | `app/admin` |
+| Admin backend (admin SQL, server actions, CSV import logic), backup for infra | Henry | `lib/admin`, admin migrations |
 | Fantasy backend (F1 to F8) | Mary | `lib/fantasy`, fantasy server actions and SQL |
-| Fantasy frontend | Henry | `app/fantasy` |
+| Fantasy frontend, worked scoring examples | Akeem | `app/fantasy`, `components/fantasy`, `lib/fantasy/__fixtures__` |
 | Live scores backend, console API | Bolu | match and standings SQL, `lib/live` |
 | Live scores frontend, design kit | Fortune | `app/page.tsx`, `app/matches`, `app/sports`, `components/ui`, `app/globals.css` |
 | Console app, PWA, push, share cards | Samuel | `app/console`, `app/manifest.ts`, service worker |

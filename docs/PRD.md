@@ -189,7 +189,7 @@ Fantasy is built in eight steps, and each one is finished and tested before the 
 | F2 | Squad builder: pick 15, with the server checking positions, the ₦100m budget and the per-year limit | The server rejects every invalid squad with a clear reason. There is a test for each rule | 20 Nov |
 | F3 | Lineup: starting 11 in a valid formation, bench order, captain and vice-captain | Invalid formations are rejected. The captain and vice are different players, both in the squad | 20 Nov |
 | F4 | Deadline lock: each manager's picks are saved as a snapshot per matchday | The server's clock rejects saves after the deadline. Later edits never change a snapshot | 20 Nov |
-| F5 | Scoring engine: player stats, then player points, then manager points with automatic subs, captain or vice, and transfer penalties | Matches every one of Henry's worked examples. Running it again gives the same result | 21 Nov |
+| F5 | Scoring engine: player stats, then player points, then manager points with automatic subs, captain or vice, and transfer penalties | Matches every one of Akeem's worked examples. Running it again gives the same result | 21 Nov |
 | F6 | Finalise and rankings: provisional points during play, final when the admin finalises. Overall and per-year rankings | Correcting one event recalculates every manager it affects | 21 Nov |
 | F7 | Transfers: 1 free per matchday, save up to 2, −4 for each extra, unlimited before matchdays 1 and 6 | Penalties land on the right matchday. Saved transfers are correct across 3 matchdays | 21 Nov |
 | F8 | Wildcard and mini-leagues | Wildcard usable once. Join by code | 21 Nov |
@@ -284,20 +284,20 @@ Seven developers, each owning one area from start to finish, so nobody waits on 
 
 | Person | Owns | Done by |
 | --- | --- | --- |
-| Tayo (lead) | Repo, Supabase and Vercel setup, base schema, Google sign-in, roles and row-level security, CI and deploys, domain. Runs the daily standup, unblocks the team, signs off each test matchday | Setup and sign-in: 19 Nov |
-| Akeem | Admin portal: sports and events, teams, player and price CSV import, fixtures and kickoff times, officials and console holders, corrections, announcements, audit log. Backup owner for infra | 20 Nov |
+| Tayo (lead) | Repo, Supabase and Vercel setup, base schema, Google sign-in, roles and row-level security, CI and deploys, domain. **Admin portal pages (all admin UI).** Runs the daily standup, unblocks the team, signs off each test matchday | Setup and sign-in: 19 Nov. Admin pages: 21 Nov |
+| Henry (backend) | Admin backend: server actions and SQL behind the admin portal (sports and events, teams, players and prices, CSV import parsing and validation, fixtures and kickoff times, officials and console holders, corrections, announcements, audit log, price lock). Backup owner for infra and the runbook | 21 Nov |
 | Mary (backend) | Fantasy backend, F1 to F8 on the server: rules config, squad and lineup checks, deadline lock and snapshots, scoring engine, finalising, rankings, transfers, Wildcard, mini-leagues | 21 Nov |
-| Henry | Fantasy frontend: squad builder (pitch and list views), my team, transfers, points breakdown, rankings, leagues. Writes the worked scoring examples that Mary's engine is tested against | 21 Nov |
+| Akeem | Fantasy frontend: squad builder (pitch and list views), my team, transfers, points breakdown, rankings, leagues. Writes the worked scoring examples that Mary's engine is tested against | 21 Nov |
 | Bolu | Live scores backend: `match_events`, the console API and one-holder lock, clock and periods, `player_match_stats`, standings, medal table, Realtime channels, all four result formats | 21 Nov |
 | Fortune (frontend) | Live scores frontend: home, match and event pages, tables and brackets, stats pages. Owns the design tokens and shared UI kit from day 1 | 21 Nov |
 | Samuel | Match console app (phone-first, offline queue, undo), PWA install, push notifications, WhatsApp share cards | 21 Nov |
 
 **Changes to the allocation you gave**
 
-- **Tayo and Akeem both had infra and the admin flow.** Now Tayo owns infra and sign-in, and Akeem owns the admin portal and backs up infra. When two people own the same thing, nobody really owns it.
-- **Henry is on the fantasy frontend**, since Mary is the backend developer. Henry also writes the worked scoring examples, so the engine is checked by someone who didn't write it.
+- **Tayo owns infra, sign-in and the admin portal pages.** Henry owns the admin backend behind them and backs up infra. When two people own the same thing, nobody really owns it. (Updated 18 Nov: Akeem and Henry swapped roles, and the admin UI moved to Tayo, because Henry is a backend developer.)
+- **Akeem is on the fantasy frontend**, since Mary is the backend developer. Akeem also writes the worked scoring examples, so the engine is checked by someone who didn't write it.
 - **The match console had no owner.** It's the one place data is written, so Bolu builds its backend and Samuel its phone app.
-- **No one owned the design.** Fortune sets the design tokens and shared components on 19 Nov, and Henry and Samuel build on them.
+- **No one owned the design.** Fortune sets the design tokens and shared components on 19 Nov, and Akeem, Tayo and Samuel build on them.
 - **Samuel's "the rest"** is now named: console app, PWA, push and share cards.
 
 **Hand-offs agreed on the morning of 19 Nov**
@@ -305,7 +305,7 @@ Seven developers, each owning one area from start to finish, so nobody waits on 
 - **Tayo → all:** the base schema (profiles, roles, teams, players, fixtures) is merged by the end of 19 Nov.
 - **Bolu → Mary:** `player_match_stats` has one row per player per fixture: minutes, goals, assists, goals conceded while on the pitch, cards, penalties, own goals, Man of the Match. Mary's engine reads only this and never reads `match_events`. The row shape is agreed on day 1, and Mary works from made-up rows until Bolu's are ready.
 - **Bolu → Fortune and Samuel:** the console API and the Realtime message format.
-- **Akeem → all:** the CSV formats for players, prices and fixtures.
+- **Henry → all:** the CSV formats for players, prices and fixtures.
 
 ## Release plan
 
