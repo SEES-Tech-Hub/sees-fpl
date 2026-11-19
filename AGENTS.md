@@ -42,7 +42,7 @@ Product spec: `docs/PRD.md` (live version: https://claude.ai/artifact/5vxb7y7RGN
 ## Database
 
 - There is one Supabase project. Everyone writes the SQL for their own area, but only Tayo runs SQL on the project. Every change, however small, goes through a migration file and a PR.
-- Migrations live in `supabase/migrations/` and are named with a UTC timestamp, then a short description: `YYYYMMDDHHMMSS_short_description.sql` (for example `20261119093000_base_schema.sql`). Use the moment you create the file. They only ever move forward. Never rename or edit a migration after it has been applied; write a new one instead.
+- Migrations live in `supabase/migrations/` and are named with a UTC timestamp, then a short description: `YYYYMMDDHHMMSS_short_description.sql` (for example `20261119093000_base_schema.sql`). Use the moment you create the file, **in UTC, not Lagos time** (UTC is one hour behind WAT): `date -u +%Y%m%d%H%M%S` in Git Bash, or `(Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss')` in PowerShell. A Lagos-time stamp sorts an hour into the future, and `db push` refuses anyone's migration made in that hour. They only ever move forward. Never rename or edit a migration after it has been applied; write a new one instead.
 - Every migration turns on RLS for each new table it creates, with policies in the same file. Use the role helpers `is_admin()`, `is_official()` and `holds_fixture()`. Index every foreign key.
 - Tayo applies merged migrations at 10:00, 14:00 and 18:00 on build days, then regenerates `lib/supabase/types.ts` and pushes it. Pull `main` afterwards.
 - Secrets live in `.env.local` (copied from `.env.example`). `SUPABASE_SECRET_KEY` and `VAPID_PRIVATE_KEY` are server-only.
