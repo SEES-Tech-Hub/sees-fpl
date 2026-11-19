@@ -25,6 +25,8 @@ Product spec: `docs/PRD.md` (live version: https://claude.ai/artifact/5vxb7y7RGN
 - **The database enforces roles.** Every table has row-level security. Hiding something in the UI is not authorization.
 - `proxy.ts` only refreshes sessions. Don't put authorization in it.
 - **`match_events` is the single record of what happened in a match.** Scores, standings, `player_match_stats` and fantasy points are all calculated from it. Never write them by hand.
+- **Live scores: read `docs/live-scores.md` before touching match data.** Nobody writes `match_events` or `lineups` directly (the database refuses it). Record and undo through `lib/live/actions.ts` (`recordMatchEvent`, `undoMatchEvent`, `takeFixture`, `releaseFixture`, `setLineup`). Read through `lib/live/queries.ts`, subscribe through `lib/live/realtime.ts`, and use `lib/live/clock.ts` for the match clock. Events are never edited or deleted; mistakes are voided. Event types are `period_start`, `period_end`, `goal` (with `is_own_goal`), `card` (with a colour), `substitution` (player off, then player on), `penalty_miss`, `shootout_kick`, `man_of_the_match`, `full_time` and `walkover` (admin only). There is no `own_goal`, `yellow_card` or `motm` type.
+- **Fixtures are guarded.** Scores, periods and winners come only from match events. Status can only move between scheduled, postponed and cancelled, and only before any events. A walkover is a match event, not a status.
 - **The fantasy engine reads only `player_match_stats`**, never `match_events`. Keep scoring as plain functions (in `lib/fantasy/`) with tests built from Akeem's worked examples.
 - Fantasy rule values (budget, squad shape, points) come from the rules config table. Never hard-code them.
 - All times are shown in WAT (`Africa/Lagos`).
