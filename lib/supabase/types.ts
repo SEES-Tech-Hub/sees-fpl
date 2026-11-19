@@ -17,6 +17,7 @@ export type Database = {
       events: {
         Row: {
           created_at: string
+          extra_period_minutes: number | null
           id: string
           name: string
           period_count: number | null
@@ -26,6 +27,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          extra_period_minutes?: number | null
           id?: string
           name: string
           period_count?: number | null
@@ -35,6 +37,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          extra_period_minutes?: number | null
           id?: string
           name?: string
           period_count?: number | null
@@ -55,12 +58,14 @@ export type Database = {
       fixtures: {
         Row: {
           away_score: number | null
+          away_shootout: number | null
           away_team_id: string | null
           console_holder: string | null
           created_at: string
           current_period: Database["public"]["Enums"]["match_period"] | null
           event_id: string
           home_score: number | null
+          home_shootout: number | null
           home_team_id: string | null
           id: string
           kickoff_at: string | null
@@ -75,12 +80,14 @@ export type Database = {
         }
         Insert: {
           away_score?: number | null
+          away_shootout?: number | null
           away_team_id?: string | null
           console_holder?: string | null
           created_at?: string
           current_period?: Database["public"]["Enums"]["match_period"] | null
           event_id: string
           home_score?: number | null
+          home_shootout?: number | null
           home_team_id?: string | null
           id?: string
           kickoff_at?: string | null
@@ -95,12 +102,14 @@ export type Database = {
         }
         Update: {
           away_score?: number | null
+          away_shootout?: number | null
           away_team_id?: string | null
           console_holder?: string | null
           created_at?: string
           current_period?: Database["public"]["Enums"]["match_period"] | null
           event_id?: string
           home_score?: number | null
+          home_shootout?: number | null
           home_team_id?: string | null
           id?: string
           kickoff_at?: string | null
@@ -161,6 +170,192 @@ export type Database = {
             columns: ["winner_team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lineups: {
+        Row: {
+          fixture_id: string
+          player_id: string
+          role: Database["public"]["Enums"]["lineup_role"]
+          set_at: string
+          set_by: string | null
+          team_id: string
+        }
+        Insert: {
+          fixture_id: string
+          player_id: string
+          role: Database["public"]["Enums"]["lineup_role"]
+          set_at?: string
+          set_by?: string | null
+          team_id: string
+        }
+        Update: {
+          fixture_id?: string
+          player_id?: string
+          role?: Database["public"]["Enums"]["lineup_role"]
+          set_at?: string
+          set_by?: string | null
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lineups_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineups_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineups_set_by_fkey"
+            columns: ["set_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineups_set_by_fkey"
+            columns: ["set_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineups_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_events: {
+        Row: {
+          card: Database["public"]["Enums"]["card_colour"] | null
+          client_event_id: string
+          fixture_id: string
+          id: number
+          is_own_goal: boolean
+          is_penalty: boolean
+          occurred_at: string
+          other_player_id: string | null
+          period: Database["public"]["Enums"]["match_period"] | null
+          player_id: string | null
+          points: number | null
+          recorded_at: string
+          recorded_by: string | null
+          scored: boolean | null
+          team_id: string | null
+          type: Database["public"]["Enums"]["match_event_type"]
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          card?: Database["public"]["Enums"]["card_colour"] | null
+          client_event_id: string
+          fixture_id: string
+          id?: never
+          is_own_goal?: boolean
+          is_penalty?: boolean
+          occurred_at: string
+          other_player_id?: string | null
+          period?: Database["public"]["Enums"]["match_period"] | null
+          player_id?: string | null
+          points?: number | null
+          recorded_at?: string
+          recorded_by?: string | null
+          scored?: boolean | null
+          team_id?: string | null
+          type: Database["public"]["Enums"]["match_event_type"]
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          card?: Database["public"]["Enums"]["card_colour"] | null
+          client_event_id?: string
+          fixture_id?: string
+          id?: never
+          is_own_goal?: boolean
+          is_penalty?: boolean
+          occurred_at?: string
+          other_player_id?: string | null
+          period?: Database["public"]["Enums"]["match_period"] | null
+          player_id?: string | null
+          points?: number | null
+          recorded_at?: string
+          recorded_by?: string | null
+          scored?: boolean | null
+          team_id?: string | null
+          type?: Database["public"]["Enums"]["match_event_type"]
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_events_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_other_player_id_fkey"
+            columns: ["other_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -322,6 +517,59 @@ export type Database = {
       }
     }
     Views: {
+      match_timeline: {
+        Row: {
+          added_minutes: number | null
+          card: Database["public"]["Enums"]["card_colour"] | null
+          client_event_id: string | null
+          fixture_id: string | null
+          id: number | null
+          is_own_goal: boolean | null
+          is_penalty: boolean | null
+          minute: number | null
+          occurred_at: string | null
+          other_player_id: string | null
+          other_player_name: string | null
+          period: Database["public"]["Enums"]["match_period"] | null
+          player_id: string | null
+          player_name: string | null
+          points: number | null
+          scored: boolean | null
+          team_id: string | null
+          team_short_name: string | null
+          type: Database["public"]["Enums"]["match_event_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_events_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_other_player_id_fkey"
+            columns: ["other_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_profiles: {
         Row: {
           avatar_url: string | null
@@ -345,12 +593,242 @@ export type Database = {
       }
     }
     Functions: {
+      fixture_player_state: {
+        Args: { p_fixture_id: string }
+        Returns: {
+          appeared: boolean
+          lineup_role: Database["public"]["Enums"]["lineup_role"]
+          on_pitch: boolean
+          player_id: string
+          sent_off: boolean
+          team_id: string
+          yellow_cards: number
+        }[]
+      }
       holds_fixture: { Args: { p_fixture_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_official: { Args: never; Returns: boolean }
+      live_check_on_pitch: {
+        Args: {
+          p_fixture_id: string
+          p_is_own_goal: boolean
+          p_opponent_id: string
+          p_other_player_id: string
+          p_player_id: string
+          p_team_id: string
+          p_type: Database["public"]["Enums"]["match_event_type"]
+        }
+        Returns: undefined
+      }
+      live_check_player: {
+        Args: { p_label: string; p_player_id: string; p_team_id: string }
+        Returns: undefined
+      }
+      live_fail: {
+        Args: { p_code: string; p_message: string }
+        Returns: undefined
+      }
+      live_is_on_pitch: {
+        Args: { p_fixture_id: string; p_player_id: string }
+        Returns: boolean
+      }
+      live_lock_fixture_for_console: {
+        Args: { p_fixture_id: string }
+        Returns: {
+          away_score: number | null
+          away_shootout: number | null
+          away_team_id: string | null
+          console_holder: string | null
+          created_at: string
+          current_period: Database["public"]["Enums"]["match_period"] | null
+          event_id: string
+          home_score: number | null
+          home_shootout: number | null
+          home_team_id: string | null
+          id: string
+          kickoff_at: string | null
+          matchday_id: string | null
+          period_started_at: string | null
+          result_note: string | null
+          stage: string
+          status: Database["public"]["Enums"]["fixture_status"]
+          updated_at: string
+          venue: string | null
+          winner_team_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fixtures"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      match_minute: {
+        Args: {
+          p_at: string
+          p_extra_period_minutes: number
+          p_period: Database["public"]["Enums"]["match_period"]
+          p_period_minutes: number
+          p_period_started_at: string
+        }
+        Returns: {
+          added_minutes: number
+          minute: number
+        }[]
+      }
+      record_match_event: {
+        Args: {
+          p_card?: Database["public"]["Enums"]["card_colour"]
+          p_client_event_id: string
+          p_fixture_id: string
+          p_is_own_goal?: boolean
+          p_is_penalty?: boolean
+          p_occurred_at?: string
+          p_other_player_id?: string
+          p_period?: Database["public"]["Enums"]["match_period"]
+          p_player_id?: string
+          p_points?: number
+          p_scored?: boolean
+          p_team_id?: string
+          p_type: Database["public"]["Enums"]["match_event_type"]
+        }
+        Returns: {
+          card: Database["public"]["Enums"]["card_colour"] | null
+          client_event_id: string
+          fixture_id: string
+          id: number
+          is_own_goal: boolean
+          is_penalty: boolean
+          occurred_at: string
+          other_player_id: string | null
+          period: Database["public"]["Enums"]["match_period"] | null
+          player_id: string | null
+          points: number | null
+          recorded_at: string
+          recorded_by: string | null
+          scored: boolean | null
+          team_id: string | null
+          type: Database["public"]["Enums"]["match_event_type"]
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      refresh_fixture_state: {
+        Args: { p_fixture_id: string }
+        Returns: undefined
+      }
+      release_fixture: {
+        Args: { p_fixture_id: string }
+        Returns: {
+          away_score: number | null
+          away_shootout: number | null
+          away_team_id: string | null
+          console_holder: string | null
+          created_at: string
+          current_period: Database["public"]["Enums"]["match_period"] | null
+          event_id: string
+          home_score: number | null
+          home_shootout: number | null
+          home_team_id: string | null
+          id: string
+          kickoff_at: string | null
+          matchday_id: string | null
+          period_started_at: string | null
+          result_note: string | null
+          stage: string
+          status: Database["public"]["Enums"]["fixture_status"]
+          updated_at: string
+          venue: string | null
+          winner_team_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fixtures"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_lineup: {
+        Args: {
+          p_bench?: string[]
+          p_fixture_id: string
+          p_starters: string[]
+          p_team_id: string
+        }
+        Returns: number
+      }
+      take_fixture: {
+        Args: { p_fixture_id: string }
+        Returns: {
+          away_score: number | null
+          away_shootout: number | null
+          away_team_id: string | null
+          console_holder: string | null
+          created_at: string
+          current_period: Database["public"]["Enums"]["match_period"] | null
+          event_id: string
+          home_score: number | null
+          home_shootout: number | null
+          home_team_id: string | null
+          id: string
+          kickoff_at: string | null
+          matchday_id: string | null
+          period_started_at: string | null
+          result_note: string | null
+          stage: string
+          status: Database["public"]["Enums"]["fixture_status"]
+          updated_at: string
+          venue: string | null
+          winner_team_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fixtures"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      void_match_event: {
+        Args: { p_client_event_id: string; p_reason?: string }
+        Returns: {
+          card: Database["public"]["Enums"]["card_colour"] | null
+          client_event_id: string
+          fixture_id: string
+          id: number
+          is_own_goal: boolean
+          is_penalty: boolean
+          occurred_at: string
+          other_player_id: string | null
+          period: Database["public"]["Enums"]["match_period"] | null
+          player_id: string | null
+          points: number | null
+          recorded_at: string
+          recorded_by: string | null
+          scored: boolean | null
+          team_id: string | null
+          type: Database["public"]["Enums"]["match_event_type"]
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "user" | "official" | "admin"
+      card_colour: "yellow" | "red"
       fixture_status:
         | "scheduled"
         | "live"
@@ -359,6 +837,18 @@ export type Database = {
         | "postponed"
         | "walkover"
         | "cancelled"
+      lineup_role: "starter" | "bench"
+      match_event_type:
+        | "period_start"
+        | "period_end"
+        | "goal"
+        | "card"
+        | "substitution"
+        | "penalty_miss"
+        | "shootout_kick"
+        | "man_of_the_match"
+        | "full_time"
+        | "walkover"
       match_period:
         | "first_half"
         | "second_half"
@@ -497,6 +987,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["user", "official", "admin"],
+      card_colour: ["yellow", "red"],
       fixture_status: [
         "scheduled",
         "live",
@@ -505,6 +996,19 @@ export const Constants = {
         "postponed",
         "walkover",
         "cancelled",
+      ],
+      lineup_role: ["starter", "bench"],
+      match_event_type: [
+        "period_start",
+        "period_end",
+        "goal",
+        "card",
+        "substitution",
+        "penalty_miss",
+        "shootout_kick",
+        "man_of_the_match",
+        "full_time",
+        "walkover",
       ],
       match_period: [
         "first_half",
