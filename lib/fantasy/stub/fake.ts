@@ -49,18 +49,18 @@ function fakeStats(player: Player, md: number, plays: boolean): FakeStats {
   const minutes = roll < 12 ? 0 : roll < 25 ? 20 : 50;
   if (minutes === 0) return { minutes };
   const goalChance = { GK: 0, DEF: 4, MID: 10, FWD: 18 }[player.position];
-  const goals = (h >> 7) % 100 < goalChance ? 1 + (((h >> 14) % 100) < 8 ? 1 : 0) : 0;
-  const assists = (h >> 9) % 100 < 10 ? 1 : 0;
-  const conceded = (h >> 11) % 4;
+  const goals = (h >>> 7) % 100 < goalChance ? 1 + (((h >>> 14) % 100) < 8 ? 1 : 0) : 0;
+  const assists = (h >>> 9) % 100 < 10 ? 1 : 0;
+  const conceded = (h >>> 11) % 4;
   const s: FakeStats = { minutes, appeared: 1 };
   if (minutes >= 30) s.played_30 = 1;
   if (goals) s.goal = goals;
   if (assists) s.assist = assists;
   if (conceded === 0 && minutes >= 30) s.clean_sheet = 1;
   if (conceded >= 2) s.goals_conceded_2 = Math.floor(conceded / 2);
-  if ((h >> 13) % 100 < 10) s.yellow_card = 1;
-  if ((h >> 17) % 100 < 4) s.man_of_the_match = 1;
-  if (player.position === "GK" && (h >> 19) % 100 < 6) s.penalty_saved = 1;
+  if ((h >>> 13) % 100 < 10) s.yellow_card = 1;
+  if ((h >>> 17) % 100 < 4) s.man_of_the_match = 1;
+  if (player.position === "GK" && (h >>> 19) % 100 < 6) s.penalty_saved = 1;
   return s;
 }
 
@@ -152,9 +152,9 @@ export const FAKE_MANAGERS: FakeManager[] = Array.from({ length: 137 }, (_, i) =
   const h = hash(`manager-${i}`);
   return {
     id: `00000000-0000-4000-8000-5${String(i).padStart(11, "0")}`,
-    teamName: `${WORD1[h % WORD1.length]} ${WORD2[(h >> 5) % WORD2.length]}${i > 60 ? ` ${(i % 9) + 2}` : ""}`,
-    managerName: `${FIRST[(h >> 9) % FIRST.length]} ${LAST[(h >> 13) % LAST.length]}`,
-    yearGroup: (h >> 17) % 6 === 0 ? null : ((h >> 17) % 5) + 1,
+    teamName: `${WORD1[h % WORD1.length]} ${WORD2[(h >>> 5) % WORD2.length]}${i > 60 ? ` ${(i % 9) + 2}` : ""}`,
+    managerName: `${FIRST[(h >>> 9) % FIRST.length]} ${LAST[(h >>> 13) % LAST.length]}`,
+    yearGroup: (h >>> 17) % 6 === 0 ? null : ((h >>> 17) % 5) + 1,
   };
 });
 
