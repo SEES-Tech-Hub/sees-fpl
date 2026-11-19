@@ -48,9 +48,9 @@ function fakeStats(player: Player, md: number, plays: boolean): FakeStats {
   const roll = h % 100;
   const minutes = roll < 12 ? 0 : roll < 25 ? 20 : 50;
   if (minutes === 0) return { minutes };
-  const goalChance = { GK: 0, DEF: 8, MID: 18, FWD: 30 }[player.position];
-  const goals = (h >> 7) % 100 < goalChance ? 1 + (((h >> 14) % 100) < 15 ? 1 : 0) : 0;
-  const assists = (h >> 9) % 100 < 18 ? 1 : 0;
+  const goalChance = { GK: 0, DEF: 4, MID: 10, FWD: 18 }[player.position];
+  const goals = (h >> 7) % 100 < goalChance ? 1 + (((h >> 14) % 100) < 8 ? 1 : 0) : 0;
+  const assists = (h >> 9) % 100 < 10 ? 1 : 0;
   const conceded = (h >> 11) % 4;
   const s: FakeStats = { minutes, appeared: 1 };
   if (minutes >= 30) s.played_30 = 1;

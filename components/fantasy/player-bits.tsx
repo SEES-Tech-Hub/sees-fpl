@@ -46,14 +46,16 @@ export function PlayerRow({
   note,
   action,
   highlight,
+  as: Tag = "li",
 }: {
   player: Player;
   note?: ReactNode;
   action?: ReactNode;
   highlight?: boolean;
+  as?: "li" | "div";
 }) {
   return (
-    <li
+    <Tag
       className={cn(
         "flex min-h-14 items-center gap-3 border-b border-border px-1 py-2 last:border-b-0",
         highlight && "bg-secondary",
@@ -66,12 +68,12 @@ export function PlayerRow({
           <StatusFlag status={player.status} />
         </div>
         <p className="truncate text-xs text-muted-foreground">
-          {player.teamShort} · {player.totalPoints} pts · {player.selectedByPct}% picked
-          {note ? <> · {note}</> : null}
+          {player.teamShort} · {player.totalPoints} pts · {player.selectedByPct}%
         </p>
+        {note ? <p className="text-xs leading-tight">{note}</p> : null}
       </div>
       <p className="w-14 text-right text-sm font-medium tabular-nums">{formatMoney(player.priceTenths)}</p>
       {action}
-    </li>
+    </Tag>
   );
 }
