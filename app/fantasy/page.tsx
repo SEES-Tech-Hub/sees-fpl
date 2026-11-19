@@ -1,5 +1,21 @@
-import { Placeholder } from "@/components/placeholder";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { LoadingPage } from "@/components/fantasy/states";
+import { requireSquad } from "@/lib/fantasy/guards";
 
-export default function Page() {
-  return <Placeholder title="SEES Fantasy" owner="Akeem (UI), Mary (server)" notes="Squad builder, my team, transfers, points, rankings. Build order F1 to F8 in docs/PRD.md." />;
+export const metadata = { title: "Fantasy" };
+
+// /fantasy sends each manager where they need to be: sign in, onboarding,
+// squad builder, or their team.
+export default function FantasyHome() {
+  return (
+    <Suspense fallback={<LoadingPage />}>
+      <Route />
+    </Suspense>
+  );
+}
+
+async function Route(): Promise<never> {
+  await requireSquad("/fantasy");
+  redirect("/fantasy/team");
 }

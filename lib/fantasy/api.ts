@@ -42,10 +42,14 @@ import type {
 /** Flip to true when Mary's backend is wired in; hides the "sample data" banner. */
 export const FANTASY_BACKEND_LIVE = false;
 
-/** Without Supabase env vars (a laptop with no .env.local), use stub reference data too. */
-const HAS_SUPABASE = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-);
+/**
+ * Without Supabase env vars, or with FANTASY_LOCAL_STUB=1 (local testing with
+ * dummy Supabase values, so proxy.ts can start), use stub reference data and
+ * a stub user too. Never set FANTASY_LOCAL_STUB on Vercel.
+ */
+const HAS_SUPABASE =
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) &&
+  process.env.FANTASY_LOCAL_STUB !== "1";
 
 export const usingStubReferenceData = !HAS_SUPABASE;
 
