@@ -129,6 +129,8 @@ export type MatchdayState = {
   matchdays: Matchday[];
   next: Matchday | null;
   current: Matchday | null;
+  /** The server's clock (ms) when this was read, so countdowns can correct a wrong phone clock. */
+  serverNow: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -253,6 +255,12 @@ export type ManagerMatchdayPoints = {
   total: number;
   provisional: boolean;
   wildcardPlayed: boolean;
+  /** Average and highest manager total this matchday (design system §11.3 points hero). */
+  averagePoints: number | null;
+  highestPoints: number | null;
+  /** Overall rank after this matchday and before it (null before the first). */
+  overallRank: number | null;
+  previousOverallRank: number | null;
   players: PlayerPoints[];
 };
 

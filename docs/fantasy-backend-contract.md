@@ -1,6 +1,6 @@
 # SEES Fantasy: backend contract (frontend ↔ backend)
 
-Draft v1 · 19 Nov 2026 · From Henry (fantasy frontend) to Mary (fantasy backend)
+Draft v1.1 · 20 Nov 2026 (v1: 19 Nov) · From Henry (fantasy frontend) to Mary (fantasy backend)
 
 This is what the fantasy screens call and what they expect back. The frontend reaches the backend **only** through `lib/fantasy/api.ts`. Each function there is either already real (reads of `teams`, `players`, `matchdays`, `fixtures`) or a typed stub marked `// STUB: replace with Mary's RPC`. When a function below is ready, I swap that one stub for your RPC or table read and nothing else changes.
 
@@ -83,7 +83,7 @@ Suggested: a view `player_fantasy_stats (player_id, total_points, selected_by_pc
 
 ### 2.3 `getMatchdayState(): MatchdayState`
 
-Already real: all `matchdays` with their `fixtures`, ordered by number. `next` = the earliest matchday whose `deadline_at > now()`; `current` = the latest one whose deadline has passed. The frontend only needs you to keep `deadline_at` correct (30 min before the first kickoff, your M5 trigger) and to move `status` through upcoming → open → locked → finalised.
+Already real: all `matchdays` with their `fixtures`, ordered by number. `next` = the earliest matchday whose `deadline_at > now()`; `current` = the latest one whose deadline has passed. `serverNow` is the server's clock when it was read: countdowns use it to correct a wrong phone clock (design system §11.1). The frontend only needs you to keep `deadline_at` correct (30 min before the first kickoff, your M5 trigger) and to move `status` through upcoming → open → locked → finalised.
 
 ### 2.4 `getMyManager(): Manager | null`
 
@@ -114,6 +114,7 @@ The points breakdown screen. `null` if that manager has no picks snapshot for th
 - One `PlayerPoints` row for each of the 15 picks, with its `slot`, `multiplier` (0 bench, 1, 2 captain or vice standing in), `autoSubIn` / `autoSubOut`, `minutes`, a `fixtureLabel` like `"Y1 v Y4"` (`null` if the team didn't play or it was a walkover), and `items`.
 - `items` explains every point: `{ key, label, count, points }`, for example `{ key: "goal", label: "Goals", count: 2, points: 10 }`. The items must add up to `basePoints`, and `totalPoints = basePoints × multiplier`. Don't send zero-point items.
 - `pointsBeforeCost` = sum of `totalPoints`; `total = pointsBeforeCost − transferCost`.
+- **Added 20 Nov for the design system's points hero (§11.3):** `averagePoints` and `highestPoints` (the average and highest manager `total` that matchday, `null` if none), and `overallRank` / `previousOverallRank` (overall rank after this matchday and after the one before, `null` when there isn't one). The UI shows "▲ 1,204 → 312".
 - `provisional` = true until you finalise the matchday.
 - **RLS:** the owner can always read their own; anyone can read other managers' picks and points only after that matchday's deadline (PRD: "after it, squads lock and everyone's picks become visible").
 

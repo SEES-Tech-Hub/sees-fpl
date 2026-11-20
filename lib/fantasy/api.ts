@@ -174,7 +174,7 @@ export const getMatchdayState = cache(async (): Promise<MatchdayState> => {
   const passed = (m: Matchday) => m.deadlineAt !== null && new Date(m.deadlineAt).getTime() <= now;
   const next = matchdays.find((m) => m.deadlineAt !== null && !passed(m) && m.status !== "finalised") ?? null;
   const current = [...matchdays].reverse().find(passed) ?? null;
-  return { matchdays, next, current };
+  return { matchdays, next, current, serverNow: now };
 });
 
 // ===========================================================================
@@ -298,7 +298,7 @@ export async function getManagerPoints(
     const squad = stubSquad(state, players);
     if (!squad || !state.manager) return null;
     const cost = state.transfers?.md === matchdayNumber ? state.transfers.cost : 0;
-    return fakeManagerPoints({
+    const mine = fakeManagerPoints({
       managerId,
       teamName: state.manager.teamName,
       squad,
@@ -309,6 +309,11 @@ export async function getManagerPoints(
       transferCost: cost,
       wildcardPlayed: state.wildcardMd === matchdayNumber,
     });
+    // STUB rank: where this total would sit among the fake managers.
+    const better = FAKE_MANAGERS.filter((m) => fakeMatchdayScore(m.id, matchdayNumber) > mine.total).length;
+    mine.overallRank = better + 1;
+    mine.previousOverallRank = matchdayNumber > 1 ? Math.min(FAKE_MANAGERS.length, better + 1 + (hash(user.id) % 40) - 15) : null;
+    return mine;
   }
 
   const other = FAKE_MANAGERS.find((m) => m.id === managerId);

@@ -133,6 +133,10 @@ export function fakeManagerPoints(args: {
     total: pointsBeforeCost - args.transferCost,
     provisional: matchday.status !== "finalised",
     wildcardPlayed: args.wildcardPlayed,
+    averagePoints: Math.round(FAKE_MANAGERS.reduce((s, m) => s + fakeMatchdayScore(m.id, matchday.number), 0) / FAKE_MANAGERS.length),
+    highestPoints: Math.max(...FAKE_MANAGERS.map((m) => fakeMatchdayScore(m.id, matchday.number))),
+    overallRank: null,
+    previousOverallRank: null,
     players,
   };
 }
