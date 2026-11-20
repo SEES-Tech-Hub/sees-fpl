@@ -1,22 +1,15 @@
 import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
+import { TeamDot } from "@/components/fantasy/team-badge";
 import { formatMoney } from "@/lib/fantasy/format";
 import type { Player, PlayerStatus, Position } from "@/lib/fantasy/types";
 import { cn } from "@/lib/utils";
 
-const POSITION_STYLE: Record<Position, string> = {
-  GK: "bg-highlight text-highlight-foreground",
-  DEF: "bg-brand text-brand-foreground",
-  MID: "bg-info text-brand-foreground",
-  FWD: "bg-live text-brand-foreground",
-};
-
+/** Positions are neutral: never team-coloured, never status-coloured (design system §3.1). */
 export function PositionTag({ position, className }: { position: Position; className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex h-5 w-9 shrink-0 items-center justify-center rounded text-[0.65rem] font-semibold",
-        POSITION_STYLE[position],
+        "inline-flex h-5 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-[0.7rem] font-semibold text-muted-foreground",
         className,
       )}
     >
@@ -25,31 +18,36 @@ export function PositionTag({ position, className }: { position: Position; class
   );
 }
 
-const STATUS_LABEL: Record<Exclude<PlayerStatus, "available">, string> = {
-  injured: "Injured",
-  suspended: "Suspended",
-  left: "Left squad",
+const STATUS: Record<Exclude<PlayerStatus, "available">, { label: string; cls: string }> = {
+  injured: { label: "Injured", cls: "bg-warning text-highlight-foreground" },
+  suspended: { label: "Suspended", cls: "bg-destructive/15 text-destructive" },
+  left: { label: "Left squad", cls: "bg-muted text-muted-foreground" },
 };
 
 export function StatusFlag({ status }: { status: PlayerStatus }) {
   if (status === "available") return null;
+  const s = STATUS[status];
   return (
-    <Badge variant="destructive" className="h-5 px-1.5 text-[0.65rem]">
-      {STATUS_LABEL[status]}
-    </Badge>
+    <span className={cn("inline-flex h-5 shrink-0 items-center rounded-full px-1.5 text-[0.7rem] font-semibold", s.cls)}>
+      {s.label}
+    </span>
   );
 }
 
-/** One tappable player line used by the squad builder and transfers. */
+/**
+ * Design system §11.3 PlayerRow: team dot, name, neutral position tag, price,
+ * points and "picked by", with the action on the right. A disabled action
+ * shows its reason under the name.
+ */
 export function PlayerRow({
   player,
-  note,
+  reason,
   action,
   highlight,
   as: Tag = "li",
 }: {
   player: Player;
-  note?: ReactNode;
+  reason?: ReactNode;
   action?: ReactNode;
   highlight?: boolean;
   as?: "li" | "div";
@@ -57,22 +55,28 @@ export function PlayerRow({
   return (
     <Tag
       className={cn(
-        "flex min-h-14 items-center gap-3 border-b border-border px-1 py-2 last:border-b-0",
+        "flex min-h-16 items-center gap-3 border-b border-border px-2 py-2 last:border-b-0",
         highlight && "bg-secondary",
       )}
     >
-      <PositionTag position={player.position} />
+      <TeamDot year={player.teamYear} className="size-7 text-xs" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <p className="truncate text-sm font-medium">{player.displayName}</p>
+          <p className={cn("truncate text-[0.9375rem] font-semibold", player.status === "left" && "line-through")}>
+            {player.displayName}
+          </p>
           <StatusFlag status={player.status} />
         </div>
-        <p className="truncate text-xs text-muted-foreground">
-          {player.teamShort} · {player.totalPoints} pts · {player.selectedByPct}%
+        <p className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
+          <PositionTag position={player.position} />
+          <span className="truncate tabular-nums">picked by {Math.round(player.selectedByPct)}%</span>
         </p>
-        {note ? <p className="text-xs leading-tight">{note}</p> : null}
+        {reason ? <p className="mt-0.5 text-xs font-medium text-destructive">{reason}</p> : null}
       </div>
-      <p className="w-14 text-right text-sm font-medium tabular-nums">{formatMoney(player.priceTenths)}</p>
+      <div className="w-14 text-right">
+        <p className="font-heading text-base font-semibold tabular-nums">{formatMoney(player.priceTenths)}</p>
+        <p className="text-xs text-muted-foreground tabular-nums">{player.totalPoints} pts</p>
+      </div>
       {action}
     </Tag>
   );

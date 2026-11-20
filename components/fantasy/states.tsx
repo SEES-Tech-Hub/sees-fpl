@@ -4,16 +4,53 @@ import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-export function PageHeader({ title, description, action }: { title: string; description?: ReactNode; action?: ReactNode }) {
+// Design system §9 states. TODO(Henry): use Fortune's shared EmptyState once it lands.
+
+/** Caption ("MATCHDAY 2 · DEADLINE IN 3H 12M") + Oswald title. */
+export function PageHeader({
+  title,
+  caption,
+  description,
+  action,
+  display,
+}: {
+  title: string;
+  caption?: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
+  /** Use the 36 px display size (hero-style screens like the squad builder). */
+  display?: boolean;
+}) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="font-heading text-2xl font-semibold text-brand">{title}</h1>
+        {caption && (
+          <p className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">{caption}</p>
+        )}
+        <h1
+          className={cn(
+            "font-heading text-brand dark:text-foreground",
+            display ? "text-display font-bold uppercase" : "text-[1.75rem] leading-[1.1] font-semibold",
+          )}
+        >
+          {title}
+        </h1>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
       {action}
     </div>
+  );
+}
+
+/** A small hand-drawn underline, the one "human" mark on empty states. */
+function HandMark() {
+  return (
+    <svg viewBox="0 0 120 14" className="h-3 w-28 stroke-highlight" fill="none" strokeWidth="3" strokeLinecap="round" aria-hidden>
+      <path d="M3 9 C 25 4, 50 5, 70 7 S 105 9, 117 5" />
+      <path d="M10 12 C 35 9, 70 10, 100 10" strokeWidth="2" opacity="0.7" />
+    </svg>
   );
 }
 
@@ -29,11 +66,12 @@ export function EmptyState({
   cta?: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border px-4 py-10 text-center">
-      <p className="font-heading text-lg font-semibold">{title}</p>
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-10 text-center">
+      <p className="font-heading text-xl font-semibold">{title}</p>
+      <HandMark />
       {description && <p className="max-w-xs text-sm text-muted-foreground">{description}</p>}
       {href && cta && (
-        <Button asChild size="lg" className="h-11 px-5">
+        <Button asChild size="lg" className="mt-2 h-11 px-5 text-[0.9375rem]">
           <Link href={href}>{cta}</Link>
         </Button>
       )}
@@ -41,7 +79,7 @@ export function EmptyState({
   );
 }
 
-export function InlineError({ title = "Something went wrong", message }: { title?: string; message: string }) {
+export function InlineError({ title = "That didn't work", message }: { title?: string; message: string }) {
   return (
     <Alert variant="destructive" role="alert">
       <AlertCircle />
@@ -51,15 +89,39 @@ export function InlineError({ title = "Something went wrong", message }: { title
   );
 }
 
+const shimmer = "motion-reduce:animate-none";
+
+/** Skeleton for list screens (rankings, leagues, transfers). */
 export function LoadingPage({ rows = 6 }: { rows?: number }) {
   return (
     <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading">
-      <Skeleton className="h-8 w-40" />
-      <Skeleton className="h-4 w-56" />
-      <Skeleton className="mt-2 h-24 w-full rounded-xl" />
+      <Skeleton className={cn("h-3 w-32", shimmer)} />
+      <Skeleton className={cn("h-8 w-48", shimmer)} />
+      <Skeleton className={cn("mt-2 h-24 w-full rounded-xl", shimmer)} />
       {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} className="h-12 w-full" />
+        <Skeleton key={i} className={cn("h-14 w-full", shimmer)} />
       ))}
+    </div>
+  );
+}
+
+/** Skeleton shaped like the pitch (team, squad, points). */
+export function LoadingPitch() {
+  return (
+    <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading">
+      <Skeleton className={cn("h-3 w-40", shimmer)} />
+      <Skeleton className={cn("h-9 w-56", shimmer)} />
+      <Skeleton className={cn("h-24 w-full rounded-xl", shimmer)} />
+      <div className="flex flex-col gap-5 rounded-xl bg-muted px-4 py-6">
+        {[2, 4, 4, 1].map((n, r) => (
+          <div key={r} className="flex justify-center gap-3">
+            {Array.from({ length: n }, (_, i) => (
+              <Skeleton key={i} className={cn("h-14 w-12 bg-background", shimmer)} />
+            ))}
+          </div>
+        ))}
+      </div>
+      <Skeleton className={cn("h-24 w-full rounded-xl", shimmer)} />
     </div>
   );
 }

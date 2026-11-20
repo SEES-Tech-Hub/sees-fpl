@@ -86,17 +86,15 @@ export function squadIssues(players: Player[], rules: FantasyRules): Issue[] {
   return issues;
 }
 
-/** Why a player can't be added right now, or null if they can. */
+/** Why a player can't be added right now ("Max 4 from Year 5", "Not enough budget", "DEF slots full"), or null. */
 export function cannotAddReason(player: Player, selected: Player[], rules: FantasyRules): string | null {
   if (selected.some((p) => p.id === player.id)) return "Already in your squad";
   const counts = countByPosition(selected);
-  if (counts[player.position] >= rules.squadPositions[player.position]) {
-    return `You have all ${rules.squadPositions[player.position]} ${player.position}`;
-  }
+  if (counts[player.position] >= rules.squadPositions[player.position]) return `${player.position} slots full`;
   const fromTeam = selected.filter((p) => p.teamId === player.teamId).length;
-  if (fromTeam >= rules.maxPerTeam) return `Already ${rules.maxPerTeam} from Year ${player.teamYear}`;
+  if (fromTeam >= rules.maxPerTeam) return `Max ${rules.maxPerTeam} from Year ${player.teamYear}`;
   const left = rules.budgetTenths - squadCost(selected);
-  if (player.priceTenths > left) return `Only ${formatMoney(left)} left`;
+  if (player.priceTenths > left) return "Not enough budget";
   return null;
 }
 
