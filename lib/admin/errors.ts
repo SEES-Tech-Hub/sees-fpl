@@ -19,7 +19,7 @@ export const ADMIN_ERROR_CODES = [
   "admin.own_role", // an admin tried to change their own role
   "admin.role_forbidden", // admin can only be granted or removed in the SQL editor
   "admin.price_locked", // price change after the matchday 1 deadline
-  "admin.price_out_of_range", // outside admin_price_rules()
+  "admin.price_out_of_range", // outside the allowed price range (admin_price_rules() from PR 3)
   "admin.player_ambiguous", // two players share that name; give a display_name
   "admin.import_invalid", // the import has rows with errors; nothing was written
   "admin.rule_violation", // another database rule (message comes from the database)

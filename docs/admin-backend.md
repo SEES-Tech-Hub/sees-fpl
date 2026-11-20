@@ -44,7 +44,7 @@ Defined in `lib/admin/errors.ts`.
 | `admin.own_role` | You can't change your own role |
 | `admin.role_forbidden` | Admin is granted or removed only in the database (by Tayo) |
 | `admin.price_locked` | Price change after the matchday 1 deadline |
-| `admin.price_out_of_range` | Price outside `admin_price_rules()` |
+| `admin.price_out_of_range` | Price outside the allowed range (today the `players` check constraint, ₦4.0m to ₦10.0m in steps of ₦0.5m; from PR 3, `admin_price_rules()`) |
 | `admin.player_ambiguous` | Two players share that name; give a display name |
 | `admin.import_invalid` | The import has rows with errors; nothing was written |
 | `admin.rule_violation` | Another database rule refused it |

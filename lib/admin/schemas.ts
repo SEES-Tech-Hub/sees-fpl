@@ -56,7 +56,7 @@ export const stage = z
 
 export const year = z.coerce.number().int().min(1, "Year 1 to 5").max(5, "Year 1 to 5");
 export const shirtNumber = z.coerce.number().int().min(0, "0 to 99").max(99, "0 to 99").nullable();
-/** Price in tenths of a million (55 = N5.5m). The range is checked against admin_price_rules(). */
+/** Price in tenths of a million (55 = N5.5m). The range is checked by the database (admin_price_rules() from PR 3). */
 export const priceTenths = z.coerce.number().int("Prices go in steps; send tenths of a million").positive();
 export const position = z.enum(PLAYER_POSITIONS, { error: "GK, DEF, MID or FWD" });
 export const playerStatus = z.enum(PLAYER_STATUSES, { error: "available, injured, suspended or left" });

@@ -1,7 +1,7 @@
 // Player prices. Stored as tenths of a million naira (55 = N5.5m), the same as
 // players.price_tenths and the fantasy contract.
 //
-// The allowed range and step are never written here. They come from the
+// The allowed range and step are never written here. From PR 3 they come from the
 // database function admin_price_rules() and are passed in as PriceRules.
 
 export type PriceRules = {
