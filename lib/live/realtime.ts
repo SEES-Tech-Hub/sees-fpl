@@ -44,6 +44,16 @@ function toConnectionStatus(status: string): ConnectionStatus {
   }
 }
 
+/**
+ * supabase-js returns the existing channel when a name is reused, and adding
+ * listeners to a channel that has already joined throws. Two components on
+ * one page can follow the same fixture, and React mounts effects twice in
+ * development, so every subscription gets its own channel name.
+ */
+export function uniqueChannelName(base: string): string {
+  return `${base}:${crypto.randomUUID()}`;
+}
+
 function unsubscriber(supabase: Client, channel: RealtimeChannel) {
   return () => {
     void supabase.removeChannel(channel);
@@ -58,7 +68,7 @@ export function subscribeToFixture(
 ): () => void {
   handlers.onStatus?.("connecting");
   const channel = supabase
-    .channel(`live:fixture:${fixtureId}`)
+    .channel(uniqueChannelName(`live:fixture:${fixtureId}`))
     .on(
       "postgres_changes",
       { event: "UPDATE", schema: "public", table: "fixtures", filter: `id=eq.${fixtureId}` },
@@ -93,7 +103,7 @@ export function subscribeToFixtures(
 ): () => void {
   handlers.onStatus?.("connecting");
   const channel = supabase
-    .channel("live:fixtures")
+    .channel(uniqueChannelName("live:fixtures"))
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "fixtures" }, (payload) =>
       handlers.onFixture?.(payload.new as FixtureRow),
     )

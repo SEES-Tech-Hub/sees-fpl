@@ -45,7 +45,7 @@ export type RecordEventInput = RecordEventBase &
         type: "goal";
         /** The team the goal counts for. For an own goal, the team that benefits. */
         teamId: string;
-        /** Scorer. For an own goal, the opponent who put it in his own net. */
+        /** Scorer. For an own goal, the opponent who put it in their own net. */
         scorerId?: string | null;
         assistId?: string | null;
         penalty?: boolean;
@@ -281,7 +281,7 @@ export type PlayerMatchStats = {
   goals: number;
   assists: number;
   ownGoals: number;
-  /** Goals the player's team conceded while he was on the pitch. */
+  /** Goals the player's team conceded while they were on the pitch. */
   goalsConcededOnPitch: number;
   yellowCards: number;
   redCards: number;

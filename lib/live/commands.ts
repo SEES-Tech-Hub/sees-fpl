@@ -104,7 +104,7 @@ export function parseRecordEventInput(input: unknown): Parsed<RecordEventInput> 
         return invalid("An own goal has no assist and isn't a penalty.");
       }
       if (scorerId && scorerId === assistId) {
-        return invalid("A player can't assist his own goal.");
+        return invalid("A player can't assist their own goal.");
       }
       return {
         ok: true,
@@ -124,7 +124,7 @@ export function parseRecordEventInput(input: unknown): Parsed<RecordEventInput> 
       if (!isUuid(teamId) || !isUuid(playerOffId) || !isUuid(playerOnId)) {
         return invalid("A substitution needs teamId, playerOffId and playerOnId.");
       }
-      if (playerOffId === playerOnId) return invalid("A player can't replace himself.");
+      if (playerOffId === playerOnId) return invalid("A player can't replace themselves.");
       return { ok: true, data: { ...base, type, teamId, playerOffId, playerOnId } };
     }
 

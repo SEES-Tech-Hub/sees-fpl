@@ -85,10 +85,10 @@ Every event needs `fixtureId`, `clientEventId` and `type`. `occurredAt` is optio
 | --- | --- | --- |
 | `period_start` | `period` | Kick off. Order: first_half → second_half → (knockouts, if level) extra_first → extra_second → penalties. Penalties can also follow the second half. |
 | `period_end` | — | Half time or end of a period. Status becomes `half_time` (a break). |
-| `goal` | `teamId`, `scorerId?`, `assistId?`, `penalty?`, `ownGoal?` | `teamId` is the team the goal counts for. For an own goal, `scorerId` is the opponent who put it in his own net, and there's no assist. |
+| `goal` | `teamId`, `scorerId?`, `assistId?`, `penalty?`, `ownGoal?` | `teamId` is the team the goal counts for. For an own goal, `scorerId` is the opponent who put it in their own net, and there's no assist. |
 | `card` | `teamId`, `playerId`, `colour` | A second yellow: record a `red` (the console can warn using `yellowCards` from the lineup). |
 | `substitution` | `teamId`, `playerOffId`, `playerOnId` | Allowed at half time too. No re-entry: a player who came off can't come back on. |
-| `penalty_miss` | `teamId`, `takerId`, `savedById?` | Normal or extra time only. `savedById` is the goalkeeper if he saved it. |
+| `penalty_miss` | `teamId`, `takerId`, `savedById?` | Normal or extra time only. `savedById` is the goalkeeper if they saved it. |
 | `shootout_kick` | `teamId`, `takerId?`, `scored` | During `penalties` only. |
 | `man_of_the_match` | `playerId` | Once per match, during or after it. Undo it to change it. |
 | `full_time` | — | After the second half (league), or once there's a winner (knockout). |
