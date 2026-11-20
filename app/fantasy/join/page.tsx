@@ -23,8 +23,9 @@ async function Join() {
   return (
     <>
       <PageHeader
-        title="Create your team"
-        description={`Pick ${rules.squadSize} players from the five year squads with ${formatMoney(rules.budgetTenths)}, then score points from every matchday.`}
+        caption="Step 1 of 2"
+        title="Name your team"
+        description={`Next you'll pick ${rules.squadSize} players within ${formatMoney(rules.budgetTenths)}.`}
       />
       <JoinForm
         managerName={user.name}

@@ -5,6 +5,7 @@ import { createManagerAction, type OnboardingState } from "@/app/fantasy/actions
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { TeamDot } from "@/components/fantasy/team-badge";
 import { cn } from "@/lib/utils";
 
 const YEARS = [
@@ -58,7 +59,7 @@ export function JoinForm({
             <label
               key={y.value}
               className={cn(
-                "flex min-h-14 cursor-pointer flex-col justify-center rounded-lg border border-border px-3 py-2 has-checked:border-primary has-checked:bg-secondary has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
+                "flex min-h-16 cursor-pointer flex-col justify-center gap-0.5 rounded-lg border-2 border-border px-3 py-2 has-checked:border-primary has-checked:bg-secondary has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
                 y.value === "none" && "col-span-2",
               )}
             >
@@ -70,8 +71,11 @@ export function JoinForm({
                 required
                 className="sr-only"
               />
-              <span className="text-sm font-medium">{y.label}</span>
-              <span className="text-xs text-muted-foreground">{y.sub}</span>
+              <span className="flex items-center gap-2">
+                {y.value !== "none" && <TeamDot year={Number(y.value)} />}
+                <span className="text-[0.9375rem] font-semibold">{y.label}</span>
+              </span>
+              <span className="text-[0.8125rem] text-muted-foreground">{y.sub}</span>
             </label>
           ))}
         </div>
@@ -80,7 +84,7 @@ export function JoinForm({
       {state.error && <FieldError>{state.error}</FieldError>}
 
       <Button type="submit" size="lg" className="h-12 text-base" disabled={pending}>
-        {pending ? "Creating…" : "Create team and pick players"}
+        {pending ? "Creating…" : "Create team"}
       </Button>
     </form>
   );

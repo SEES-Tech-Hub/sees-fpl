@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { RankingTable } from "@/components/fantasy/ranking-table";
+import { RankingTabs } from "@/components/fantasy/ranking-tabs";
 import { EmptyState, LoadingPage, PageHeader } from "@/components/fantasy/states";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ export const metadata = { title: "Rankings" };
 export default function RankingsPage({ searchParams }: PageProps<"/fantasy/rankings">) {
   return (
     <>
-      <PageHeader title="Rankings" description="Every SEES Fantasy manager, by total points." />
+      <PageHeader caption="SEES Fantasy" title="Rankings" />
       <Suspense fallback={<LoadingPage rows={10} />}>
         <Rankings searchParams={searchParams} />
       </Suspense>
@@ -46,37 +47,37 @@ async function Rankings({ searchParams }: { searchParams: PageProps<"/fantasy/ra
 
   return (
     <>
-      <nav aria-label="Ranking" className="-mx-4 overflow-x-auto px-4">
-        <ul className="flex min-w-max gap-2">
-          {[null, 1, 2, 3, 4, 5].map((y) => (
-            <li key={y ?? "all"}>
-              <Link
-                href={href(y)}
-                aria-current={activeYear === y ? "page" : undefined}
-                className={cn(
-                  "flex h-11 items-center rounded-lg border border-border px-3 text-sm font-medium",
-                  activeYear === y && "border-primary bg-primary text-primary-foreground",
-                )}
-              >
-                {y === null ? "Overall" : `Year ${y}`}
-              </Link>
-            </li>
+      <RankingTabs active={activeYear ? "year" : "overall"} myYear={manager?.yearGroup ?? user?.yearGroup ?? null} />
+      {activeYear && (
+        <nav aria-label="Year" className="flex flex-wrap gap-2">
+          {[1, 2, 3, 4, 5].map((y) => (
+            <Link
+              key={y}
+              href={href(y)}
+              aria-current={activeYear === y ? "page" : undefined}
+              className={cn(
+                "flex h-11 min-w-11 items-center justify-center rounded-full border border-border px-3 text-[0.9375rem] font-medium",
+                activeYear === y && "border-primary bg-primary text-primary-foreground",
+              )}
+            >
+              Y{y}
+            </Link>
           ))}
-        </ul>
-      </nav>
+        </nav>
+      )}
 
       {ranking.me ? (
-        <section aria-label="Your rank" className="flex items-center justify-between rounded-xl bg-brand px-4 py-3 text-brand-foreground">
+        <section aria-label="Your rank" className="flex items-center justify-between rounded-xl bg-highlight px-4 py-3 text-highlight-foreground shadow-card">
           <div className="min-w-0">
             <p className="text-xs opacity-80">Your rank{activeYear ? ` in Year ${activeYear}` : ""}</p>
-            <p className="font-heading text-3xl font-semibold tabular-nums">
+            <p className="font-heading text-display font-bold tabular-nums">
               {ordinal(ranking.me.rank)}
               <span className="ml-1 text-base font-normal opacity-80">of {ranking.totalManagers}</span>
             </p>
           </div>
           <div className="text-right">
             <p className="text-xs opacity-80">Points</p>
-            <p className="font-heading text-2xl font-semibold tabular-nums">{ranking.me.totalPoints}</p>
+            <p className="font-heading text-display font-bold tabular-nums">{ranking.me.totalPoints}</p>
           </div>
         </section>
       ) : !user ? (
@@ -99,7 +100,7 @@ async function Rankings({ searchParams }: { searchParams: PageProps<"/fantasy/ra
 
       {ranking.provisional && ranking.rows.length > 0 && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Badge className="bg-highlight text-highlight-foreground">Provisional</Badge>
+          <Badge variant="secondary" className="text-muted-foreground">Provisional</Badge>
           Ranks can change until the matchday is finalised.
         </p>
       )}
@@ -107,10 +108,10 @@ async function Rankings({ searchParams }: { searchParams: PageProps<"/fantasy/ra
       {ranking.rows.length === 0 ? (
         <EmptyState
           title="No managers here yet"
-          description={activeYear ? `No Year ${activeYear} managers have points yet.` : "Rankings appear after the first matchday."}
+          description={activeYear ? `No Year ${activeYear} managers have points yet.` : "Rankings start after the first matchday."}
         />
       ) : (
-        <RankingTable rows={ranking.rows} meId={user?.id ?? null} linkToPoints={Boolean(manager)} />
+        <RankingTable rows={ranking.rows} me={ranking.me} linkToPoints={Boolean(manager)} />
       )}
 
       {pages > 1 && (

@@ -39,20 +39,20 @@ async function League({ params }: { params: PageProps<"/fantasy/leagues/[id]">["
   return (
     <>
       <PageHeader
+        caption={`League · ${league.memberCount} manager${league.memberCount === 1 ? "" : "s"}`}
         title={league.name}
-        description={`${league.memberCount} manager${league.memberCount === 1 ? "" : "s"}`}
       />
       <CopyCode code={league.code} leagueName={league.name} />
       {standings.provisional && rows.length > 0 && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Badge className="bg-highlight text-highlight-foreground">Provisional</Badge>
+          <Badge variant="secondary" className="text-muted-foreground">Provisional</Badge>
           Ranks can change until the matchday is finalised.
         </p>
       )}
       {rows.length <= 1 && (
-        <p className="text-sm text-muted-foreground">Share the code so friends can join.</p>
+        <p className="text-sm text-muted-foreground">It&apos;s just you so far. Share the code so friends can join.</p>
       )}
-      {rows.length > 0 && <RankingTable rows={rows} meId={user.id} linkToPoints />}
+      {rows.length > 0 && <RankingTable rows={rows} me={rows.find((r) => r.managerId === user.id) ?? null} linkToPoints />}
     </>
   );
 }

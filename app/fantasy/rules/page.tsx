@@ -3,7 +3,7 @@ import { LoadingPage, PageHeader } from "@/components/fantasy/states";
 import { getFantasyRules, getMatchdayState } from "@/lib/fantasy/api";
 import { formatMoney, formatSigned } from "@/lib/fantasy/format";
 import { formatWAT } from "@/lib/fantasy/time";
-import { POSITIONS } from "@/lib/fantasy/types";
+import { POSITIONS, type FantasyRules, type Position, type ScoringKey } from "@/lib/fantasy/types";
 import { allowedFormations } from "@/lib/fantasy/validate";
 
 export const metadata = { title: "Fantasy rules" };
@@ -13,7 +13,7 @@ export const metadata = { title: "Fantasy rules" };
 export default function RulesPage() {
   return (
     <>
-      <PageHeader title="Rules" description="How SEES Fantasy works. Based on official FPL, scaled down for five teams." />
+      <PageHeader caption="SEES Fantasy" title="Rules" description="How SEES Fantasy works. Based on official FPL, scaled down for five teams." />
       <Suspense fallback={<LoadingPage rows={10} />}>
         <Rules />
       </Suspense>
@@ -24,8 +24,8 @@ export default function RulesPage() {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="font-heading text-lg font-semibold text-brand">{title}</h2>
-      <div className="flex flex-col gap-2 text-sm leading-relaxed">{children}</div>
+      <h2 className="font-heading text-[1.375rem] leading-[1.15] font-semibold">{title}</h2>
+      <div className="flex flex-col gap-2 text-base leading-normal">{children}</div>
     </section>
   );
 }
@@ -37,7 +37,7 @@ async function Rules() {
   const unlimited = rules.unlimitedTransferMatchdays.map((n) => `Matchday ${n}`).join(" and ");
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <Section title="Your squad">
         <p>
           Pick {rules.squadSize} players: {sp.GK} goalkeepers, {sp.DEF} defenders, {sp.MID} midfielders and {sp.FWD}{" "}
@@ -109,6 +109,10 @@ async function Rules() {
         </p>
       </Section>
 
+      <Section title="Worked examples">
+        <WorkedExamples rules={rules} />
+      </Section>
+
       <Section title="Scoring">
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full min-w-[20rem] text-sm">
@@ -148,5 +152,72 @@ async function Rules() {
         </ul>
       </Section>
     </div>
+  );
+}
+
+/**
+ * Three worked examples (from docs/fantasy-scoring-examples.md E1, E2, E15c).
+ * The numbers come from the rules config, so they follow any rule change.
+ */
+function WorkedExamples({ rules }: { rules: FantasyRules }) {
+  const pts = (key: ScoringKey, pos: Position) => rules.scoring.find((r) => r.key === key)?.points[pos] ?? 0;
+  const ex1 = [
+    ["Appeared", pts("appeared", "FWD")],
+    ["Played 30+ min", pts("played_30", "FWD")],
+    ["Goal", pts("goal", "FWD")],
+    ["Assist", pts("assist", "FWD")],
+  ] as const;
+  const ex1Total = ex1.reduce((s, [, p]) => s + p, 0);
+  const ex2 = [
+    ["Appeared", pts("appeared", "DEF")],
+    ["Played 30+ min", pts("played_30", "DEF")],
+    ["Goal", pts("goal", "DEF")],
+    ["Clean sheet", pts("clean_sheet", "DEF")],
+  ] as const;
+  const ex2Total = ex2.reduce((s, [, p]) => s + p, 0);
+  const extra = 2;
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      <ExampleCard
+        title="Captain forward"
+        story="A Year 5 forward is your captain. He plays all 50 minutes, scores once and assists once."
+        lines={ex1.map(([label, p]) => [label, formatSigned(p)])}
+        total={`${ex1Total} × ${rules.captainMultiplier} = ${ex1Total * rules.captainMultiplier} pts`}
+      />
+      <ExampleCard
+        title="Defender clean sheet"
+        story="A defender plays all 50 minutes, scores, and his team concedes nothing."
+        lines={ex2.map(([label, p]) => [label, formatSigned(p)])}
+        total={`${ex2Total} pts`}
+      />
+      <ExampleCard
+        title="Transfer hit"
+        story={`You have ${rules.freeTransfersPerMatchday} free transfer and make ${rules.freeTransfersPerMatchday + extra}.`}
+        lines={[
+          ["Extra transfers", String(extra)],
+          ["Cost each", formatSigned(-rules.transferHitPoints)],
+        ]}
+        total={`−${extra * rules.transferHitPoints} pts`}
+      />
+    </div>
+  );
+}
+
+function ExampleCard({ title, story, lines, total }: { title: string; story: string; lines: (readonly [string, string])[]; total: string }) {
+  return (
+    <article className="flex flex-col gap-2 rounded-xl bg-card p-4 text-sm shadow-card">
+      <h3 className="text-[1.0625rem] font-semibold">{title}</h3>
+      <p className="text-muted-foreground">{story}</p>
+      <dl className="flex flex-col">
+        {lines.map(([label, value]) => (
+          <div key={label} className="flex justify-between border-t border-border py-1.5">
+            <dt>{label}</dt>
+            <dd className="font-semibold tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-auto border-t-2 border-foreground pt-2 text-right font-heading text-2xl font-bold tabular-nums">{total}</p>
+    </article>
   );
 }

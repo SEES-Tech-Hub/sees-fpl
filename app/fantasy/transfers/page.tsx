@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { EmptyState, LoadingPage, PageHeader } from "@/components/fantasy/states";
+import { EmptyState, LoadingPitch, PageHeader } from "@/components/fantasy/states";
 import { TransferPlanner } from "@/components/fantasy/transfer-planner";
 import { getFantasyRules, getMatchdayState, getPlayers, getTransferState } from "@/lib/fantasy/api";
 import { requireSquad } from "@/lib/fantasy/guards";
@@ -8,7 +8,7 @@ export const metadata = { title: "Transfers" };
 
 export default function TransfersPage() {
   return (
-    <Suspense fallback={<LoadingPage rows={8} />}>
+    <Suspense fallback={<LoadingPitch />}>
       <Transfers />
     </Suspense>
   );
@@ -29,7 +29,7 @@ async function Transfers() {
         <PageHeader title="Transfers" />
         <EmptyState
           title="Transfers are closed"
-          description="There's no matchday open for changes right now."
+          description="No matchday is open for changes right now. Transfers open again after the next matchday is finalised."
           href="/fantasy/points"
           cta="See your points"
         />
@@ -42,7 +42,7 @@ async function Transfers() {
 
   return (
     <>
-      <PageHeader title="Transfers" description={`For ${md.next.name}. Players can only be swapped for one in the same position.`} />
+      <PageHeader caption={`Matchday ${md.next.number} · Transfers`} title="Transfers" />
       <TransferPlanner
         key={squad.map((p) => p.id).join() + state.made + String(state.wildcard.activeThisMatchday)}
         squad={squad}
@@ -50,6 +50,7 @@ async function Transfers() {
         state={state}
         rules={rules}
         deadlineAt={md.next.deadlineAt}
+        serverNow={md.serverNow}
         matchdayName={md.next.name}
       />
     </>

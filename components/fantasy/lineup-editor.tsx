@@ -2,11 +2,13 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeftRight, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { saveLineupAction } from "@/app/fantasy/actions";
-import { DeadlineCountdown } from "@/components/fantasy/deadline-countdown";
-import { PitchCard, PitchRow } from "@/components/fantasy/pitch-card";
+import { DeadlineCard } from "@/components/fantasy/deadline-card";
+import { BenchTray, Pitch, PitchRow } from "@/components/fantasy/pitch";
+import { PlayerChip } from "@/components/fantasy/player-chip";
 import { StatusFlag } from "@/components/fantasy/player-bits";
 import { InlineError } from "@/components/fantasy/states";
 import { Button } from "@/components/ui/button";
@@ -19,10 +21,12 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { ERROR_COPY } from "@/lib/fantasy/errors";
-import { formatMoney, POSITION_LABEL } from "@/lib/fantasy/format";
-import { POSITIONS, type FantasyRules, type Player } from "@/lib/fantasy/types";
+import { formatMoney, POSITION_LABEL, POSITION_PLURAL } from "@/lib/fantasy/format";
+import type { FantasyRules, Player, Position } from "@/lib/fantasy/types";
 import { formationIssue, formationLabel } from "@/lib/fantasy/validate";
 import { cn } from "@/lib/utils";
+
+const PITCH_ORDER: Position[] = ["FWD", "MID", "DEF", "GK"];
 
 type Props = {
   squad: Player[]; // 15 players in slot order
@@ -31,6 +35,9 @@ type Props = {
   rules: FantasyRules;
   locked: boolean;
   deadlineAt: string | null;
+  serverNow: number;
+  matchdayName: string;
+  matchdayNumber: number;
   fixtureByTeam: Record<string, string>;
 };
 
@@ -165,43 +172,45 @@ export function LineupEditor(props: Props) {
   const menuPlayer = menuFor ? byId.get(menuFor) : undefined;
   const menuStarts = menuFor ? order.indexOf(menuFor) < xiSize : false;
 
-  const card = (p: Player) => {
+  const chip = (p: Player) => {
     const isTarget = swapFrom !== null && p.id !== swapFrom && swapped(swapFrom, p.id) !== null;
     return (
-      <PitchCard
+      <PlayerChip
         key={p.id}
         player={p}
-        sub={sub(p)}
-        badge={p.id === captain ? "C" : p.id === vice ? "V" : null}
+        tag={sub(p)}
+        captain={p.id === captain}
+        vice={p.id === vice}
         selected={p.id === swapFrom}
         target={isTarget}
         dimmed={swapFrom !== null && p.id !== swapFrom && !isTarget}
-        flagged={p.status !== "available"}
         onClick={locked ? undefined : () => tap(p.id)}
       />
     );
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <DeadlineCountdown
+    <div className={cn("flex flex-col gap-3", !locked && changed && "pb-24")}>
+      <DeadlineCard
+        matchdayName={props.matchdayName}
+        matchdayNumber={props.matchdayNumber}
         deadlineAt={props.deadlineAt}
-        label={locked ? "Deadline passed" : "Deadline"}
+        serverNow={props.serverNow}
         onPassed={onPassed}
       />
 
       {locked ? (
         <p className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
           <Lock className="size-4 shrink-0" />
-          Your team is locked for this matchday. You can change it again once the next matchday opens.
+          Deadline passed. Your team is locked for Matchday {props.matchdayNumber}.
         </p>
       ) : swapFrom ? (
-        <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm" role="status">
+        <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-1 text-sm" role="status">
           <ArrowLeftRight className="size-4 shrink-0" />
           <span className="flex-1">
-            Tap who swaps with <strong>{byId.get(swapFrom)?.displayName}</strong>
+            Tap a glowing player to swap with <strong>{byId.get(swapFrom)?.displayName}</strong>
           </span>
-          <Button variant="ghost" className="h-10" onClick={() => setSwapFrom(null)}>
+          <Button variant="ghost" className="h-11" onClick={() => setSwapFrom(null)}>
             Cancel
           </Button>
         </div>
@@ -209,29 +218,21 @@ export function LineupEditor(props: Props) {
         <p className="text-sm text-muted-foreground">Tap a player to make them captain or to substitute them.</p>
       )}
 
-      <section aria-label="Starting XI" className="flex flex-col gap-2 rounded-xl bg-brand p-3">
-        <p className="text-center text-xs font-medium text-brand-foreground/80">{formationLabel(xi)}</p>
-        {POSITIONS.map((pos) => {
+      <Pitch caption={formationLabel(xi)}>
+        {PITCH_ORDER.map((pos) => {
           const row = xi.filter((p) => p.position === pos);
           return (
-            <PitchRow key={pos} count={row.length}>
-              {row.map(card)}
+            <PitchRow key={pos} count={row.length} label={POSITION_PLURAL[pos]}>
+              {row.map(chip)}
             </PitchRow>
           );
         })}
-      </section>
+      </Pitch>
 
-      <section aria-label="Bench" className="rounded-xl border border-border bg-muted p-3">
-        <p className="mb-2 text-xs text-muted-foreground">Bench: auto-subs come on left to right (GK replaces GK only)</p>
-        <div className="grid grid-cols-4 gap-1.5">
-          {bench.map((p, i) => (
-            <div key={p.id} className="flex min-w-0 flex-col gap-1">
-              <span className="text-center text-[0.65rem] font-medium text-muted-foreground">{i === 0 ? "GK" : i}</span>
-              {card(p)}
-            </div>
-          ))}
-        </div>
-      </section>
+      <BenchTray
+        note="Auto-subs come on in this order. A goalkeeper only replaces a goalkeeper."
+        items={bench.map((p, i) => ({ key: p.id, label: i === 0 ? "GK" : undefined, node: chip(p) }))}
+      />
 
       {error && <InlineError title="Lineup not saved" message={error} />}
       {!locked && (formationProblem || captainProblem) && (
@@ -239,14 +240,14 @@ export function LineupEditor(props: Props) {
       )}
 
       {!locked && changed && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/80 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-raised backdrop-blur-md">
           <div className="mx-auto flex max-w-2xl gap-3">
-            <Button variant="outline" size="lg" className="h-11 flex-1" onClick={reset} disabled={saving}>
+            <Button variant="outline" size="lg" className="h-11 flex-1 text-[0.9375rem]" onClick={reset} disabled={saving}>
               Undo changes
             </Button>
             <Button
               size="lg"
-              className="h-11 flex-1"
+              className="h-11 flex-1 text-[0.9375rem]"
               onClick={save}
               disabled={saving || Boolean(formationProblem || captainProblem)}
             >
@@ -294,13 +295,16 @@ export function LineupEditor(props: Props) {
                 <Button
                   size="lg"
                   variant="outline"
-                  className={cn("h-12")}
+                  className="h-12"
                   onClick={() => {
                     setSwapFrom(menuPlayer.id);
                     setMenuFor(null);
                   }}
                 >
                   <ArrowLeftRight /> {menuStarts ? "Substitute" : "Bring on or reorder bench"}
+                </Button>
+                <Button asChild size="lg" variant="ghost" className="h-12">
+                  <Link href="/fantasy/transfers">Transfer out</Link>
                 </Button>
               </DrawerFooter>
             </>

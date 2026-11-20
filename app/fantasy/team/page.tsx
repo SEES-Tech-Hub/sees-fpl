@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { LineupEditor } from "@/components/fantasy/lineup-editor";
-import { LoadingPage, PageHeader } from "@/components/fantasy/states";
+import { LoadingPitch, PageHeader } from "@/components/fantasy/states";
 import { getFantasyRules, getMatchdayState, getPlayers } from "@/lib/fantasy/api";
 import { formatMoney } from "@/lib/fantasy/format";
 import { requireSquad } from "@/lib/fantasy/guards";
@@ -10,18 +10,18 @@ export const metadata = { title: "My team" };
 
 export default function TeamPage() {
   return (
-    <Suspense fallback={<LoadingPage rows={4} />}>
+    <Suspense fallback={<LoadingPitch />}>
       <Team />
     </Suspense>
   );
 }
 
-/** "v Y4 (H)" for each team on a matchday, or "No match". */
+/** "v Y4" for each team on a matchday (short enough for a pitch chip). */
 function fixtureLabels(matchday: Matchday | null) {
   const labels: Record<string, string> = {};
   for (const f of matchday?.fixtures ?? []) {
-    if (f.homeTeamId) labels[f.homeTeamId] = `v ${f.awayShort ?? "TBD"} (H)`;
-    if (f.awayTeamId) labels[f.awayTeamId] = `v ${f.homeShort ?? "TBD"} (A)`;
+    if (f.homeTeamId) labels[f.homeTeamId] = `v ${f.awayShort ?? "TBD"}`;
+    if (f.awayTeamId) labels[f.awayTeamId] = `v ${f.homeShort ?? "TBD"}`;
   }
   return labels;
 }
@@ -37,8 +37,9 @@ async function Team() {
   return (
     <>
       <PageHeader
+        caption={md.next ? `Matchday ${md.next.number} · My team` : "My team"}
         title={manager.teamName}
-        description={`${md.next ? md.next.name : "Season finished"} · Squad value ${formatMoney(team.squadValueTenths)} · In the bank ${formatMoney(team.bankTenths)}`}
+        description={`Squad value ${formatMoney(team.squadValueTenths)} · ${formatMoney(team.bankTenths)} in the bank`}
       />
       <LineupEditor
         // Re-mount when the saved lineup changes (after Save or a transfer).
@@ -49,6 +50,9 @@ async function Team() {
         rules={rules}
         locked={team.locked}
         deadlineAt={md.next?.deadlineAt ?? null}
+        serverNow={md.serverNow}
+        matchdayName={md.next?.name ?? md.current?.name ?? "Matchday"}
+        matchdayNumber={md.next?.number ?? md.current?.number ?? 0}
         fixtureByTeam={fixtureLabels(md.next)}
       />
     </>

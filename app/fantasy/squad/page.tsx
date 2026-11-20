@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { DeadlineIn } from "@/components/fantasy/deadline-card";
 import { SquadBuilder } from "@/components/fantasy/squad-builder";
-import { DeadlineCountdown } from "@/components/fantasy/deadline-countdown";
-import { EmptyState, LoadingPage, PageHeader } from "@/components/fantasy/states";
-import { getFantasyRules, getMatchdayState, getMyTeam, getPlayers, getTeams } from "@/lib/fantasy/api";
+import { EmptyState, LoadingPitch, PageHeader } from "@/components/fantasy/states";
+import { getFantasyRules, getMatchdayState, getMyTeam, getPlayers } from "@/lib/fantasy/api";
 import { formatMoney } from "@/lib/fantasy/format";
 import { requireManager } from "@/lib/fantasy/guards";
 
@@ -11,18 +11,17 @@ export const metadata = { title: "Pick your squad" };
 
 export default function SquadPage() {
   return (
-    <Suspense fallback={<LoadingPage rows={10} />}>
+    <Suspense fallback={<LoadingPitch />}>
       <Squad />
     </Suspense>
   );
 }
 
 async function Squad() {
-  const { user, manager } = await requireManager("/fantasy/squad");
-  const [team, players, teams, rules, md] = await Promise.all([
+  const { user } = await requireManager("/fantasy/squad");
+  const [team, players, rules, md] = await Promise.all([
     getMyTeam(user),
     getPlayers(),
-    getTeams(),
     getFantasyRules(),
     getMatchdayState(),
   ]);
@@ -32,18 +31,28 @@ async function Squad() {
   return (
     <>
       <PageHeader
+        display
         title="Pick your squad"
-        description={`${manager.teamName}: ${rules.squadPositions.GK} GK, ${rules.squadPositions.DEF} DEF, ${rules.squadPositions.MID} MID, ${rules.squadPositions.FWD} FWD, ${formatMoney(rules.budgetTenths)}, at most ${rules.maxPerTeam} from one year.`}
+        caption={
+          md.next ? (
+            <>
+              Matchday {md.next.number} · <DeadlineIn deadlineAt={md.next.deadlineAt} serverNow={md.serverNow} />
+            </>
+          ) : undefined
+        }
+        description={`Pick ${rules.squadSize} players within ${formatMoney(rules.budgetTenths)}. At most ${rules.maxPerTeam} from one year.`}
       />
-      {md.next ? (
-        <DeadlineCountdown deadlineAt={md.next.deadlineAt} label={`${md.next.name} deadline`} />
-      ) : null}
       {!md.next ? (
-        <EmptyState title="Squads are closed" description="There's no matchday left to pick a squad for." />
+        <EmptyState
+          title="Squads are closed"
+          description="There's no matchday left to pick a squad for."
+          href="/fantasy/rankings"
+          cta="See the rankings"
+        />
       ) : players.length === 0 ? (
-        <EmptyState title="No players yet" description="The organisers haven't loaded the squads. Check back soon." />
+        <EmptyState title="No players yet" description="The organisers haven't loaded the squads yet. Check back soon." />
       ) : (
-        <SquadBuilder players={players} teams={teams} rules={rules} draftKey={`sees-fantasy-draft:${user.id}`} />
+        <SquadBuilder players={players} rules={rules} draftKey={`sees-fantasy-draft:${user.id}`} />
       )}
     </>
   );

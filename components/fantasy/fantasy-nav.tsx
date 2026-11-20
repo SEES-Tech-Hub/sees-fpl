@@ -34,8 +34,8 @@ export function FantasyNav() {
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-11 items-center rounded-lg px-3 text-sm font-medium text-brand-foreground/80 transition-colors hover:bg-brand-foreground/10",
-                  active && "bg-brand-foreground text-brand hover:bg-brand-foreground",
+                  "flex h-11 items-center rounded-full px-4 text-[0.9375rem] font-medium text-muted-foreground transition-colors duration-(--dur-fast) hover:bg-muted",
+                  active && "bg-primary text-primary-foreground hover:bg-primary",
                 )}
               >
                 {link.label}

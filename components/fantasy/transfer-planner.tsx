@@ -2,13 +2,16 @@
 
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Sparkles, Undo2 } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { activateWildcardAction, makeTransfersAction } from "@/app/fantasy/actions";
-import { DeadlineCountdown } from "@/components/fantasy/deadline-countdown";
-import { PlayerRow, PositionTag } from "@/components/fantasy/player-bits";
+import { DeadlineCard } from "@/components/fantasy/deadline-card";
+import { BenchTray, Pitch, PitchRow } from "@/components/fantasy/pitch";
+import { PositionTag, StatusFlag } from "@/components/fantasy/player-bits";
+import { PlayerChip } from "@/components/fantasy/player-chip";
+import { PlayerPickerList } from "@/components/fantasy/player-picker";
+import { RoundButton } from "@/components/fantasy/squad-builder";
 import { InlineError } from "@/components/fantasy/states";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,90 +22,86 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { ERROR_COPY } from "@/lib/fantasy/errors";
-import { formatMoney, POSITION_PLURAL } from "@/lib/fantasy/format";
-import { POSITIONS, type FantasyRules, type Player, type TransferState } from "@/lib/fantasy/types";
+import { formatMoney, POSITION_LABEL, POSITION_PLURAL } from "@/lib/fantasy/format";
+import type { FantasyRules, Player, Position, TransferState } from "@/lib/fantasy/types";
 import { previewTransferCost, squadIssues } from "@/lib/fantasy/validate";
 import { cn } from "@/lib/utils";
 
+const PITCH_ORDER: Position[] = ["FWD", "MID", "DEF", "GK"];
+
 type Props = {
-  squad: Player[];
+  squad: Player[]; // 15 in slot order: 1–11 XI, 12–15 bench
   players: Player[];
   state: TransferState;
   rules: FantasyRules;
   deadlineAt: string | null;
+  serverNow: number;
   matchdayName: string;
 };
 
-export function TransferPlanner({ squad, players, state, rules, deadlineAt, matchdayName }: Props) {
+export function TransferPlanner({ squad, players, state, rules, deadlineAt, serverNow, matchdayName }: Props) {
   const router = useRouter();
   const byId = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   // out player id → in player id (null while choosing)
   const [plan, setPlan] = useState<Map<string, string | null>>(new Map());
-  const [choosingFor, setChoosingFor] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [sheetFor, setSheetFor] = useState<string | null>(null);
+  const [pickFor, setPickFor] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [wildcardOpen, setWildcardOpen] = useState(false);
   const [locked, setLocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const complete = [...plan].filter((entry): entry is [string, string] => entry[1] !== null);
+  const complete = [...plan].filter((e): e is [string, string] => e[1] !== null);
   const newSquad = squad.map((p) => {
     const inId = plan.get(p.id);
     return inId ? byId.get(inId)! : p;
   });
-  const bankAfter = state.bankTenths + squad.reduce((s, p) => s + p.priceTenths, 0) - newSquad.reduce((s, p) => s + p.priceTenths, 0);
+  const cost = (list: Player[]) => list.reduce((s, p) => s + p.priceTenths, 0);
+  const bankAfter = state.bankTenths + cost(squad) - cost(newSquad);
   const preview = previewTransferCost(state, complete.length, rules);
   const blocking = squadIssues(newSquad, rules).filter((i) => i.blocking);
   const unlimited = state.freeTransfers === null;
   const wildcardAllowed = state.wildcard.available && !unlimited;
+  const totalCost = state.costPoints + preview.costPoints;
 
   const onPassed = useCallback(() => {
     setLocked(true);
     router.refresh();
   }, [router]);
 
-  function toggleOut(id: string) {
+  function cancel(outId: string) {
     const next = new Map(plan);
-    if (next.has(id)) next.delete(id);
-    else {
-      next.set(id, null);
-      setChoosingFor(id);
-      setSearch("");
-    }
+    next.delete(outId);
     setPlan(next);
     setError(null);
   }
 
   function choose(inId: string) {
-    if (!choosingFor) return;
-    setPlan(new Map(plan).set(choosingFor, inId));
-    setChoosingFor(null);
+    if (!pickFor) return;
+    setPlan(new Map(plan).set(pickFor, inId));
+    setPickFor(null);
+    setError(null);
   }
 
-  // Candidates for the player being replaced: same position, not already in the squad.
-  const outPlayer = choosingFor ? byId.get(choosingFor) : undefined;
-  const candidates = useMemo(() => {
-    if (!outPlayer) return [];
-    const inSquad = new Set(newSquad.map((p) => p.id));
-    const q = search.trim().toLowerCase();
-    return players
-      .filter((p) => p.position === outPlayer.position && !inSquad.has(p.id))
-      .filter((p) => !q || p.displayName.toLowerCase().includes(q) || p.teamShort.toLowerCase().includes(q))
-      .sort((a, b) => b.priceTenths - a.priceTenths || a.displayName.localeCompare(b.displayName));
-  }, [outPlayer, newSquad, players, search]);
-
-  function candidateProblem(p: Player): string | null {
-    if (!outPlayer) return null;
-    const current = plan.get(outPlayer.id);
-    const base = newSquad.filter((x) => x.id !== (current ?? outPlayer.id));
-    const money = rules.budgetTenths - base.reduce((s, x) => s + x.priceTenths, 0);
-    if (p.priceTenths > money) return `Only ${formatMoney(money)} to spend`;
+  /** Why a replacement can't come in for `outId`, or null. */
+  function reasonFor(outId: string, p: Player): string | null {
+    const current = plan.get(outId) ?? outId;
+    const base = newSquad.filter((x) => x.id !== current);
+    const money = rules.budgetTenths - cost(base);
+    if (p.priceTenths > money) return "Not enough budget";
     if (base.filter((x) => x.teamId === p.teamId).length >= rules.maxPerTeam) {
-      return `Already ${rules.maxPerTeam} from Year ${p.teamYear}`;
+      return `Max ${rules.maxPerTeam} from Year ${p.teamYear}`;
     }
     return null;
   }
@@ -118,9 +117,7 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, matc
           if (result.error.code === "DEADLINE_PASSED") onPassed();
           return;
         }
-        toast.success(
-          `${complete.length} transfer${complete.length === 1 ? "" : "s"} made. Check your lineup and captain.`,
-        );
+        toast.success(complete.length === 1 ? "Transfer confirmed" : "Transfers confirmed");
         setPlan(new Map());
         router.refresh();
       } catch {
@@ -139,7 +136,7 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, matc
           toast.error(result.error.message);
           return;
         }
-        toast.success("Wildcard played. All transfers are free this matchday.");
+        toast.success("Wildcard played");
         router.refresh();
       } catch {
         toast.error(ERROR_COPY.UNKNOWN);
@@ -147,124 +144,126 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, matc
     });
   }
 
+  // Each slot shows the incoming player if one is planned.
+  const slot = (p: Player) => {
+    const inId = plan.get(p.id);
+    const shown = inId ? byId.get(inId)! : p;
+    return (
+      <PlayerChip
+        key={p.id}
+        player={shown}
+        tag={plan.has(p.id) ? (inId ? "IN" : "OUT") : formatMoney(shown.priceTenths)}
+        tagLabel={plan.has(p.id) ? (inId ? `coming in for ${p.displayName}` : "transferring out") : undefined}
+        selected={plan.has(p.id)}
+        dimmed={plan.has(p.id) && !inId}
+        onClick={locked ? undefined : () => setSheetFor(p.id)}
+      />
+    );
+  };
+  const xi = squad.slice(0, rules.startingSize);
+  const bench = squad.slice(rules.startingSize);
+  const sheetPlayer = sheetFor ? byId.get(sheetFor) : undefined;
+  const sheetIn = sheetFor ? plan.get(sheetFor) : undefined;
+  const pickOut = pickFor ? byId.get(pickFor) : undefined;
+  const inSquad = new Set(newSquad.map((p) => p.id));
+
   return (
-    <div className="flex flex-col gap-4">
-      <DeadlineCountdown deadlineAt={deadlineAt} label={`${matchdayName} deadline`} onPassed={onPassed} />
-
-      {/* Allowance */}
-      <section aria-label="Transfer allowance" className="grid grid-cols-3 gap-2">
-        <Stat label="Free transfers" value={unlimited ? "∞" : String(state.freeTransfers)} hint={unlimited ? "Unlimited" : undefined} />
-        <Stat label="Already made" value={String(state.made)} hint={state.costPoints ? `−${state.costPoints} pts` : undefined} />
-        <Stat label="In the bank" value={formatMoney(bankAfter)} danger={bankAfter < 0} />
-      </section>
-
-      {/* Wildcard */}
-      <section
-        aria-label="Wildcard"
-        className={cn(
-          "flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2",
-          state.wildcard.activeThisMatchday && "border-highlight bg-highlight/15",
-        )}
-      >
-        <Sparkles className="size-5 shrink-0 text-brand" />
-        <div className="min-w-0 flex-1 text-sm">
-          <p className="font-medium">Wildcard</p>
-          <p className="text-xs text-muted-foreground">
-            {state.wildcard.activeThisMatchday
-              ? "Active: every transfer this matchday is free."
-              : state.wildcard.usedOnMatchday
-                ? `Used on Matchday ${state.wildcard.usedOnMatchday}.`
-                : unlimited
-                  ? "Transfers are already free this matchday, so save it."
-                  : "Unlimited free transfers for one matchday. Once per season."}
+    <div className={cn("flex flex-col gap-3", plan.size > 0 && "pb-28")}>
+      {/* Top bar: free transfers, cost so far, Wildcard */}
+      <section aria-label="Transfer allowance" className="flex items-stretch gap-2">
+        <div className="flex-1 rounded-xl bg-card px-3 py-2 shadow-card">
+          <p className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Free</p>
+          <p className="font-heading text-xl font-bold tabular-nums">
+            {unlimited ? "Unlimited" : `${Math.max(0, (state.freeTransfers ?? 0) - complete.length)} free`}
           </p>
         </div>
-        {state.wildcard.activeThisMatchday ? (
-          <Badge className="bg-highlight text-highlight-foreground">Active</Badge>
-        ) : wildcardAllowed && !locked ? (
-          <Button variant="outline" className="h-11" onClick={() => setWildcardOpen(true)}>
-            Play
-          </Button>
-        ) : null}
+        <div className="flex-1 rounded-xl bg-card px-3 py-2 shadow-card">
+          <p className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Cost</p>
+          <p className={cn("font-heading text-xl font-bold tabular-nums", totalCost > 0 && "text-destructive")}>
+            {totalCost > 0 ? `▼ −${totalCost} pts` : "0 pts"}
+          </p>
+        </div>
+        <div className="flex-1 rounded-xl bg-card px-3 py-2 shadow-card">
+          <p className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Bank</p>
+          <p className={cn("font-heading text-xl font-bold tabular-nums", bankAfter < 0 && "text-destructive")}>
+            {formatMoney(bankAfter)}
+          </p>
+        </div>
       </section>
 
-      {/* Squad */}
-      {POSITIONS.map((pos) => (
-        <section key={pos} aria-label={POSITION_PLURAL[pos]}>
-          <h2 className="mb-1 font-heading text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-            {POSITION_PLURAL[pos]}
-          </h2>
-          <ul className="rounded-xl border border-border bg-card px-2">
-            {squad
-              .filter((p) => p.position === pos)
-              .map((p) => {
-                const isOut = plan.has(p.id);
-                const inId = plan.get(p.id);
-                const incoming = inId ? byId.get(inId) : undefined;
-                return (
-                  <li key={p.id} className="border-b border-border last:border-b-0 [&>div]:border-b-0">
-                    <PlayerRow
-                      as="div"
-                      player={p}
-                      highlight={isOut}
-                      action={
-                        <Button
-                          variant={isOut ? "destructive" : "outline"}
-                          className="h-11 w-16 shrink-0"
-                          disabled={locked}
-                          onClick={() => toggleOut(p.id)}
-                          aria-label={isOut ? `Keep ${p.displayName}` : `Transfer out ${p.displayName}`}
-                        >
-                          {isOut ? <Undo2 /> : "Out"}
-                        </Button>
-                      }
-                    />
-                    {isOut && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setChoosingFor(p.id);
-                          setSearch("");
-                        }}
-                        className="mb-2 flex min-h-12 w-full items-center gap-2 rounded-lg border border-dashed border-primary px-3 text-left text-sm"
-                      >
-                        <ArrowRight className="size-4 shrink-0 text-primary" />
-                        {incoming ? (
-                          <span className="flex-1 truncate">
-                            In: <strong>{incoming.displayName}</strong> ({incoming.teamShort}, {formatMoney(incoming.priceTenths)})
-                          </span>
-                        ) : (
-                          <span className="flex-1 font-medium text-primary">Choose a replacement</span>
-                        )}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-          </ul>
-        </section>
-      ))}
+      {state.wildcard.activeThisMatchday ? (
+        <p role="status" className="flex items-center gap-2 rounded-xl bg-highlight px-3 py-2.5 text-sm font-semibold text-highlight-foreground">
+          <Sparkles className="size-4 shrink-0" />
+          Wildcard active: unlimited free transfers this matchday.
+        </p>
+      ) : (
+        <div className="flex items-center gap-3 rounded-xl border border-border px-3 py-2">
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-semibold">Wildcard</p>
+            <p className="text-xs text-muted-foreground">
+              {state.wildcard.usedOnMatchday
+                ? `Used on Matchday ${state.wildcard.usedOnMatchday}.`
+                : unlimited
+                  ? "Transfers are already free this matchday. Save it for later."
+                  : "Unlimited free transfers for one matchday. Once a season."}
+            </p>
+          </div>
+          {wildcardAllowed && !locked && (
+            <Button
+              variant="outline"
+              className="h-11 border-2 border-highlight px-4 text-[0.9375rem]"
+              onClick={() => setWildcardOpen(true)}
+            >
+              <Sparkles /> Play Wildcard
+            </Button>
+          )}
+        </div>
+      )}
+
+      <DeadlineCard
+        matchdayName={matchdayName}
+        matchdayNumber={state.matchdayNumber}
+        deadlineAt={deadlineAt}
+        serverNow={serverNow}
+        onPassed={onPassed}
+      />
+
+      <p className="text-sm text-muted-foreground">
+        Tap a player to transfer them out. Replacements must play the same position.
+      </p>
+
+      <Pitch>
+        {PITCH_ORDER.map((pos) => {
+          const row = xi.filter((p) => p.position === pos);
+          return (
+            <PitchRow key={pos} count={row.length} label={POSITION_PLURAL[pos]}>
+              {row.map((p) => slot(p))}
+            </PitchRow>
+          );
+        })}
+      </Pitch>
+      <BenchTray items={bench.map((p) => ({ key: p.id, node: slot(p) }))} />
 
       {error && <InlineError title="Transfers not made" message={error} />}
 
       {plan.size > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/80 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-raised backdrop-blur-md">
           <div className="mx-auto flex max-w-2xl items-center gap-3">
-            <div className="min-w-0 flex-1 text-sm" aria-live="polite">
-              <p className="font-medium">
+            <div className="min-w-0 flex-1" aria-live="polite">
+              <p className="font-heading text-lg font-semibold tabular-nums">
                 {complete.length} transfer{complete.length === 1 ? "" : "s"} ·{" "}
                 <span className={cn(preview.costPoints > 0 && "text-destructive")}>
                   {preview.costPoints > 0 ? `−${preview.costPoints} pts` : "free"}
                 </span>
               </p>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className={cn("truncate text-[0.8125rem]", blocking.length ? "text-destructive" : "text-muted-foreground")}>
                 {blocking[0]?.message ??
-                  (complete.length < plan.size ? "Choose a replacement for each player out." : `Bank after: ${formatMoney(bankAfter)}`)}
+                  (complete.length < plan.size ? "Choose a replacement for each player out." : `${formatMoney(bankAfter)} left in the bank`)}
               </p>
             </div>
             <Button
               size="lg"
-              className="h-11 px-5"
+              className="h-11 px-5 text-[0.9375rem]"
               disabled={locked || pending || complete.length === 0 || complete.length < plan.size || blocking.length > 0}
               onClick={() => setConfirmOpen(true)}
             >
@@ -274,105 +273,132 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, matc
         </div>
       )}
 
-      {/* Replacement picker */}
-      <Drawer open={outPlayer !== undefined} onOpenChange={(open) => !open && setChoosingFor(null)}>
-        <DrawerContent className="max-h-[88vh]">
-          {outPlayer && (
+      {/* Player sheet */}
+      <Drawer open={sheetPlayer !== undefined} onOpenChange={(o) => !o && setSheetFor(null)}>
+        <DrawerContent>
+          {sheetPlayer && (
             <>
               <DrawerHeader>
-                <DrawerTitle>Replace {outPlayer.displayName}</DrawerTitle>
+                <DrawerTitle className="flex items-center justify-center gap-2">
+                  {sheetPlayer.displayName} <StatusFlag status={sheetPlayer.status} />
+                </DrawerTitle>
                 <DrawerDescription>
-                  {POSITION_PLURAL[outPlayer.position]} · selling for {formatMoney(outPlayer.priceTenths)}
+                  {POSITION_LABEL[sheetPlayer.position]} · Year {sheetPlayer.teamYear} · sells for{" "}
+                  {formatMoney(sheetPlayer.priceTenths)}
+                  {sheetIn ? ` · replaced by ${byId.get(sheetIn)?.displayName}` : ""}
                 </DrawerDescription>
               </DrawerHeader>
-              <div className="px-4 pb-2">
-                <Input
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search name or year (Y3)"
-                  aria-label="Search replacements"
-                  className="h-11 text-base"
-                />
-              </div>
-              <ul className="overflow-y-auto px-4 pb-6">
-                {candidates.length === 0 && (
-                  <li className="py-6 text-center text-sm text-muted-foreground">No players match.</li>
+              <DrawerFooter>
+                <Button
+                  size="lg"
+                  className="h-12 text-[0.9375rem]"
+                  onClick={() => {
+                    setPlan(new Map(plan).set(sheetPlayer.id, plan.get(sheetPlayer.id) ?? null));
+                    setPickFor(sheetPlayer.id);
+                    setSheetFor(null);
+                  }}
+                >
+                  {plan.has(sheetPlayer.id) ? "Choose a different replacement" : "Transfer out"}
+                </Button>
+                {plan.has(sheetPlayer.id) && (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-12 text-[0.9375rem]"
+                    onClick={() => {
+                      cancel(sheetPlayer.id);
+                      setSheetFor(null);
+                    }}
+                  >
+                    Keep {sheetPlayer.displayName}
+                  </Button>
                 )}
-                {candidates.map((p) => {
-                  const problem = candidateProblem(p);
-                  return (
-                    <PlayerRow
-                      key={p.id}
-                      player={p}
-                      note={problem ? <span className="text-destructive">{problem}</span> : undefined}
-                      action={
-                        <Button
-                          className="h-11 w-16 shrink-0"
-                          variant="outline"
-                          disabled={Boolean(problem)}
-                          onClick={() => choose(p.id)}
-                          aria-label={`Bring in ${p.displayName}`}
-                        >
-                          In
-                        </Button>
-                      }
-                    />
-                  );
-                })}
-              </ul>
+              </DrawerFooter>
             </>
           )}
         </DrawerContent>
       </Drawer>
 
-      {/* Confirm transfers */}
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm transfers</DialogTitle>
-            <DialogDescription>
+      {/* Replacement picker: same position, affordable */}
+      <Drawer
+        open={pickOut !== undefined}
+        onOpenChange={(o) => {
+          if (o || !pickFor) return;
+          if (!plan.get(pickFor)) cancel(pickFor);
+          setPickFor(null);
+        }}
+      >
+        <DrawerContent className="flex max-h-[90dvh] flex-col">
+          {pickOut && (
+            <>
+              <DrawerHeader>
+                <DrawerTitle>Replace {pickOut.displayName}</DrawerTitle>
+                <DrawerDescription>
+                  {POSITION_PLURAL[pickOut.position]} you can afford · selling for {formatMoney(pickOut.priceTenths)}
+                </DrawerDescription>
+              </DrawerHeader>
+              <PlayerPickerList
+                key={pickOut.id}
+                players={players.filter((p) => p.position === pickOut.position && !inSquad.has(p.id))}
+                position={pickOut.position}
+                hideBlocked
+                reasonFor={(p) => reasonFor(pickOut.id, p)}
+                renderAction={(p, reason) => (
+                  <RoundButton added={false} disabled={Boolean(reason)} name={p.displayName} onClick={() => choose(p.id)} />
+                )}
+              />
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
+
+      {/* Confirm sheet */}
+      <Drawer open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Confirm transfers</DrawerTitle>
+            <DrawerDescription>
               {preview.costPoints > 0
-                ? `${preview.extra} more than your free transfers: −${preview.costPoints} points on ${matchdayName}.`
+                ? `${preview.extra} more than your free transfers: −${preview.costPoints} pts from ${matchdayName}.`
                 : "These transfers are free."}{" "}
-              Transfers can&apos;t be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <ul className="flex flex-col gap-2">
+              They can&apos;t be undone.
+            </DrawerDescription>
+          </DrawerHeader>
+          <ul className="flex flex-col gap-2 px-4">
             {complete.map(([o, i]) => {
               const out = byId.get(o)!;
               const inn = byId.get(i)!;
               return (
-                <li key={o} className="flex items-center gap-2 text-sm">
-                  <PositionTag position={out.position} />
+                <li key={o} className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
+                  <PositionTag position={out.position} className="bg-background" />
                   <span className="min-w-0 flex-1 truncate text-destructive line-through">{out.displayName}</span>
                   <ArrowRight className="size-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate font-medium">{inn.displayName}</span>
+                  <span className="min-w-0 flex-1 truncate font-semibold">{inn.displayName}</span>
                 </li>
               );
             })}
           </ul>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" className="h-11">
+          <DrawerFooter>
+            <Button size="lg" className="h-12 text-[0.9375rem]" onClick={confirm} disabled={pending}>
+              {pending ? "Confirming…" : complete.length === 1 ? "Confirm transfer" : `Confirm ${complete.length} transfers`}
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline" size="lg" className="h-12 text-[0.9375rem]">
                 Back
               </Button>
-            </DialogClose>
-            <Button className="h-11" onClick={confirm} disabled={pending}>
-              {pending ? "Making transfers…" : "Confirm"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
-      {/* Confirm Wildcard */}
+      {/* Wildcard: risky and permanent, so a dialog */}
       <Dialog open={wildcardOpen} onOpenChange={setWildcardOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Play your Wildcard?</DialogTitle>
             <DialogDescription>
-              Every transfer for {matchdayName} becomes free, including any you&apos;ve already made. You only get one,
-              and it can&apos;t be undone.
+              Every transfer for {matchdayName} becomes free, including any you&apos;ve already made. You get one a
+              season, and it can&apos;t be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -387,16 +413,6 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, matc
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-function Stat({ label, value, hint, danger }: { label: string; value: string; hint?: string; danger?: boolean }) {
-  return (
-    <div className={cn("rounded-xl border border-border bg-card px-3 py-2", danger && "border-destructive")}>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={cn("font-heading text-xl font-semibold tabular-nums", danger && "text-destructive")}>{value}</p>
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

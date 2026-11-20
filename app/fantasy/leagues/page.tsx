@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { CreateLeagueForm, JoinLeagueForm } from "@/components/fantasy/league-forms";
-import { LoadingPage, PageHeader } from "@/components/fantasy/states";
+import { EmptyState, LoadingPage, PageHeader } from "@/components/fantasy/states";
+import { RankingTabs } from "@/components/fantasy/ranking-tabs";
 import { Separator } from "@/components/ui/separator";
 import { getFantasyRules, getMyLeagues } from "@/lib/fantasy/api";
 import { ordinal } from "@/lib/fantasy/format";
@@ -13,7 +14,7 @@ export const metadata = { title: "Leagues" };
 export default function LeaguesPage() {
   return (
     <>
-      <PageHeader title="Leagues" description="Private mini-leagues with your friends, joined by code." />
+      <PageHeader caption="SEES Fantasy" title="Leagues" description="Private mini-leagues with your friends, joined by code." />
       <Suspense fallback={<LoadingPage rows={3} />}>
         <Leagues />
       </Suspense>
@@ -27,13 +28,15 @@ async function Leagues() {
 
   return (
     <>
+      <RankingTabs active="leagues" myYear={user.yearGroup} />
       <section aria-label="Your leagues">
         {leagues.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-            You&apos;re not in any leagues yet. Join one with a code, or start your own below.
-          </p>
+          <EmptyState
+            title="No leagues yet"
+            description="You're not in a league yet. Create one and share the code with friends."
+          />
         ) : (
-          <ul className="rounded-xl border border-border bg-card">
+          <ul className="rounded-xl bg-card shadow-card">
             {leagues.map((l) => (
               <li key={l.id} className="border-b border-border last:border-b-0">
                 <Link href={`/fantasy/leagues/${l.id}`} className="flex min-h-14 items-center gap-3 px-3 py-2">
@@ -44,7 +47,7 @@ async function Leagues() {
                       {l.isOwner ? " · you created it" : ""}
                     </p>
                   </div>
-                  <span className="font-heading text-lg font-semibold tabular-nums">
+                  <span className="font-heading text-xl font-bold tabular-nums">
                     {l.myRank ? ordinal(l.myRank) : "–"}
                   </span>
                   <ChevronRight className="size-4 text-muted-foreground" />
