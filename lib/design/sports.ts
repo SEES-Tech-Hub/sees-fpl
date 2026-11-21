@@ -28,3 +28,4 @@ export const sportIcons: Record<string, LucideIcon> = {
   mobile_games: Gamepad2,
   mortal_kombat: HandFist,
 };
+export type SportSlug = keyof typeof sportIcons;

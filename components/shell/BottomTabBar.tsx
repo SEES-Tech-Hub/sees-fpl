@@ -1,0 +1,98 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { House, Trophy, Shirt, ListOrdered, Menu, X } from "lucide-react";
+
+const TABS = [
+  { href: "/", label: "Home", icon: House },
+  { href: "/sports", label: "Sports", icon: Trophy },
+  { href: "/fantasy", label: "Fantasy", icon: Shirt },
+  { href: "/tables", label: "Tables", icon: ListOrdered },
+];
+
+interface BottomTabBarProps {
+  hasLiveMatch?: boolean;
+  role?: "user" | "official" | "admin";
+}
+
+export function BottomTabBar({ hasLiveMatch = false, role = "user" }: BottomTabBarProps) {
+  const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  return (
+    <>
+      <nav
+        aria-label="Bottom tabs"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
+      >
+        <div className="grid h-16 grid-cols-5 items-center">
+          {TABS.map(({ href, label, icon: Icon }) => {
+            const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="flex min-h-[44px] flex-col items-center justify-center gap-1 text-[11px] font-medium"
+              >
+                <span
+                  className={`relative flex h-8 w-12 items-center justify-center rounded-full transition-colors ${
+                    active ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
+                  {href === "/" && hasLiveMatch && (
+                    <span className="absolute top-1.5 right-3 h-2 w-2 rounded-full bg-destructive" />
+                  )}
+                </span>
+                <span className={active ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            className="flex min-h-[44px] flex-col items-center justify-center gap-1 text-[11px] font-medium text-muted-foreground"
+          >
+            <span className="flex h-8 w-12 items-center justify-center">
+              <Menu size={22} strokeWidth={1.75} aria-hidden="true" />
+            </span>
+            <span>More</span>
+          </button>
+        </div>
+      </nav>
+
+      {moreOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/50 lg:hidden" onClick={() => setMoreOpen(false)}>
+          <div className="rounded-t-xl bg-card p-5 pb-8 shadow-raised" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <span className="font-heading text-lg font-semibold">More</span>
+              <button type="button" onClick={() => setMoreOpen(false)} aria-label="Close menu" className="p-2">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-2 text-sm font-medium">
+              <Link href="/fantasy/rules" onClick={() => setMoreOpen(false)} className="rounded-lg p-3 hover:bg-muted">
+                Fantasy rules
+              </Link>
+              {(role === "official" || role === "admin") && (
+                <Link href="/console" onClick={() => setMoreOpen(false)} className="rounded-lg p-3 text-primary hover:bg-muted">
+                  Match console
+                </Link>
+              )}
+              {role === "admin" && (
+                <Link href="/admin" onClick={() => setMoreOpen(false)} className="rounded-lg p-3 text-primary hover:bg-muted">
+                  Admin portal
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
