@@ -298,6 +298,8 @@ begin
     from public.matchdays md
     where md.number > greatest(1, v_mgr.last_rollover_matchday)
       and md.number <= p_target_md.number
+      and md.deadline_at is not null
+      and md.deadline_at <= now()
       and not (md.number = any(v_rules.unlimited_transfer_matchdays));
 
     if v_passed_cnt > 0 then
@@ -309,7 +311,17 @@ begin
 
     update public.managers
     set free_transfers = v_mgr.free_transfers,
-        last_rollover_matchday = p_target_md.number
+        last_rollover_matchday = greatest(
+          v_mgr.last_rollover_matchday,
+          coalesce((
+            select max(md.number)
+            from public.matchdays md
+            where md.number > v_mgr.last_rollover_matchday
+              and md.number <= p_target_md.number
+              and md.deadline_at is not null
+              and md.deadline_at <= now()
+          ), v_mgr.last_rollover_matchday)
+        )
     where id = v_mgr.id
     returning * into v_mgr;
   end if;
