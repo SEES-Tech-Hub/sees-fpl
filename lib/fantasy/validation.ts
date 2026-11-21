@@ -5,7 +5,7 @@ import type {
   PickInput,
   PlayerPosition,
   ValidationResult,
-} from "./types";
+} from "./engine-types";
 
 export function isDeadlinePassed(
   matchday: Pick<MatchdayInfo, "deadline_at" | "status">,
@@ -69,16 +69,28 @@ export function validateSquad(
   }
 
   if (posCounts.GK !== rules.gk_quota) {
-    return { valid: false, reason: `Squad must have exactly ${rules.gk_quota} goalkeepers.` };
+    return {
+      valid: false,
+      reason: `Squad must have exactly ${rules.gk_quota} goalkeepers.`,
+    };
   }
   if (posCounts.DEF !== rules.def_quota) {
-    return { valid: false, reason: `Squad must have exactly ${rules.def_quota} defenders.` };
+    return {
+      valid: false,
+      reason: `Squad must have exactly ${rules.def_quota} defenders.`,
+    };
   }
   if (posCounts.MID !== rules.mid_quota) {
-    return { valid: false, reason: `Squad must have exactly ${rules.mid_quota} midfielders.` };
+    return {
+      valid: false,
+      reason: `Squad must have exactly ${rules.mid_quota} midfielders.`,
+    };
   }
   if (posCounts.FWD !== rules.fwd_quota) {
-    return { valid: false, reason: `Squad must have exactly ${rules.fwd_quota} forwards.` };
+    return {
+      valid: false,
+      reason: `Squad must have exactly ${rules.fwd_quota} forwards.`,
+    };
   }
 
   return { valid: true };
@@ -89,7 +101,12 @@ export function isValidStartingFormation(
   rules: FantasyRules,
 ): boolean {
   if (starters.length !== rules.starting_size) return false;
-  const counts: Record<PlayerPosition, number> = { GK: 0, DEF: 0, MID: 0, FWD: 0 };
+  const counts: Record<PlayerPosition, number> = {
+    GK: 0,
+    DEF: 0,
+    MID: 0,
+    FWD: 0,
+  };
   for (const s of starters) {
     counts[s.position] += 1;
   }
@@ -127,7 +144,10 @@ export function validateLineupAndCaptains(
   for (const pick of picks) {
     const player = squadMap.get(pick.player_id);
     if (!player) {
-      return { valid: false, reason: "All picks must belong to your current squad." };
+      return {
+        valid: false,
+        reason: "All picks must belong to your current squad.",
+      };
     }
     if (seenPlayers.has(pick.player_id)) {
       return { valid: false, reason: "Duplicate player in lineup." };
@@ -143,16 +163,27 @@ export function validateLineupAndCaptains(
 
     if (pick.is_starter) {
       if (pick.bench_order !== null) {
-        return { valid: false, reason: "Starting players cannot have a bench order." };
+        return {
+          valid: false,
+          reason: "Starting players cannot have a bench order.",
+        };
       }
       starters.push(player);
       if (pick.is_captain) {
-        if (captainId) return { valid: false, reason: "Only one captain can be selected." };
+        if (captainId) {
+          return {
+            valid: false,
+            reason: "Only one captain can be selected.",
+          };
+        }
         captainId = pick.player_id;
       }
       if (pick.is_vice_captain) {
         if (viceCaptainId) {
-          return { valid: false, reason: "Only one vice-captain can be selected." };
+          return {
+            valid: false,
+            reason: "Only one vice-captain can be selected.",
+          };
         }
         viceCaptainId = pick.player_id;
       }
@@ -169,7 +200,11 @@ export function validateLineupAndCaptains(
         pick.bench_order < 1 ||
         pick.bench_order > rules.squad_size - rules.starting_size
       ) {
-        return { valid: false, reason: "Each bench player must have a unique bench order from 1 to 4." };
+        return {
+          valid: false,
+          reason:
+            "Each bench player must have a unique bench order from 1 to 4.",
+        };
       }
       if (benchOrders.has(pick.bench_order)) {
         return { valid: false, reason: "Bench order numbers must be unique." };
@@ -188,14 +223,16 @@ export function validateLineupAndCaptains(
   if (!isValidStartingFormation(starters, rules)) {
     return {
       valid: false,
-      reason: "Invalid formation. Must have 1 GK, 3-5 DEF, 2-5 MID, and 1-3 FWD.",
+      reason:
+        "Invalid formation. Must have 1 GK, 3-5 DEF, 2-5 MID, and 1-3 FWD.",
     };
   }
 
   if (!captainId || !viceCaptainId || captainId === viceCaptainId) {
     return {
       valid: false,
-      reason: "You must choose two distinct starting players as captain and vice-captain.",
+      reason:
+        "You must choose two distinct starting players as captain and vice-captain.",
     };
   }
 

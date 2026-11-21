@@ -4,6 +4,27 @@ export type PlayerPosition = Database["public"]["Enums"]["player_position"];
 export type PlayerStatus = Database["public"]["Enums"]["player_status"];
 export type MatchdayStatus = Database["public"]["Enums"]["matchday_status"];
 
+export type ScoringKey =
+  | "appeared"
+  | "played_30"
+  | "goal"
+  | "assist"
+  | "clean_sheet"
+  | "goals_conceded_2"
+  | "penalty_saved"
+  | "penalty_missed"
+  | "yellow_card"
+  | "red_card"
+  | "own_goal"
+  | "man_of_the_match";
+
+export type ScoreBreakdownItem = {
+  key: ScoringKey;
+  label: string;
+  count: number;
+  points: number;
+};
+
 export type FantasyRules = {
   id: number;
   squad_size: number;
@@ -25,6 +46,7 @@ export type FantasyRules = {
   free_transfers_per_md: number;
   max_saved_transfers: number;
   extra_transfer_cost: number;
+  unlimited_transfer_matchdays: number[];
   captain_multiplier: number;
   min_minutes_threshold: number;
   pts_appearance: number;
@@ -91,11 +113,12 @@ export type PickInput = {
 export type PlayerMatchStats = {
   playerId: string;
   fixtureId: string;
-  minutes: number;
+  appeared: boolean;
+  minutesPlayed: number;
   goals: number;
   assists: number;
   ownGoals: number;
-  goalsConceded: number;
+  goalsConcededOnPitch: number;
   yellowCards: number;
   redCards: number;
   penaltiesMissed: number;
@@ -114,7 +137,7 @@ export type PlayerScoreBreakdown = {
   multiplier: number;
   base_points: number;
   applied_points: number;
-  items: { label: string; points: number }[];
+  items: ScoreBreakdownItem[];
 };
 
 export type ManagerMatchdayScoreResult = {
@@ -130,6 +153,12 @@ export type ValidationResult =
   | { valid: true }
   | { valid: false; reason: string };
 
+export type FantasyError = {
+  code: string;
+  message: string;
+  playerIds?: string[];
+};
+
 export type FantasyActionResult<T> =
   | { ok: true; data: T }
-  | { ok: false; error: string };
+  | { ok: false; error: FantasyError };

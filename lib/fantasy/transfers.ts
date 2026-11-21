@@ -3,13 +3,15 @@ import type {
   FantasyRules,
   MatchdayInfo,
   ValidationResult,
-} from "./types";
+} from "./engine-types";
 import { validateSquad } from "./validation";
 
 export function isUnlimitedTransferMatchday(
   matchday: Pick<MatchdayInfo, "number">,
+  rules?: Pick<FantasyRules, "unlimited_transfer_matchdays">,
 ): boolean {
-  return matchday.number === 1 || matchday.number === 6;
+  const unlimitedMatchdays = rules?.unlimited_transfer_matchdays ?? [1, 6];
+  return unlimitedMatchdays.includes(matchday.number);
 }
 
 export function calculateTransferCost(params: {
@@ -39,7 +41,7 @@ export function calculateTransferCost(params: {
     };
   }
 
-  if (wildcardActive || isUnlimitedTransferMatchday(matchday)) {
+  if (wildcardActive || isUnlimitedTransferMatchday(matchday, rules)) {
     return {
       pointsCost: 0,
       freeTransfersUsed: 0,
@@ -70,7 +72,9 @@ export function validateTransfersAndResultingSquad(params: {
   currentSquad: FantasyPlayer[];
   swaps: { outPlayer: FantasyPlayer; inPlayer: FantasyPlayer }[];
   rules: FantasyRules;
-}): { valid: true; newSquad: FantasyPlayer[] } | { valid: false; reason: string } {
+}):
+  | { valid: true; newSquad: FantasyPlayer[] }
+  | { valid: false; reason: string } {
   const { currentSquad, swaps, rules } = params;
 
   if (swaps.length === 0) {
@@ -89,10 +93,16 @@ export function validateTransfersAndResultingSquad(params: {
       };
     }
     if (outIds.has(outPlayer.id)) {
-      return { valid: false, reason: "Cannot transfer out the same player twice." };
+      return {
+        valid: false,
+        reason: "Cannot transfer out the same player twice.",
+      };
     }
     if (inIds.has(inPlayer.id)) {
-      return { valid: false, reason: "Cannot transfer in the same player twice." };
+      return {
+        valid: false,
+        reason: "Cannot transfer in the same player twice.",
+      };
     }
     if (squadMap.has(inPlayer.id) && !outIds.has(inPlayer.id)) {
       return {

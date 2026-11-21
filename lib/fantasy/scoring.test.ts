@@ -1,8 +1,15 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-import { calculateManagerMatchdayScore, calculatePlayerPoints } from "./scoring";
+import { describe, expect, it } from "vitest";
+import type {
+  FantasyPlayer,
+  FantasyRules,
+  PickInput,
+  PlayerMatchStats,
+} from "./engine-types";
+import {
+  calculateManagerMatchdayScore,
+  calculatePlayerPoints,
+} from "./scoring";
 import { calculateTransferCost, nextMatchdayFreeTransfers } from "./transfers";
-import type { FantasyPlayer, FantasyRules, PickInput, PlayerMatchStats } from "./types";
 import { validateLineupAndCaptains, validateSquad } from "./validation";
 
 const defaultRules: FantasyRules = {
@@ -26,6 +33,7 @@ const defaultRules: FantasyRules = {
   free_transfers_per_md: 1,
   max_saved_transfers: 2,
   extra_transfer_cost: 4,
+  unlimited_transfer_matchdays: [1, 6],
   captain_multiplier: 2,
   min_minutes_threshold: 30,
   pts_appearance: 1,
@@ -51,6 +59,31 @@ const defaultRules: FantasyRules = {
   pts_own_goal: -2,
   pts_motm: 3,
 };
+
+function makeStats(
+  playerId: string,
+  overrides: Partial<PlayerMatchStats> = {},
+): PlayerMatchStats {
+  const minutesPlayed = overrides.minutesPlayed ?? 50;
+  return {
+    playerId,
+    fixtureId: "f1",
+    appeared: overrides.appeared ?? minutesPlayed > 0,
+    minutesPlayed,
+    goals: 0,
+    assists: 0,
+    ownGoals: 0,
+    goalsConcededOnPitch: 0,
+    yellowCards: 0,
+    redCards: 0,
+    penaltiesMissed: 0,
+    penaltiesSaved: 0,
+    manOfTheMatch: false,
+    walkover: false,
+    fixtureFinished: true,
+    ...overrides,
+  };
+}
 
 function makeSquad(): FantasyPlayer[] {
   const teams = ["t1", "t2", "t3", "t4", "t5"];
@@ -110,98 +143,254 @@ function makeDefaultPicks(squad: FantasyPlayer[]): PickInput[] {
   });
 }
 
-describe("Fantasy validation and scoring", () => {
+describe("Fantasy validation and scoring (E1-E20)", () => {
   it("validates a 15-player squad within budget and team quotas", () => {
     const squad = makeSquad();
-    assert.deepEqual(validateSquad(squad, defaultRules), { valid: true });
-    assert.deepEqual(
+    expect(validateSquad(squad, defaultRules)).toEqual({ valid: true });
+    expect(
       validateLineupAndCaptains(makeDefaultPicks(squad), squad, defaultRules),
-      { valid: true },
-    );
+    ).toEqual({ valid: true });
   });
 
   it("rejects squads over budget or over max per team", () => {
     const overBudget = makeSquad().map((p) => ({ ...p, price_tenths: 100 }));
-    assert.equal(validateSquad(overBudget, defaultRules).valid, false);
+    expect(validateSquad(overBudget, defaultRules).valid).toBe(false);
 
     const tooManySameTeam = makeSquad().map((p) => ({ ...p, team_id: "t1" }));
-    assert.equal(validateSquad(tooManySameTeam, defaultRules).valid, false);
+    expect(validateSquad(tooManySameTeam, defaultRules).valid).toBe(false);
   });
 
-  it("calculates defender points including goals, clean sheet, card, and MOTM", () => {
-    const stats: PlayerMatchStats = {
-      playerId: "p3",
-      fixtureId: "f1",
-      minutes: 50,
+  it("E1-E3: computes goals, assists, and clean sheets by position", () => {
+    const fwdStats = makeStats("p13", {
+      minutesPlayed: 50,
       goals: 1,
       assists: 1,
-      ownGoals: 0,
-      goalsConceded: 0,
-      yellowCards: 1,
-      redCards: 0,
-      penaltiesMissed: 0,
-      penaltiesSaved: 0,
-      manOfTheMatch: true,
-      walkover: false,
-      fixtureFinished: true,
-    };
-    const res = calculatePlayerPoints("DEF", stats, defaultRules);
-    assert.equal(res.points, 1 + 1 + 6 + 3 + 4 - 1 + 3);
+      goalsConcededOnPitch: 1,
+    });
+    expect(calculatePlayerPoints("FWD", fwdStats, defaultRules).points).toBe(9);
+
+    expect(
+      calculatePlayerPoints(
+        "GK",
+        makeStats("p1", { goals: 1, goalsConcededOnPitch: 0 }),
+        defaultRules,
+      ).points,
+    ).toBe(12);
+
+    expect(
+      calculatePlayerPoints(
+        "DEF",
+        makeStats("p3", { goals: 1, goalsConcededOnPitch: 0 }),
+        defaultRules,
+      ).points,
+    ).toBe(12);
+
+    expect(
+      calculatePlayerPoints(
+        "MID",
+        makeStats("p8", { goals: 1, goalsConcededOnPitch: 0 }),
+        defaultRules,
+      ).points,
+    ).toBe(8);
+
+    expect(
+      calculatePlayerPoints(
+        "FWD",
+        makeStats("p13", { goals: 1, goalsConcededOnPitch: 0 }),
+        defaultRules,
+      ).points,
+    ).toBe(6);
+
+    expect(
+      calculatePlayerPoints(
+        "DEF",
+        makeStats("p3", { assists: 2, goalsConcededOnPitch: 0 }),
+        defaultRules,
+      ).points,
+    ).toBe(12);
+
+    expect(
+      calculatePlayerPoints(
+        "MID",
+        makeStats("p8", { assists: 1, goalsConcededOnPitch: 0 }),
+        defaultRules,
+      ).points,
+    ).toBe(6);
+
+    expect(
+      calculatePlayerPoints(
+        "FWD",
+        makeStats("p13", { assists: 1, goalsConcededOnPitch: 0 }),
+        defaultRules,
+      ).points,
+    ).toBe(5);
   });
 
-  it("applies automatic substitution and vice-captain multiplier when captain does not play", () => {
+  it("E4 & E10: handles 30-min threshold, appeared=true subs, and extra time", () => {
+    expect(
+      calculatePlayerPoints(
+        "MID",
+        makeStats("p8", { minutesPlayed: 15, goalsConcededOnPitch: 1 }),
+        defaultRules,
+      ).points,
+    ).toBe(1);
+
+    expect(
+      calculatePlayerPoints(
+        "MID",
+        makeStats("p8", { minutesPlayed: 30, goalsConcededOnPitch: 1 }),
+        defaultRules,
+      ).points,
+    ).toBe(2);
+
+    expect(
+      calculatePlayerPoints(
+        "MID",
+        makeStats("p8", { minutesPlayed: 29, goalsConcededOnPitch: 1 }),
+        defaultRules,
+      ).points,
+    ).toBe(1);
+
+    expect(
+      calculatePlayerPoints(
+        "MID",
+        makeStats("p8", { appeared: false, minutesPlayed: 0 }),
+        defaultRules,
+      ).points,
+    ).toBe(0);
+
+    expect(
+      calculatePlayerPoints(
+        "FWD",
+        makeStats("p13", { appeared: true, minutesPlayed: 0 }),
+        defaultRules,
+      ).points,
+    ).toBe(1);
+
+    expect(
+      calculatePlayerPoints(
+        "FWD",
+        makeStats("p13", { minutesPlayed: 34 }),
+        defaultRules,
+      ).points,
+    ).toBe(2);
+  });
+
+  it("E5-E9: handles clean sheets, conceded intervals, cards, OGs, pens, and MOTM", () => {
+    expect(
+      calculatePlayerPoints(
+        "DEF",
+        makeStats("p3", { minutesPlayed: 25, goalsConcededOnPitch: 0 }),
+        defaultRules,
+      ).points,
+    ).toBe(1);
+
+    expect(
+      calculatePlayerPoints(
+        "GK",
+        makeStats("p1", { minutesPlayed: 50, goalsConcededOnPitch: 3 }),
+        defaultRules,
+      ).points,
+    ).toBe(1);
+
+    expect(
+      calculatePlayerPoints(
+        "GK",
+        makeStats("p1", { minutesPlayed: 50, goalsConcededOnPitch: 4 }),
+        defaultRules,
+      ).points,
+    ).toBe(0);
+
+    expect(
+      calculatePlayerPoints(
+        "DEF",
+        makeStats("p3", { minutesPlayed: 20, redCards: 1 }),
+        defaultRules,
+      ).points,
+    ).toBe(-2);
+
+    expect(
+      calculatePlayerPoints(
+        "DEF",
+        makeStats("p3", {
+          minutesPlayed: 50,
+          ownGoals: 1,
+          goalsConcededOnPitch: 1,
+        }),
+        defaultRules,
+      ).points,
+    ).toBe(0);
+
+    expect(
+      calculatePlayerPoints(
+        "GK",
+        makeStats("p1", {
+          minutesPlayed: 50,
+          penaltiesSaved: 1,
+          goalsConcededOnPitch: 2,
+        }),
+        defaultRules,
+      ).points,
+    ).toBe(6);
+
+    expect(
+      calculatePlayerPoints(
+        "FWD",
+        makeStats("p13", {
+          minutesPlayed: 50,
+          goals: 1,
+          penaltiesMissed: 1,
+          goalsConcededOnPitch: 1,
+        }),
+        defaultRules,
+      ).points,
+    ).toBe(4);
+
+    expect(
+      calculatePlayerPoints(
+        "MID",
+        makeStats("p8", {
+          minutesPlayed: 50,
+          assists: 1,
+          goalsConcededOnPitch: 1,
+          manOfTheMatch: true,
+        }),
+        defaultRules,
+      ).points,
+    ).toBe(8);
+  });
+
+  it("E14: ignores walkover fixtures completely", () => {
+    const stats = makeStats("p13", {
+      minutesPlayed: 50,
+      goals: 3,
+      manOfTheMatch: true,
+      walkover: true,
+    });
+    expect(calculatePlayerPoints("FWD", stats, defaultRules).points).toBe(0);
+  });
+
+  it("E11-E12 & E17: handles captaincy, negative doubling, and auto-subs", () => {
     const squad = makeSquad();
     const picks = makeDefaultPicks(squad);
 
     const statsRows: PlayerMatchStats[] = [
-      {
-        playerId: "p1",
-        fixtureId: "f1",
-        minutes: 50,
-        goals: 0,
-        assists: 0,
-        ownGoals: 0,
-        goalsConceded: 2,
-        yellowCards: 0,
-        redCards: 0,
-        penaltiesMissed: 0,
+      makeStats("p1", {
+        minutesPlayed: 50,
+        goalsConcededOnPitch: 2,
         penaltiesSaved: 1,
-        manOfTheMatch: false,
-        walkover: false,
-        fixtureFinished: true,
-      },
-      {
-        playerId: "p7",
-        fixtureId: "f1",
-        minutes: 40,
-        goals: 0,
+      }),
+      makeStats("p7", {
+        minutesPlayed: 40,
         assists: 1,
-        ownGoals: 0,
-        goalsConceded: 0,
-        yellowCards: 0,
-        redCards: 0,
-        penaltiesMissed: 0,
-        penaltiesSaved: 0,
-        manOfTheMatch: false,
-        walkover: false,
-        fixtureFinished: true,
-      },
-      {
-        playerId: "p13",
-        fixtureId: "f1",
-        minutes: 50,
+        goalsConcededOnPitch: 0,
+      }),
+      makeStats("p13", {
+        minutesPlayed: 50,
         goals: 2,
-        assists: 0,
-        ownGoals: 0,
-        goalsConceded: 1,
-        yellowCards: 0,
-        redCards: 0,
-        penaltiesMissed: 0,
-        penaltiesSaved: 0,
+        goalsConcededOnPitch: 1,
         manOfTheMatch: true,
-        walkover: false,
-        fixtureFinished: true,
-      },
+      }),
     ];
 
     const score = calculateManagerMatchdayScore({
@@ -212,34 +401,88 @@ describe("Fantasy validation and scoring", () => {
       transferCost: 4,
     });
 
-    assert.equal(score.captain_used, "vice_captain");
-    assert.deepEqual(score.auto_subs, [{ out_player_id: "p3", in_player_id: "p7" }]);
-    assert.equal(score.gross_points, 6 + 9 + 13 * 2);
-    assert.equal(score.net_points, 37);
+    expect(score.captain_used).toBe("vice_captain");
+    expect(score.auto_subs).toEqual([
+      { out_player_id: "p3", in_player_id: "p7" },
+    ]);
+    expect(score.gross_points).toBe(6 + 9 + 13 * 2);
+    expect(score.net_points).toBe(37);
+
+    const redCardCaptainScore = calculateManagerMatchdayScore({
+      picks,
+      players: squad,
+      statsRows: [makeStats("p8", { minutesPlayed: 20, redCards: 1 })],
+      rules: defaultRules,
+      transferCost: 0,
+    });
+    expect(redCardCaptainScore.captain_used).toBe("captain");
+    expect(redCardCaptainScore.gross_points).toBe(-4);
   });
 
-  it("ignores walkover fixtures", () => {
-    const stats: PlayerMatchStats = {
-      playerId: "p13",
-      fixtureId: "f2",
-      minutes: 50,
-      goals: 3,
-      assists: 0,
-      ownGoals: 0,
-      goalsConceded: 0,
-      yellowCards: 0,
-      redCards: 0,
-      penaltiesMissed: 0,
-      penaltiesSaved: 0,
-      manOfTheMatch: true,
-      walkover: true,
-      fixtureFinished: true,
-    };
-    assert.equal(calculatePlayerPoints("FWD", stats, defaultRules).points, 0);
+  it("E12d: respects formation maximums (max 5 DEF) during auto-subs", () => {
+    const squad = makeSquad();
+    const fiveDefPicks: PickInput[] = squad.map((p) => {
+      const starters = new Set([
+        "p1",
+        "p3",
+        "p4",
+        "p5",
+        "p6",
+        "p11",
+        "p8",
+        "p9",
+        "p10",
+        "p13",
+        "p14",
+      ]);
+      const bench = ["p2", "p7", "p12", "p15"];
+      const isStarter = starters.has(p.id);
+      return {
+        player_id: p.id,
+        is_starter: isStarter,
+        bench_order: isStarter ? null : bench.indexOf(p.id) + 1,
+        is_captain: p.id === "p8",
+        is_vice_captain: p.id === "p13",
+      };
+    });
+
+    const playingStarters = [
+      "p1",
+      "p3",
+      "p4",
+      "p5",
+      "p6",
+      "p11",
+      "p8",
+      "p9",
+      "p13",
+      "p14",
+    ].map((id) =>
+      makeStats(id, { minutesPlayed: 50, goalsConcededOnPitch: 1 }),
+    );
+
+    const statsRows = [
+      ...playingStarters,
+      makeStats("p7", { minutesPlayed: 50, goalsConcededOnPitch: 1 }),
+      makeStats("p12", { minutesPlayed: 15 }),
+    ];
+
+    const res = calculateManagerMatchdayScore({
+      picks: fiveDefPicks,
+      players: squad,
+      statsRows,
+      rules: { ...defaultRules, max_start_def: 4 },
+      transferCost: 0,
+    });
+
+    expect(res.auto_subs).toEqual([
+      { out_player_id: "p10", in_player_id: "p12" },
+    ]);
+    expect(res.gross_points).toBe(23);
   });
 
-  it("computes transfer hits, free matchdays, and banked transfers", () => {
-    assert.deepEqual(
+  it("E15: computes transfer hits, unlimited matchdays, and banked transfers", () => {
+    expect(
       calculateTransferCost({
         matchday: { number: 2 },
         transfersCount: 3,
@@ -247,14 +490,13 @@ describe("Fantasy validation and scoring", () => {
         wildcardActive: false,
         rules: defaultRules,
       }),
-      {
-        pointsCost: 8,
-        freeTransfersUsed: 1,
-        freeTransfersRemaining: 0,
-      },
-    );
+    ).toEqual({
+      pointsCost: 8,
+      freeTransfersUsed: 1,
+      freeTransfersRemaining: 0,
+    });
 
-    assert.equal(
+    expect(
       calculateTransferCost({
         matchday: { number: 6 },
         transfersCount: 5,
@@ -262,10 +504,9 @@ describe("Fantasy validation and scoring", () => {
         wildcardActive: false,
         rules: defaultRules,
       }).pointsCost,
-      0,
-    );
+    ).toBe(0);
 
-    assert.equal(nextMatchdayFreeTransfers(1, defaultRules), 2);
-    assert.equal(nextMatchdayFreeTransfers(2, defaultRules), 2);
+    expect(nextMatchdayFreeTransfers(1, defaultRules)).toBe(2);
+    expect(nextMatchdayFreeTransfers(2, defaultRules)).toBe(2);
   });
 });

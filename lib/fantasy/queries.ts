@@ -7,16 +7,22 @@ import type {
   ManagerProfile,
   MatchdayInfo,
   PickInput,
-} from "./types";
+} from "./engine-types";
 
 type QueryResult = Promise<{ data: unknown; error: { message: string } | null }>;
 
-type FilterChain = PromiseLike<{ data: unknown; error: { message: string } | null }> & {
+type FilterChain = PromiseLike<{
+  data: unknown;
+  error: { message: string } | null;
+}> & {
   select: (columns?: string) => FilterChain;
   eq: (column: string, value: unknown) => FilterChain;
   neq: (column: string, value: unknown) => FilterChain;
   in: (column: string, values: unknown[]) => FilterChain;
-  order: (column: string, options?: { ascending?: boolean; nullsFirst?: boolean }) => FilterChain;
+  order: (
+    column: string,
+    options?: { ascending?: boolean; nullsFirst?: boolean },
+  ) => FilterChain;
   limit: (count: number) => FilterChain;
   single: () => QueryResult;
   maybeSingle: () => QueryResult;
@@ -71,7 +77,9 @@ export async function getFantasyPlayerPool(): Promise<
   const supabase = await createClient();
   const { data } = await supabase
     .from("players")
-    .select("id, team_id, display_name, full_name, shirt_number, position, price_tenths, status")
+    .select(
+      "id, team_id, display_name, full_name, shirt_number, position, price_tenths, status",
+    )
     .neq("status", "left")
     .order("price_tenths", { ascending: false });
 
@@ -110,7 +118,9 @@ export async function getManagerWithSquadAndPicks(params: {
     params.matchdayId
       ? reader(supabase)
           .from("picks")
-          .select("player_id, is_starter, bench_order, is_captain, is_vice_captain")
+          .select(
+            "player_id, is_starter, bench_order, is_captain, is_vice_captain",
+          )
           .eq("manager_id", manager.id)
           .eq("matchday_id", params.matchdayId)
       : Promise.resolve({ data: [] }),
@@ -124,7 +134,9 @@ export async function getManagerWithSquadAndPicks(params: {
   return { manager, squadPlayerIds, picks };
 }
 
-export async function getOverallLeaderboard(limit = 50): Promise<ManagerProfile[]> {
+export async function getOverallLeaderboard(
+  limit = 50,
+): Promise<ManagerProfile[]> {
   const supabase = await createClient();
   const { data } = await reader(supabase)
     .from("managers")
