@@ -177,6 +177,29 @@ How to wire the import screen:
 4. On **Import**, call `commit*Import({ importId, rows: commitRows(preview) })`. Keep the same `importId` for retries.
 5. A commit can still fail with `admin.import_invalid` if the data changed since the preview. Its `message` names the rows; preview again.
 
+### Sports, events and teams
+
+Queries (`lib/admin/queries/sports.ts`):
+
+| Function | Output |
+| --- | --- |
+| `listSports()` | `AdminSport[]` in display order: `{ id, slug, name, resultFormat, sortOrder, events }`. Each event is `{ id, sportId, slug, name, periodMinutes, periodCount, extraPeriodMinutes, fixtureCount }` |
+| `listTeams()` | `AdminTeam[]` by year: `{ id, year, name, shortName, classLabel, coaches }` |
+
+Actions (`lib/admin/actions/sports.ts`):
+
+| Action | Input | Errors to expect |
+| --- | --- | --- |
+| `createSport` | `{ name, slug, resultFormat, sortOrder? }` | `conflict` (slug taken) |
+| `updateSport` | `{ sportId, ...any of those }` | `rule_violation` if the result format changes after any of its fixtures has match events |
+| `createEvent` | `{ sportId, name, slug, periodMinutes?, periodCount?, extraPeriodMinutes? }` | `conflict` (slug taken in that sport) |
+| `updateEvent` | `{ eventId, ...any of those but sportId }` | |
+| `updateTeam` | `{ teamId, name?, shortName?, classLabel?, coaches? }` (up to 6 coaches) | `conflict` |
+
+- Slugs are lowercase words joined by hyphens, like `table-tennis`.
+- Venues are set per fixture, because events have no venue column.
+- `shortName` is what the fixtures CSV uses (`Y1` to `Y5`). Changing it changes what the CSV expects.
+
 ### Fixtures and matchdays
 
 Queries (`lib/admin/queries/fixtures.ts`):
