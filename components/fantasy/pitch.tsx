@@ -3,24 +3,38 @@ import { cn } from "@/lib/utils";
 
 // Design system §11.3 Pitch: the fantasy signature. Pitch green with lines in
 // pitch-line, subtle mowing stripes, rows from the top FWD, MID, DEF, GK.
+//
+// The grass, stripes and lines sit on their own layer, tilted back in CSS
+// perspective so the far end of the pitch looks further away. The player
+// chips stay upright and flat on top, so they remain sharp, readable and
+// easy to tap. The layer is taller than the pitch so the tilt never shows a
+// gap at the far edge.
+
+const STRIPES =
+  "repeating-linear-gradient(180deg, transparent 0 2.75rem, color-mix(in oklch, var(--brand-light) 6%, transparent) 2.75rem 5.5rem)";
 
 export function Pitch({ caption, children, className }: { caption?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section
       aria-label="Pitch"
-      className={cn("relative w-full overflow-hidden rounded-xl bg-pitch px-2 py-3 lg:mx-auto lg:max-w-xl", className)}
-      style={{
-        backgroundImage:
-          "repeating-linear-gradient(180deg, transparent 0 2.75rem, color-mix(in oklch, var(--brand-light) 6%, transparent) 2.75rem 5.5rem)",
-      }}
+      className={cn(
+        "relative w-full overflow-hidden rounded-xl bg-pitch px-2 py-3 perspective-[56rem] lg:mx-auto lg:max-w-xl",
+        className,
+      )}
     >
-      <svg aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" fill="none" stroke="var(--pitch-line)" strokeWidth="1.5">
-        <rect x="2%" y="1.5%" width="96%" height="97%" rx="6" />
-        <line x1="2%" y1="50%" x2="98%" y2="50%" />
-        <circle cx="50%" cy="50%" r="36" />
-        <rect x="25%" y="1.5%" width="50%" height="13%" />
-        <rect x="25%" y="85.5%" width="50%" height="13%" />
-      </svg>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 -top-[12%] bottom-0 origin-bottom transform-3d rotate-x-[24deg]"
+        style={{ backgroundImage: STRIPES }}
+      >
+        <svg className="absolute inset-0 h-full w-full" fill="none" stroke="var(--pitch-line)" strokeWidth="1.5">
+          <rect x="2%" y="1.5%" width="96%" height="97%" rx="6" />
+          <line x1="2%" y1="50%" x2="98%" y2="50%" />
+          <circle cx="50%" cy="50%" r="36" />
+          <rect x="25%" y="1.5%" width="50%" height="13%" />
+          <rect x="25%" y="85.5%" width="50%" height="13%" />
+        </svg>
+      </div>
       {caption && (
         <p className="relative mb-1 text-center text-xs font-semibold tracking-[0.06em] text-brand-foreground/80 uppercase dark:text-foreground/80">
           {caption}
