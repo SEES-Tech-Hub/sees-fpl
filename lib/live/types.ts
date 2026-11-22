@@ -124,6 +124,7 @@ export const LIVE_ERROR_CODES = [
   "player_not_found",
   "player_left",
   "player_suspended",
+  "player_banned",
   "invalid_lineup",
   "lineup_locked",
   "not_on_pitch",
@@ -139,6 +140,9 @@ export const LIVE_ERROR_CODES = [
   "reason_required",
   "already_voided",
   "append_only",
+  // Standings and knockouts (admin)
+  "league_not_finished",
+  "standings_tied",
   // Requests
   "invalid_input",
   "duplicate_id",
@@ -260,31 +264,46 @@ export type LineupPlayer = {
 };
 
 // -----------------------------------------------------------------------------
-// Phase 2 contracts (agreed shapes; the data arrives in phase 2)
+// Derived football data (phase 2): read with lib/live/stats.ts
 // -----------------------------------------------------------------------------
 
 /**
- * One row per player per fixture, worked out from match_events. The fantasy
- * engine reads only this. Rule values (30 minutes, points per goal and so on)
- * are not applied here; they live in the fantasy rules table.
+ * One row per player per fixture, worked out from match_events and lineups.
+ * The fantasy engine reads only this. Rule values (30 minutes, points per
+ * goal and so on) are not applied here; they live in the fantasy rules table.
+ *
+ * A row exists for everyone in the fixture's lineups and anyone named in an
+ * event. Penalty shootout kicks never count.
  */
 export type PlayerMatchStats = {
   fixtureId: string;
+  eventId: string;
   matchdayId: string | null;
   playerId: string;
   teamId: string;
   position: PlayerPosition;
+  /** False when the team had no lineup: minutes then assume the player started. */
+  lineupSet: boolean;
   started: boolean;
+  /** Started, or came on as a substitute, once the match kicked off. */
   appeared: boolean;
-  /** From kickoff, substitution, red card and full-time events. Extra time counts. */
+  /**
+   * Match-clock minutes: half time and stoppage time don't count, extra time
+   * does. Came on at 20' in a 50-minute match: 30. During a match, minutes
+   * run up to the current clock minute.
+   */
   minutesPlayed: number;
   goals: number;
   assists: number;
   ownGoals: number;
-  /** Goals the player's team conceded while they were on the pitch. */
+  /** Goals for the other team while this player was on the pitch (own goals by teammates included). */
   goalsConcededOnPitch: number;
+  /** How many of goalsConcededOnPitch were own goals, for rules that leave them out. */
+  ownGoalsConcededOnPitch: number;
   yellowCards: number;
   redCards: number;
+  /** The red card came after a yellow in the same match (a second yellow). */
+  redFromSecondYellow: boolean;
   penaltiesMissed: number;
   penaltiesSaved: number;
   manOfTheMatch: boolean;
@@ -297,6 +316,8 @@ export type PlayerMatchStats = {
 /** One row of the football league table. */
 export type StandingRow = {
   position: number;
+  /** Level with another team on every tie-breaker. */
+  positionShared: boolean;
   team: TeamSummary;
   played: number;
   won: number;
@@ -306,6 +327,8 @@ export type StandingRow = {
   goalsAgainst: number;
   goalDifference: number;
   points: number;
+  /** The team is playing now, so the row will change. */
+  live: boolean;
 };
 
 export type TopScorerRow = {
@@ -314,4 +337,30 @@ export type TopScorerRow = {
   team: TeamSummary;
   goals: number;
   assists: number;
+};
+
+/** A player's totals for a football event, for the stats pages. */
+export type PlayerTotalsRow = TopScorerRow & {
+  position: PlayerPosition;
+  appearances: number;
+  minutesPlayed: number;
+  ownGoals: number;
+  /** Finished match, 30+ minutes on the pitch, nothing conceded while on it. */
+  cleanSheets: number;
+  yellowCards: number;
+  redCards: number;
+  manOfTheMatch: number;
+};
+
+/** A red card means a 1-match ban in the team's next fixture. */
+export type SuspensionRow = {
+  playerId: string;
+  name: string;
+  teamId: string;
+  teamShortName: string;
+  redCardFixtureId: string;
+  /** Null until the team's next fixture is known (for example the final). */
+  bannedFixtureId: string | null;
+  bannedFixtureKickoffAt: string | null;
+  banServed: boolean;
 };

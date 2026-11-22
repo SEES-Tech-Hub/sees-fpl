@@ -1128,6 +1128,65 @@ export type Database = {
       }
     }
     Views: {
+      football_player_totals: {
+        Row: {
+          appearances: number | null
+          assists: number | null
+          clean_sheets: number | null
+          display_name: string | null
+          event_id: string | null
+          goals: number | null
+          man_of_the_match: number | null
+          minutes_played: number | null
+          own_goals: number | null
+          player_id: string | null
+          position: Database["public"]["Enums"]["player_position"] | null
+          red_cards: number | null
+          team_id: string | null
+          team_name: string | null
+          team_short_name: string | null
+          team_year: number | null
+          yellow_cards: number | null
+        }
+        Relationships: []
+      }
+      football_standings: {
+        Row: {
+          drawn: number | null
+          event_id: string | null
+          goal_difference: number | null
+          goals_against: number | null
+          goals_for: number | null
+          h2h_points: number | null
+          live: boolean | null
+          lost: number | null
+          played: number | null
+          points: number | null
+          position: number | null
+          position_shared: boolean | null
+          team_id: string | null
+          team_name: string | null
+          team_short_name: string | null
+          team_year: number | null
+          won: number | null
+        }
+        Relationships: []
+      }
+      football_suspensions: {
+        Row: {
+          ban_served: boolean | null
+          banned_fixture_id: string | null
+          banned_fixture_kickoff_at: string | null
+          display_name: string | null
+          event_id: string | null
+          player_id: string | null
+          red_card_event_id: number | null
+          red_card_fixture_id: string | null
+          team_id: string | null
+          team_short_name: string | null
+        }
+        Relationships: []
+      }
       match_timeline: {
         Row: {
           added_minutes: number | null
@@ -1180,6 +1239,35 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_match_stats: {
+        Row: {
+          appeared: boolean | null
+          assists: number | null
+          event_id: string | null
+          fixture_finished: boolean | null
+          fixture_id: string | null
+          goals: number | null
+          goals_conceded_on_pitch: number | null
+          lineup_role: Database["public"]["Enums"]["lineup_role"] | null
+          lineup_set: boolean | null
+          man_of_the_match: boolean | null
+          matchday_id: string | null
+          minutes_played: number | null
+          own_goals: number | null
+          own_goals_conceded_on_pitch: number | null
+          penalties_missed: number | null
+          penalties_saved: number | null
+          player_id: string | null
+          position: Database["public"]["Enums"]["player_position"] | null
+          red_cards: number | null
+          red_from_second_yellow: boolean | null
+          started: boolean | null
+          team_id: string | null
+          walkover: boolean | null
+          yellow_cards: number | null
+        }
+        Relationships: []
       }
       public_profiles: {
         Row: {
@@ -1309,6 +1397,37 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fill_football_knockouts: {
+        Args: { p_event_id: string }
+        Returns: {
+          away_score: number | null
+          away_shootout: number | null
+          away_team_id: string | null
+          console_holder: string | null
+          created_at: string
+          current_period: Database["public"]["Enums"]["match_period"] | null
+          event_id: string
+          home_score: number | null
+          home_shootout: number | null
+          home_team_id: string | null
+          id: string
+          kickoff_at: string | null
+          matchday_id: string | null
+          period_started_at: string | null
+          result_note: string | null
+          stage: string
+          status: Database["public"]["Enums"]["fixture_status"]
+          updated_at: string
+          venue: string | null
+          winner_team_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "fixtures"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       fixture_player_state: {
         Args: { p_fixture_id: string }
         Returns: {
@@ -1379,6 +1498,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      live_period_end_minute: {
+        Args: {
+          p_extra_period_minutes: number
+          p_period: Database["public"]["Enums"]["match_period"]
+          p_period_minutes: number
+        }
+        Returns: number
       }
       make_transfers: {
         Args: {
