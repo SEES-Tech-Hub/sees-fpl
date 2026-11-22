@@ -80,3 +80,16 @@ export function utcToWat(instant: Date | string): { date: string; time: string }
   const pad = (n: number) => String(n).padStart(2, "0");
   return { date: `${p.year}-${pad(p.month)}-${pad(p.day)}`, time: `${pad(p.hour)}:${pad(p.minute)}` };
 }
+
+/** Start (inclusive) and end (exclusive) of the Lagos calendar day containing `now`. */
+export function watDayBounds(now: Date): { start: Date; end: Date } {
+  const { date } = utcToWat(now);
+  const start = watToUtc(date, "00:00");
+  if (!start.ok) throw new Error("watDayBounds: unreachable");
+  const [y, m, d] = date.split("-").map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + 1));
+  const nextDate = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-${String(next.getUTCDate()).padStart(2, "0")}`;
+  const end = watToUtc(nextDate, "00:00");
+  if (!end.ok) throw new Error("watDayBounds: unreachable");
+  return { start: start.date, end: end.date };
+}

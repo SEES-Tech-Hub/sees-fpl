@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_imports: {
+        Row: {
+          actor: string | null
+          counts: Json | null
+          created_at: string
+          import_id: string
+          kind: string
+        }
+        Insert: {
+          actor?: string | null
+          counts?: Json | null
+          created_at?: string
+          import_id: string
+          kind: string
+        }
+        Update: {
+          actor?: string | null
+          counts?: Json | null
+          created_at?: string
+          import_id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_imports_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_imports_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           created_at: string
@@ -1412,7 +1451,58 @@ export type Database = {
           table_name: string
         }[]
       }
+      admin_begin_import: {
+        Args: { p_import_id: string; p_kind: string; p_rows: Json }
+        Returns: Json
+      }
+      admin_fail: {
+        Args: { p_code: string; p_message: string }
+        Returns: undefined
+      }
+      admin_finish_import: {
+        Args: {
+          p_import_id: string
+          p_inserted: number
+          p_unchanged: number
+          p_updated: number
+        }
+        Returns: Json
+      }
+      admin_import_fixtures: {
+        Args: { p_import_id: string; p_rows: Json }
+        Returns: Json
+      }
+      admin_import_players: {
+        Args: { p_import_id: string; p_rows: Json }
+        Returns: Json
+      }
+      admin_normalise_name: { Args: { p_name: string }; Returns: string }
+      admin_price_lock_at: { Args: never; Returns: string }
+      admin_price_problem: { Args: { p_tenths: number }; Returns: string }
+      admin_price_rules: {
+        Args: never
+        Returns: {
+          max_tenths: number
+          min_tenths: number
+          step_tenths: number
+        }[]
+      }
+      admin_raise_row_errors: {
+        Args: { p_errors: string[] }
+        Returns: undefined
+      }
       admin_set_audit_context: { Args: { p_context: Json }; Returns: undefined }
+      admin_set_prices: {
+        Args: { p_import_id: string; p_rows: Json }
+        Returns: Json
+      }
+      admin_set_role: {
+        Args: {
+          p_profile_id: string
+          p_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: Json
+      }
       create_league: { Args: { p_name: string }; Returns: Json }
       create_manager: {
         Args: { p_team_name: string; p_year_group?: number }
