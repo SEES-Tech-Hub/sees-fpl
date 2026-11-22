@@ -108,14 +108,34 @@ Every import records its `import_id` in `admin_imports`. Committing the same imp
 
 Each section is filled in by the PR named. Inputs are the schemas in `lib/admin/schemas.ts`.
 
-### Audit log and announcements (PR 2, planned)
+### Audit log and announcements
+
+Audit log (`lib/admin/queries/audit.ts`):
 
 | Function | Input | Output |
 | --- | --- | --- |
-| `getAuditLog(filter)` | `auditLogFilter`: table, actor, from, to, cursor, limit | `{ entries, nextCursor }`, newest first, keyset-paginated |
-| `listAnnouncements()` | none | all banners, newest first |
-| `getActiveAnnouncement()` | none | the banner showing now, or `null` (for Fortune's home page) |
-| `createAnnouncement` / `updateAnnouncement` / `endAnnouncement` | `announcementInput` and friends | the banner |
+| `getAuditLog(filter?)` | `{ table?, actorId?, from?, to?, cursor?, limit? }` (limit up to 99, default 50; `table` is e.g. `players`, `fixtures`, `profiles`, `match_events`) | `{ entries, nextCursor }`, newest first |
+
+- Each entry is `{ key, source, occurredAt, actorId, actorName, tableName, rowId, action, old, new, context, summary }`.
+- `summary` is one line in plain words ("Player: status available → injured", "Match event voided: Wrong scorer").
+- `action` is `insert`, `update`, `delete`, `void` or `record`.
+- For updates, `old` and `new` hold only the changed columns. `context` carries an `importId`, a `reason` or `{ action: "set_role" }`.
+- For the next page, pass `nextCursor` back as `cursor`; it's null on the last page. Paging is keyset, so new rows never shift a page.
+- `lib/admin/domain/audit.ts` also exports `auditChanges(old, new)`, for a field-by-field view.
+
+Announcements, admin side (`lib/admin/queries/announcements.ts` and `lib/admin/actions/announcements.ts`):
+
+| Function | Input | Output |
+| --- | --- | --- |
+| `listAnnouncements()` | none | `AdminAnnouncement[]`, newest first: `{ id, message, tone, startsAt, endsAt, createdBy, createdAt, state: "scheduled" \| "showing" \| "ended" }` |
+| `createAnnouncement` | `{ message (1 to 280), tone: "info" \| "warning", startsAt, endsAt }` (ISO; `endsAt` after `startsAt`) | `Announcement` |
+| `updateAnnouncement` | `{ announcementId, ...the same }` | `Announcement` |
+| `endAnnouncement` | `{ announcementId }` | `{ id, removed }`. A scheduled banner is removed; a showing one ends now |
+
+For Fortune's home page: `getActiveAnnouncement()` returns the `Announcement` showing now, or `null`.
+- It reads as an anonymous visitor with `createPublicClient()`, so it's safe inside `'use cache'`.
+- It's tagged `announcements` and cached for about a minute. Admin changes show at once; otherwise a banner appears or disappears within about a minute of its times.
+- It never throws: on a database error it returns `null`, so the home page doesn't break.
 
 ### Players and prices
 
