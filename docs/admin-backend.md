@@ -97,6 +97,7 @@ The server actions call these. They're listed so the rules are easy to find; pag
 | `admin_set_prices(import_id, rows)` | Prices CSV commit, same guarantees | `admin_players_prices` |
 | `admin_import_fixtures(import_id, rows)` | Fixtures CSV commit, same guarantees. Existing fixtures only get a new kickoff, venue and matchday; their event, stage and teams must match. Deadlines aren't recalculated: the admin sets them | `admin_fixtures_import` |
 | `admin_set_role(profile_id, role)` | Promote to official or back to user. Demoting releases the account's unfinished console holds and returns them. Refuses your own role (`admin.own_role`), anything involving admin (`admin.role_forbidden`) and the last admin (`admin.last_admin`). Safe to retry | `admin_set_role` |
+| `admin_fill_knockouts(event_id, ranking)` | Sets the final to ranking 1 v 2 and the third-place match to 3 v 4, once every league fixture has finished (`admin.league_not_finished`). Checks the ranking is exactly the league's teams. Safe to repeat. The ranking comes from Bolu's standings until they're in the database | `admin_fill_knockouts` |
 | `admin_audit_page(...)` | The audit feed: `audit_log` plus match event voids and admin-recorded events, keyset-paginated | `admin_audit_announcements` |
 
 Every import records its `import_id` in `admin_imports`. Committing the same import again returns the first run's counts with `alreadyApplied: true` and writes nothing.
