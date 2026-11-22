@@ -190,9 +190,29 @@ Deadlines are **never recalculated automatically**. Moving a kickoff doesn't mov
 
 Fixtures import (`lib/admin/actions/imports.ts`): `previewFixturesImport(csvText)` and `commitFixturesImport({ importId, rows })` work like the players import. A file with a `ref` column is refused until `fixtures.ref` exists.
 
-### Officials and dashboard (PR 5, planned)
+### Officials and console holders
 
-`listProfiles(search)`, `setRole({ profileId, role })`, which returns the fixtures released from a demoted official; `setConsoleHolder({ fixtureId, profileId | null })`; and `getDashboard()`, which returns the same `DashboardData` shape as `app/admin/dashboard-data.ts`.
+Queries (`lib/admin/queries/officials.ts`):
+
+| Function | Input | Output |
+| --- | --- | --- |
+| `listProfiles(filter?)` | `{ search?, role?, limit? }` (search matches name or email; up to 100, newest first) | `AdminProfile[]`: `{ id, displayName, email, role, createdAt }` |
+| `listOfficials()` | none | every official and admin account, by name (the console holder picker) |
+
+Actions (`lib/admin/actions/officials.ts`):
+
+| Action | Input | Output | Errors to expect |
+| --- | --- | --- | --- |
+| `setRole` | `{ profileId, role: "user" \| "official" }` | `{ profileId, role, releasedFixtures }`. When demoting, `releasedFixtures` lists the unfinished fixtures that lost their holder (`{ id, kickoffAt, stage, status, eventName, home, away }`); show them | `own_role`, `role_forbidden`, `last_admin`, `not_found` (they haven't signed in yet) |
+| `setConsoleHolder` | `{ fixtureId, profileId \| null }` | `AdminFixture` | `live.holder_not_official` |
+
+Both are "set to", so a retry does nothing new.
+
+### Dashboard
+
+`getDashboard()` (`lib/admin/queries/dashboard.ts`) returns the same `DashboardData` as `app/admin/dashboard-data.ts`. To switch, change the import in `app/admin/page.tsx` to `import { getDashboard, type DashboardFixture } from "@/lib/admin/queries/dashboard"`, call `getDashboard()`, and delete `dashboard-data.ts`.
+
+Its "needs a holder" rule is unchanged: scheduled, no console holder, and kicking off within the next 2 hours.
 
 ### Corrections, walkovers and fantasy (PR 6, planned; needs `lib/live` and Mary's functions)
 
