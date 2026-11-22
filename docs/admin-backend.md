@@ -44,7 +44,7 @@ Defined in `lib/admin/errors.ts`.
 | `admin.own_role` | You can't change your own role |
 | `admin.role_forbidden` | Admin is granted or removed only in the database (by Tayo) |
 | `admin.price_locked` | Price change after the matchday 1 deadline |
-| `admin.price_out_of_range` | Price outside the allowed range (today the `players` check constraint, ₦4.0m to ₦10.0m in steps of ₦0.5m; from PR 3, `admin_price_rules()`) |
+| `admin.price_out_of_range` | Price outside `admin_price_rules()` (₦4.0m to ₦10.0m in steps of ₦0.5m) |
 | `admin.player_ambiguous` | Two players share that name; give a display name |
 | `admin.import_invalid` | The import has rows with errors; nothing was written |
 | `admin.rule_violation` | Another database rule refused it |
@@ -83,6 +83,21 @@ Fixture changes will also expire Bolu's `liveTags.fixtureList` once `lib/live` i
 | `lib/admin/domain/deadlines.ts` | `computeDeadline`, `checkDeadlineOverride` |
 | `lib/admin/domain/fixtures.ts` | `findScheduleWarnings`, `estimateDurationMinutes` |
 | `lib/admin/csv/*` | `previewPlayersCsv`, `previewPricesCsv`, `previewFixturesCsv` (pure; the preview actions wrap them) |
+
+## Database functions
+
+The server actions call these. They're listed so the rules are easy to find; pages never call them directly.
+
+| Function | What it does | Migration |
+| --- | --- | --- |
+| `admin_price_rules()` | The allowed price range and step: min 40, max 100, step 5 (tenths). The single source; when Mary adds price columns to `fantasy_rules`, only this function changes | `admin_players_prices` |
+| `admin_price_lock_at()` | Matchday 1's `deadline_at`. Prices lock at that moment; null means no lock | `admin_players_prices` |
+| `players_price_lock` (trigger) | From the app: prices must fit the rules (`admin.price_out_of_range`). After the lock: no price changes, and new players only at the lowest price (`admin.price_locked`). Status changes are always allowed | `admin_players_prices` |
+| `admin_import_players(import_id, rows)` | Players CSV commit: re-checks every row, all or nothing, never renames existing players, tags audit rows with the import id. Returns `{ inserted, updated, unchanged, alreadyApplied }` | `admin_players_prices` |
+| `admin_set_prices(import_id, rows)` | Prices CSV commit, same guarantees | `admin_players_prices` |
+| `admin_audit_page(...)` | The audit feed: `audit_log` plus match event voids and admin-recorded events, keyset-paginated | `admin_audit_announcements` |
+
+Every import records its `import_id` in `admin_imports`. Committing the same import again returns the first run's counts with `alreadyApplied: true` and writes nothing.
 
 ## Functions by area
 

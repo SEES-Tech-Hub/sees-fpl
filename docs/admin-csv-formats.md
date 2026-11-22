@@ -22,9 +22,7 @@ Running the same commit twice does nothing the second time. Each import gets an 
 
 Prices are in **millions of naira** with one decimal place: `5.5` means ₦5.5m. `5`, `₦5.5m` and `N5.5m` also work.
 
-The allowed range is **₦4.0m to ₦10.0m, in steps of ₦0.5m**. The database enforces it with the `players` table's check constraint. A price like `5.25` or `5.3` is an error, never rounded.
-
-From PR 3, the database function `admin_price_rules()` will be the single source of the range and step, and this page will point there.
+The allowed range and step live in one place, the database function `admin_price_rules()`. Today they are **₦4.0m to ₦10.0m, in steps of ₦0.5m**. A price like `5.25` or `5.3` is an error, never rounded.
 
 **Prices lock at the matchday 1 deadline.** After that:
 
