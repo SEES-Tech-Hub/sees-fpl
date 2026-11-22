@@ -558,6 +558,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "lineups_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "football_suspensions"
+            referencedColumns: ["banned_fixture_id"]
+          },
+          {
             foreignKeyName: "lineups_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
@@ -766,6 +773,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fixtures"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "football_suspensions"
+            referencedColumns: ["banned_fixture_id"]
           },
           {
             foreignKeyName: "match_events_other_player_id_fkey"
@@ -1148,7 +1162,22 @@ export type Database = {
           team_year: number | null
           yellow_cards: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fixtures_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "players_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       football_standings: {
         Row: {
@@ -1185,7 +1214,43 @@ export type Database = {
           team_id: string | null
           team_short_name: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fixtures_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_fixture_id_fkey"
+            columns: ["red_card_fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_fixture_id_fkey"
+            columns: ["red_card_fixture_id"]
+            isOneToOne: false
+            referencedRelation: "football_suspensions"
+            referencedColumns: ["banned_fixture_id"]
+          },
+          {
+            foreignKeyName: "match_events_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       match_timeline: {
         Row: {
@@ -1216,6 +1281,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fixtures"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "football_suspensions"
+            referencedColumns: ["banned_fixture_id"]
           },
           {
             foreignKeyName: "match_events_other_player_id_fkey"
@@ -1267,7 +1339,29 @@ export type Database = {
           walkover: boolean | null
           yellow_cards: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fixtures_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixtures_matchday_id_fkey"
+            columns: ["matchday_id"]
+            isOneToOne: false
+            referencedRelation: "matchdays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "players_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       public_profiles: {
         Row: {
