@@ -157,9 +157,38 @@ How to wire the import screen:
 4. On **Import**, call `commit*Import({ importId, rows: commitRows(preview) })`. Keep the same `importId` for retries.
 5. A commit can still fail with `admin.import_invalid` if the data changed since the preview. Its `message` names the rows; preview again.
 
-### Sports, events, teams and fixtures (PR 4, planned)
+### Fixtures and matchdays
 
-`listSports`, `createSport`, `updateSport`, `createEvent`, `updateEvent`, `updateTeam`, `listFixtures`, `createFixture`, `updateFixture`, `rescheduleFixture`, `setFixtureStatus` (scheduled, postponed or cancelled), `previewFixturesImport`, `commitFixturesImport`, `setMatchdayDeadline`, `clearDeadlineOverride`.
+Queries (`lib/admin/queries/fixtures.ts`):
+
+| Function | Input | Output |
+| --- | --- | --- |
+| `listFixtures(filter?)` | `{ eventId?, matchdayId?, status?, from?, to? }` (ISO times; use `watDayBounds` for a WAT day) | `AdminFixture[]` by kickoff, fixtures with no time last |
+| `getFixture(fixtureId)` | id | `AdminFixture \| null` |
+| `listMatchdays()` | none | `AdminMatchday[]`: `{ id, number, name, deadlineAt, status, firstKickoffAt, fixtureCount }` |
+
+`AdminFixture` is `{ id, eventId, eventName, sportId, sportName, sportSlug, stage, homeTeamId, awayTeamId, home, away, label, kickoffAt, venue, status, matchdayId, matchdayNumber, consoleHolderId, holderName, homeScore, awayScore, updatedAt }`. `label` reads like "Y1 v Y4" or "Final (teams to be confirmed)", the same as the dashboard.
+
+Actions (`lib/admin/actions/fixtures.ts`), each returning the updated `AdminFixture`:
+
+| Action | Input | Errors to expect |
+| --- | --- | --- |
+| `createFixture` | `createFixtureInput`: `eventId, stage?, homeTeamId?, awayTeamId?, kickoffAt?, venue?, matchdayId?` | `invalid_input` (one team without the other, a team playing itself) |
+| `updateFixture` | `updateFixtureInput`: `fixtureId` and any of `stage, homeTeamId, awayTeamId, venue, matchdayId` | `live.has_events` (teams can't change once it has events) |
+| `rescheduleFixture` | `{ fixtureId, kickoffAt }`: ISO, or null for "to be confirmed". Convert WAT input with `watToUtc` | `not_found` |
+| `postponeFixture(fixtureId)` / `cancelFixture(fixtureId)` / `restoreFixture(fixtureId)` | id | `live.has_events` (void its events first), `live.derived_status` (it's live or over) |
+
+Walkovers are `recordWalkover`, under Corrections.
+
+Matchdays (`lib/admin/actions/matchdays.ts`):
+
+| Action | Input | Output |
+| --- | --- | --- |
+| `setMatchdayDeadline` | `{ matchdayId, deadlineAt }` | `{ matchdayId, number, deadlineAt }`. `invalid_input` if it's after the matchday's first kickoff |
+
+Deadlines are **never recalculated automatically**. Moving a kickoff doesn't move its matchday's deadline. Show `firstKickoffAt` next to each deadline so the admin can set it. Matchday 1's deadline is also when prices lock.
+
+Fixtures import (`lib/admin/actions/imports.ts`): `previewFixturesImport(csvText)` and `commitFixturesImport({ importId, rows })` work like the players import. A file with a `ref` column is refused until `fixtures.ref` exists.
 
 ### Officials and dashboard (PR 5, planned)
 
