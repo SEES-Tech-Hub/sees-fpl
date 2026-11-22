@@ -273,6 +273,17 @@ How each piece behaves:
 - **Corrections take two calls**, because Bolu's API has no single void-and-record. If the void works and the replacement is refused, `correctMatchEvent` returns an error that starts "The old event was voided, but the corrected one wasn't recorded". Fix it and send the same input again (same ids): the void isn't repeated, and the replacement is recorded once.
 - **Points only recalculate on the deployed site.** Mary's engine uses the secret key, which exists only on Vercel. Locally, `finaliseMatchday` and `recalculateMatchday` return `admin.unavailable` with "Points can only be recalculated on the deployed site."
 
-### Knockout fill (planned)
+### Knockout fill
 
-`fillKnockouts({ eventId })` (not built yet) calls Bolu's `fill_football_knockouts(event_id)`, which reads the final order from the `football_standings` view, so the database decides who plays in the final and the third-place match. See "Knockouts and bans" in docs/live-scores.md for its errors. The earlier `admin_fill_knockouts(event_id, ranking)`, which took the order from the app, was dropped before it was applied.
+| Function | Input | Output |
+| --- | --- | --- |
+| `getKnockoutPreview(eventId)` (`lib/admin/queries/knockouts.ts`) | event id | `{ ready: true, standings, final: { home, away }, thirdPlace }`, or `{ ready: false, reason: "not_football" \| "league_not_finished" \| "too_few_teams" \| "standings_tied", unfinished, standings }`. Show it on the confirm screen |
+| `fillKnockouts` (`lib/admin/actions/knockouts.ts`) | `{ eventId }` | `{ fixtures: [{ fixtureId, stage, homeTeamId, awayTeamId }] }` |
+
+- `fillKnockouts` calls Bolu's `fill_football_knockouts(event_id)`. It reads the final order from `football_standings`, so the database decides who plays in the final and the third-place match.
+- His errors come through as `live.league_not_finished`, `live.standings_tied` and `live.has_events` (see "Knockouts and bans" in `docs/live-scores.md`). On `standings_tied`, the organisers decide and the admin sets those teams with `updateFixture`.
+- Running it again with the same table changes nothing.
+
+## Smoke test
+
+[`admin-smoke-test.md`](admin-smoke-test.md) is a step-by-step check of all of the above on a preview deployment.
