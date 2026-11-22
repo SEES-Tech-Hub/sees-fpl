@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_imports: {
+        Row: {
+          actor: string | null
+          counts: Json | null
+          created_at: string
+          import_id: string
+          kind: string
+        }
+        Insert: {
+          actor?: string | null
+          counts?: Json | null
+          created_at?: string
+          import_id: string
+          kind: string
+        }
+        Update: {
+          actor?: string | null
+          counts?: Json | null
+          created_at?: string
+          import_id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_imports_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_imports_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           created_at: string
@@ -558,6 +597,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "lineups_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "football_suspensions"
+            referencedColumns: ["banned_fixture_id"]
+          },
+          {
             foreignKeyName: "lineups_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
@@ -766,6 +812,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fixtures"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "football_suspensions"
+            referencedColumns: ["banned_fixture_id"]
           },
           {
             foreignKeyName: "match_events_other_player_id_fkey"
@@ -1128,6 +1181,116 @@ export type Database = {
       }
     }
     Views: {
+      football_player_totals: {
+        Row: {
+          appearances: number | null
+          assists: number | null
+          clean_sheets: number | null
+          display_name: string | null
+          event_id: string | null
+          goals: number | null
+          man_of_the_match: number | null
+          minutes_played: number | null
+          own_goals: number | null
+          player_id: string | null
+          position: Database["public"]["Enums"]["player_position"] | null
+          red_cards: number | null
+          team_id: string | null
+          team_name: string | null
+          team_short_name: string | null
+          team_year: number | null
+          yellow_cards: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixtures_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "players_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      football_standings: {
+        Row: {
+          drawn: number | null
+          event_id: string | null
+          goal_difference: number | null
+          goals_against: number | null
+          goals_for: number | null
+          h2h_points: number | null
+          live: boolean | null
+          lost: number | null
+          played: number | null
+          points: number | null
+          position: number | null
+          position_shared: boolean | null
+          team_id: string | null
+          team_name: string | null
+          team_short_name: string | null
+          team_year: number | null
+          won: number | null
+        }
+        Relationships: []
+      }
+      football_suspensions: {
+        Row: {
+          ban_served: boolean | null
+          banned_fixture_id: string | null
+          banned_fixture_kickoff_at: string | null
+          display_name: string | null
+          event_id: string | null
+          player_id: string | null
+          red_card_event_id: number | null
+          red_card_fixture_id: string | null
+          team_id: string | null
+          team_short_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixtures_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_fixture_id_fkey"
+            columns: ["red_card_fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_fixture_id_fkey"
+            columns: ["red_card_fixture_id"]
+            isOneToOne: false
+            referencedRelation: "football_suspensions"
+            referencedColumns: ["banned_fixture_id"]
+          },
+          {
+            foreignKeyName: "match_events_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_timeline: {
         Row: {
           added_minutes: number | null
@@ -1159,6 +1322,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "match_events_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "football_suspensions"
+            referencedColumns: ["banned_fixture_id"]
+          },
+          {
             foreignKeyName: "match_events_other_player_id_fkey"
             columns: ["other_player_id"]
             isOneToOne: false
@@ -1174,6 +1344,57 @@ export type Database = {
           },
           {
             foreignKeyName: "match_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_match_stats: {
+        Row: {
+          appeared: boolean | null
+          assists: number | null
+          event_id: string | null
+          fixture_finished: boolean | null
+          fixture_id: string | null
+          goals: number | null
+          goals_conceded_on_pitch: number | null
+          lineup_role: Database["public"]["Enums"]["lineup_role"] | null
+          lineup_set: boolean | null
+          man_of_the_match: boolean | null
+          matchday_id: string | null
+          minutes_played: number | null
+          own_goals: number | null
+          own_goals_conceded_on_pitch: number | null
+          penalties_missed: number | null
+          penalties_saved: number | null
+          player_id: string | null
+          position: Database["public"]["Enums"]["player_position"] | null
+          red_cards: number | null
+          red_from_second_yellow: boolean | null
+          started: boolean | null
+          team_id: string | null
+          walkover: boolean | null
+          yellow_cards: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixtures_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixtures_matchday_id_fkey"
+            columns: ["matchday_id"]
+            isOneToOne: false
+            referencedRelation: "matchdays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "players_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -1230,7 +1451,58 @@ export type Database = {
           table_name: string
         }[]
       }
+      admin_begin_import: {
+        Args: { p_import_id: string; p_kind: string; p_rows: Json }
+        Returns: Json
+      }
+      admin_fail: {
+        Args: { p_code: string; p_message: string }
+        Returns: undefined
+      }
+      admin_finish_import: {
+        Args: {
+          p_import_id: string
+          p_inserted: number
+          p_unchanged: number
+          p_updated: number
+        }
+        Returns: Json
+      }
+      admin_import_fixtures: {
+        Args: { p_import_id: string; p_rows: Json }
+        Returns: Json
+      }
+      admin_import_players: {
+        Args: { p_import_id: string; p_rows: Json }
+        Returns: Json
+      }
+      admin_normalise_name: { Args: { p_name: string }; Returns: string }
+      admin_price_lock_at: { Args: never; Returns: string }
+      admin_price_problem: { Args: { p_tenths: number }; Returns: string }
+      admin_price_rules: {
+        Args: never
+        Returns: {
+          max_tenths: number
+          min_tenths: number
+          step_tenths: number
+        }[]
+      }
+      admin_raise_row_errors: {
+        Args: { p_errors: string[] }
+        Returns: undefined
+      }
       admin_set_audit_context: { Args: { p_context: Json }; Returns: undefined }
+      admin_set_prices: {
+        Args: { p_import_id: string; p_rows: Json }
+        Returns: Json
+      }
+      admin_set_role: {
+        Args: {
+          p_profile_id: string
+          p_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: Json
+      }
       create_league: { Args: { p_name: string }; Returns: Json }
       create_manager: {
         Args: { p_team_name: string; p_year_group?: number }
@@ -1309,6 +1581,37 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fill_football_knockouts: {
+        Args: { p_event_id: string }
+        Returns: {
+          away_score: number | null
+          away_shootout: number | null
+          away_team_id: string | null
+          console_holder: string | null
+          created_at: string
+          current_period: Database["public"]["Enums"]["match_period"] | null
+          event_id: string
+          home_score: number | null
+          home_shootout: number | null
+          home_team_id: string | null
+          id: string
+          kickoff_at: string | null
+          matchday_id: string | null
+          period_started_at: string | null
+          result_note: string | null
+          stage: string
+          status: Database["public"]["Enums"]["fixture_status"]
+          updated_at: string
+          venue: string | null
+          winner_team_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "fixtures"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       fixture_player_state: {
         Args: { p_fixture_id: string }
         Returns: {
@@ -1379,6 +1682,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      live_period_end_minute: {
+        Args: {
+          p_extra_period_minutes: number
+          p_period: Database["public"]["Enums"]["match_period"]
+          p_period_minutes: number
+        }
+        Returns: number
       }
       make_transfers: {
         Args: {
