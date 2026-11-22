@@ -18,10 +18,12 @@ export const ADMIN_ERROR_CODES = [
   "admin.forbidden", // the database refused the write for this account (42501)
   "admin.own_role", // an admin tried to change their own role
   "admin.role_forbidden", // admin can only be granted or removed in the SQL editor
+  "admin.last_admin", // the last admin account can't be demoted
   "admin.price_locked", // price change after the matchday 1 deadline
   "admin.price_out_of_range", // outside the allowed price range (admin_price_rules() from PR 3)
   "admin.player_ambiguous", // two players share that name; give a display_name
   "admin.import_invalid", // the import has rows with errors; nothing was written
+  "admin.league_not_finished", // knockout fill before every league fixture has finished
   "admin.rule_violation", // another database rule (message comes from the database)
   "admin.not_ready", // depends on a teammate's function that hasn't landed yet
   "admin.unavailable", // network or database busy (retryable)

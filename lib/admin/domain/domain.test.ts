@@ -243,3 +243,27 @@ describe("schedule warnings", () => {
     expect(warnings[0].key).toBe("row:3");
   });
 });
+
+describe("fixture labels", () => {
+  it("matches Tayo's dashboard labels", async () => {
+    const { fixtureLabel } = await import("./fixtures");
+    expect(fixtureLabel("league", "Y1", "Y4")).toBe("Y1 v Y4");
+    expect(fixtureLabel("final", "Y5", "Y3")).toBe("Final: Y5 v Y3");
+    expect(fixtureLabel("third_place", null, null)).toBe("Third place (teams to be confirmed)");
+    expect(fixtureLabel("heat_1", null, null)).toBe("Entrants to be confirmed");
+  });
+});
+
+describe("watDayBounds", () => {
+  it("is the Lagos day, which starts at 23:00 UTC the day before", async () => {
+    const { watDayBounds } = await import("./wat");
+    const { start, end } = watDayBounds(new Date("2026-11-27T23:30:00Z")); // 00:30 WAT on the 28th
+    expect(start.toISOString()).toBe("2026-11-27T23:00:00.000Z");
+    expect(end.toISOString()).toBe("2026-11-28T23:00:00.000Z");
+  });
+  it("crosses a month end", async () => {
+    const { watDayBounds } = await import("./wat");
+    const { start, end } = watDayBounds(new Date("2026-11-30T12:00:00Z"));
+    expect([start.toISOString(), end.toISOString()]).toEqual(["2026-11-29T23:00:00.000Z", "2026-11-30T23:00:00.000Z"]);
+  });
+});
