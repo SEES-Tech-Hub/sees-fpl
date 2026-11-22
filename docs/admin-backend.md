@@ -214,9 +214,22 @@ Both are "set to", so a retry does nothing new.
 
 Its "needs a holder" rule is unchanged: scheduled, no console holder, and kicking off within the next 2 hours.
 
-### Corrections, walkovers and fantasy (PR 6, planned; needs `lib/live` and Mary's functions)
+### Corrections, walkovers and fantasy points
 
-`recordWalkover`, `voidMatchEvent`, `correctMatchEvent`, `finaliseMatchday` and `recalculateMatchday`. The last two return `admin.not_ready` until Mary's functions exist.
+`lib/admin/actions/corrections.ts` wraps Bolu's `recordMatchEvent` and `undoMatchEvent` (`lib/live/actions.ts`) and Mary's `recalculateMatchdayAndRankings` (`lib/fantasy/actions.ts`). Nothing here writes `match_events` directly. Bolu's errors come back as `live.<his code>` with his message.
+
+| Action | Input | Output |
+| --- | --- | --- |
+| `recordWalkover` | `{ fixtureId, awardedTeamId, clientEventId, points? }`. Make `clientEventId` with `crypto.randomUUID()` when the admin confirms | `{ event, recalculation }`. Only before the fixture has events (`live.invalid_state`) |
+| `voidMatchEvent` | `{ clientEventId, reason }` (reason: 5 to 300 characters) | `{ voided, recorded: null, recalculation }` |
+| `correctMatchEvent` | `{ voidClientEventId, reason, replacement? }`. `replacement` is a `RecordEventInput` (see `docs/live-scores.md`) for the same fixture, with a new `clientEventId`; after full time it can carry the real `occurredAt` | `{ voided, recorded, recalculation }` |
+| `finaliseMatchday` | `{ matchdayId }` | `{ managersUpdated }`. Final points and rankings; safe to repeat |
+| `recalculateMatchday` | `{ matchdayId }` | `{ managersUpdated, finalised }`. Leaves the finalised flag as it was |
+
+How each piece behaves:
+- **`recalculation`** is `{ status: "done", managersUpdated, finalised }`, or `{ status: "skipped", reason: "no_matchday" | "before_deadline" }`, or `{ status: "failed", error }`. A correction that worked but couldn't recalculate still returns `ok: true`, so show `recalculation.error.message` and offer **Recalculate**.
+- **Corrections take two calls**, because Bolu's API has no single void-and-record. If the void works and the replacement is refused, `correctMatchEvent` returns an error that starts "The old event was voided, but the corrected one wasn't recorded". Fix it and send the same input again (same ids): the void isn't repeated, and the replacement is recorded once.
+- **Points only recalculate on the deployed site.** Mary's engine uses the secret key, which exists only on Vercel. Locally, `finaliseMatchday` and `recalculateMatchday` return `admin.unavailable` with "Points can only be recalculated on the deployed site."
 
 ### Knockout fill (PR 7, planned; needs Bolu's standings)
 
