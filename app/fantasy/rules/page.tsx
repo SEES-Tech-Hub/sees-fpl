@@ -181,13 +181,13 @@ function WorkedExamples({ rules }: { rules: FantasyRules }) {
     <div className="grid gap-3 sm:grid-cols-3">
       <ExampleCard
         title="Captain forward"
-        story="A Year 5 forward is your captain. He plays all 50 minutes, scores once and assists once."
+        story="A Year 5 forward is your captain. They play all 50 minutes, score once and assist once."
         lines={ex1.map(([label, p]) => [label, formatSigned(p)])}
         total={`${ex1Total} × ${rules.captainMultiplier} = ${ex1Total * rules.captainMultiplier} pts`}
       />
       <ExampleCard
         title="Defender clean sheet"
-        story="A defender plays all 50 minutes, scores, and his team concedes nothing."
+        story="A defender plays all 50 minutes, scores, and their team concedes nothing."
         lines={ex2.map(([label, p]) => [label, formatSigned(p)])}
         total={`${ex2Total} pts`}
       />

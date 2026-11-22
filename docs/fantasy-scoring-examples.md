@@ -15,7 +15,7 @@ These seven are the gaps raised on 19 Nov. Each one is linked to the examples th
 | # | Question | Version A | Version B | Examples |
 | --- | --- | --- | --- | --- |
 | Q1 | "Up to 2 saved" free transfers: is 2 the most a manager can **hold**, or the most they can **carry over** (on top of the new one)? | Hold at most 2 free transfers | Carry over up to 2, so hold up to 3 | E15d |
-| Q2 | A player gets a second yellow and is sent off. What does he lose? | Yellow and red both count: −1 −3 = −4 | Only the red counts: −3 (official FPL) | E6c |
+| Q2 | A player gets a second yellow and is sent off. What do they lose? | Yellow and red both count: −1 −3 = −4 | Only the red counts: −3 (official FPL) | E6c |
 | Q3 | Does a captain's **negative** score also double? | Yes, everything doubles (official FPL) | No, only a positive total doubles | E11d |
 | Q4 | Does an own goal count as a goal conceded (losing clean sheets, adding to "every 2 conceded") for the scorer's team? | Yes, it counts like any goal against (official FPL) | No, own goals are ignored for clean sheets and conceded | E7 |
 | Q5 | The table gives "penalty saved" 5 points to **every** position. Should an outfield player (e.g. a MID who went in goal after a red card) really get 5? | Yes, any position, as the table says | Only goalkeepers can score it (outfield = 0) | E8d |
@@ -56,7 +56,7 @@ These seven are the gaps raised on 19 Nov. Each one is linked to the examples th
 
 - A league match is 50 min (2 × 25). A knockout draw adds 14 min of extra time (2 × 7), then penalties.
 - "Every 2 conceded" is `floor(conceded / 2)`: 1 conceded = 0, 2 or 3 = −1, 4 or 5 = −2.
-- A player with 0 minutes "didn't play" and scores 0 for everything. He can be replaced by an automatic sub.
+- A player with 0 minutes "didn't play" and scores 0 for everything. They can be replaced by an automatic sub.
 - Penalty-shootout goals, saves and misses are ignored.
 - A walkover gives every player in that fixture 0, and they count as not having played.
 
@@ -79,14 +79,14 @@ Input: `pos=FWD, min=50, goals=1, assists=1, conceded=1`
 | 30+ min | 1 |
 | Goal (FWD) | 4 |
 | Assist | 3 |
-| Clean sheet (FWD) | 0 (FWD never gets one; his team conceded anyway) |
+| Clean sheet (FWD) | 0 (FWD never gets one; their team conceded anyway) |
 | **Total** | **9** |
 
 As captain: 9 × 2 = **18**. This matches the PRD.
 
 ### E2. The same goal, by each position
 
-Each player plays all 50 min, scores 1 goal, and his team concedes 0.
+Each player plays all 50 min, scores 1 goal, and their team concedes 0.
 
 | Item | GK | DEF | MID | FWD |
 | --- | --- | --- | --- | --- |
@@ -118,7 +118,7 @@ Input: `pos=FWD, min=50, assists=1, conceded=0`
 | E4b. MID comes on at 20', plays to full time | `MID, min=30` | 1 + 1 (exactly 30 counts, Q12) | **2** |
 | E4c. MID starts, is subbed off at 29' | `MID, min=29` | 1 | **1** |
 | E4d. MID on the bench, never comes on | `MID, min=0` | didn't play | **0** |
-| E4e. MID comes on at 10', subbed off again at 30' | `MID, min=20` | 1 (minutes stop when he goes off) | **1** |
+| E4e. MID comes on at 10', subbed off again at 30' | `MID, min=20` | 1 (minutes stop when they go off) | **1** |
 
 ### E5. Clean sheets and goals conceded (only while on the pitch)
 
@@ -140,9 +140,9 @@ Input: `pos=FWD, min=50, assists=1, conceded=0`
 Input: `MID, min=50, yellow=1, conceded=1`
 1 + 1 − 1 = **1**
 
-**E6b.** DEF starts, straight red at 20', team concedes 0 while he is on.
+**E6b.** DEF starts, straight red at 20', team concedes 0 while they are on.
 Input: `DEF, min=20, red=1, conceded=0`
-1 (appeared, under 30 min) − 3, no CS because he played under 30 min = **−2**
+1 (appeared, under 30 min) − 3, no CS because they played under 30 min = **−2**
 
 **E6c. (Q2)** FWD starts, booked at 10', second yellow at 40' and sent off. Team concedes 1.
 Minutes stop at 40', so min=40.
@@ -158,7 +158,7 @@ Note for Bolu: whichever version is picked, `player_match_stats` must make it cl
 
 ### E7. Own goal (Q4)
 
-Y2 v Y3 ends 0–1. The only goal is an own goal by a Y2 DEF. He plays 50 min. The Y2 GK also plays 50 min.
+Y2 v Y3 ends 0–1. The only goal is an own goal by a Y2 DEF. They play 50 min. The Y2 GK also plays 50 min.
 
 | | Version A (OG counts as conceded) | Version B (OG ignored for conceded) |
 | --- | --- | --- |
@@ -185,7 +185,7 @@ Input: `FWD, min=50, goals=1, pen_missed=1`
 - GK plays 64 min, concedes 1, saves 2 shootout penalties. Input: `GK, min=64, conceded=1, pen_saved=0`. Working: 1 + 1 = **2**.
 - FWD plays 64 min, scores in the shootout and also misses one. Input: `FWD, min=64, goals=0, pen_missed=0`. Working: 1 + 1 = **2**.
 
-**E8d. (Q5)** Y4's GK is sent off. A Y4 MID goes in goal for the last 20 min and saves a penalty. He plays 50 min in total and Y4 concede 2.
+**E8d. (Q5)** Y4's GK is sent off. A Y4 MID goes in goal for the last 20 min and saves a penalty. They play 50 min in total and Y4 concede 2.
 
 | | Version A (any position scores it) | Version B (GK only) |
 | --- | --- | --- |
@@ -193,7 +193,7 @@ Input: `FWD, min=50, goals=1, pen_missed=1`
 | Working | 1 + 1 + 5; MIDs lose nothing for conceding | 1 + 1 |
 | **Total** | **7** | **2** |
 
-His position for scoring stays MID either way.
+Their position for scoring stays MID either way.
 
 ### E9. Man of the Match
 
@@ -208,7 +208,7 @@ A knockout match is 2–2 after 50 min, then plays 14 min of extra time (64 min 
 | Case | Input | Working | Total |
 | --- | --- | --- | --- |
 | E10a. FWD comes on at 40', scores in extra time | `FWD, min=24, goals=1` (10 + 14) | 1 (under 30) + 4 | **5** |
-| E10b. FWD comes on at 30' | `FWD, min=34` (20 + 14) | 1 + 1 (extra time takes him past 30) | **2** |
+| E10b. FWD comes on at 30' | `FWD, min=34` (20 + 14) | 1 + 1 (extra time takes them past 30) | **2** |
 | E10c. DEF plays all 64 min, team concedes 3 (2 in normal time, 1 in extra time) | `DEF, min=64, conceded=3` | 1 + 1 − 1 | **1** |
 | E10d. GK plays all 64 min, saves a penalty in extra time, concedes 2 | `GK, min=64, pen_saved=1, conceded=2` | 1 + 1 + 5 − 1 | **6** |
 
@@ -235,7 +235,7 @@ Bench notation: `GK slot | B1, B2, B3` (outfield order, see Q8).
 | Captain counts | −2 × 2 = −4 | −2 |
 | Captain bonus | **−2** | **0** |
 
-**E11e.** Captain plays 1 min. Captain FWD comes on at 49': `min=1`, so 1 point, doubled to **2**. He played, so the vice does not take over.
+**E11e.** Captain plays 1 min. Captain FWD comes on at 49': `min=1`, so 1 point, doubled to **2**. They played, so the vice does not take over.
 
 ### E12. Automatic substitutes
 
@@ -247,11 +247,11 @@ B1 MID comes in: 3 DEF, 5 MID, 2 FWD is valid. **+3 points** from B1. B2 and B3 
 
 **E12b. A bench player who didn't play is skipped.** XI is 4-4-2, one starting MID has 0 min.
 Bench: `GK2 | B1 FWD 0 min, B2 DEF 2 pts, B3 MID 6 pts`.
-B1 has 0 min, so skip him. B2 DEF comes in (5-3-2 is valid). **+2**. B3 does not come in, even though he scored more.
+B1 has 0 min, so skip them. B2 DEF comes in (5-3-2 is valid). **+2**. B3 does not come in, even though they scored more.
 
 **E12c. Formation forces a skip.** XI is 3-5-2, one starting DEF has 0 min.
 Bench: `GK2 | B1 MID 5 pts, B2 DEF 1 pt, B3 FWD 2 pts`.
-B1 MID would leave 2 DEF, below the minimum of 3, so skip him. B2 DEF comes in (3-5-2). **+1**.
+B1 MID would leave 2 DEF, below the minimum of 3, so skip them. B2 DEF comes in (3-5-2). **+1**.
 
 **E12d. (Q6)** Maximums. XI is 5-3-2, one starting MID has 0 min.
 Bench: `GK2 | B1 DEF 2 pts, B2 MID 1 pt, B3 FWD 6 pts`.
@@ -275,7 +275,7 @@ Assumption: missing starters are filled in XI order. With these rules the order 
 ### E13. Team doesn't play that matchday
 
 Matchday 1: Y1 v Y4 and Y2 v Y3. Year 5 sit out.
-A manager starts a Y5 FWD. He scores **0** and counts as not having played, so he is replaced by the first valid bench player who did play, exactly as in E12. If he was captain, the vice takes over (E11b).
+A manager starts a Y5 FWD. They score **0** and count as not having played, so they are replaced by the first valid bench player who did play, exactly as in E12. If they were captain, the vice takes over (E11b).
 
 ### E14. Walkover
 
@@ -343,7 +343,7 @@ Matchday 2. The manager made 2 transfers with 1 free transfer. Formation 3-4-3. 
 
 **Bench:** `GK2 2 pts | B1 FWD4 1 pt, B2 DEF4 2 pts, B3 MID5 0 min`
 
-**Automatic subs.** DEF3 is missing. B1 FWD4 would leave 2 DEF, so skip him. B2 DEF4 (`DEF, min=50, conceded=1`: 1 + 1 = 2) comes in.
+**Automatic subs.** DEF3 is missing. B1 FWD4 would leave 2 DEF, so skip them. B2 DEF4 (`DEF, min=50, conceded=1`: 1 + 1 = 2) comes in.
 
 **Total**
 
@@ -375,7 +375,7 @@ The rank after a tie skips (1, 2, 2, **4**), as in standard competition ranking.
 
 ### E19. A player removed from the squad
 
-After MD2, an admin marks a Y3 DEF as "left". On MD3 he stays in every manager's team, scores **0** and counts as not having played (automatic subs apply). Every manager gets **+1 free transfer** for MD3 (Q13). A manager who held 1 has 2 for MD3; a manager who held 2 has 3 for MD3 only.
+After MD2, an admin marks a Y3 DEF as "left". On MD3 they stay in every manager's team, score **0** and count as not having played (automatic subs apply). Every manager gets **+1 free transfer** for MD3 (Q13). A manager who held 1 has 2 for MD3; a manager who held 2 has 3 for MD3 only.
 
 ### E20. A correction after finalising
 
