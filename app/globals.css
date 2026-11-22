@@ -229,6 +229,73 @@
   --text-display: 2.25rem; --text-display--line-height:
 }
 
+/*
+  Design system v1.0, section 4 (docs: SEES Games Hub Design System, Akeem).
+  Copied verbatim so the fantasy screens can use team colours, the pitch and
+  elevation. Owner stays Fortune: if your day-1 tokens land, keep yours and
+  drop this block.
+*/
+:root {
+  /* Team colours */
+  --team-y1: #38bdf8;  --team-y1-ink: #0369a1;
+  --team-y2: #ff7a59;  --team-y2-ink: #c2410c;
+  --team-y3: #a78bfa;  --team-y3-ink: #6d28d9;
+  --team-y4: #9be15d;  --team-y4-ink: #3f7a12;
+  --team-y5: #f472b6;  --team-y5-ink: #be185d;
+  --team-foreground: #0f0f0f;
+
+  /* Surfaces */
+  --pitch: #013f31;            /* fantasy pitch and match hero */
+  --pitch-line: rgb(149 253 226 / 0.18);
+  --glow: rgb(149 253 226 / 0.45);  /* live glow */
+  --scrim: rgb(1 20 15 / 0.6);
+
+  /* Elevation */
+  --shadow-card: 0 1px 2px rgb(1 30 22 / 0.06), 0 4px 16px rgb(1 30 22 / 0.06);
+  --shadow-raised: 0 8px 30px rgb(1 30 22 / 0.14);
+  --shadow-glow: 0 0 0 1px var(--glow), 0 0 24px var(--glow);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --team-y1: #7dd3fc;  --team-y1-ink: #7dd3fc;
+    --team-y2: #ff9b80;  --team-y2-ink: #ff9b80;
+    --team-y3: #c4b5fd;  --team-y3-ink: #c4b5fd;
+    --team-y4: #b5eb85;  --team-y4-ink: #b5eb85;
+    --team-y5: #f9a8d4;  --team-y5-ink: #f9a8d4;
+    --pitch: #0b2a22;
+    --shadow-card: 0 0 0 1px var(--border);
+    --shadow-raised: 0 8px 30px rgb(0 0 0 / 0.5);
+  }
+}
+
+@theme inline {
+  --color-team-y1: var(--team-y1);  --color-team-y1-ink: var(--team-y1-ink);
+  --color-team-y2: var(--team-y2);  --color-team-y2-ink: var(--team-y2-ink);
+  --color-team-y3: var(--team-y3);  --color-team-y3-ink: var(--team-y3-ink);
+  --color-team-y4: var(--team-y4);  --color-team-y4-ink: var(--team-y4-ink);
+  --color-team-y5: var(--team-y5);  --color-team-y5-ink: var(--team-y5-ink);
+  --color-team-foreground: var(--team-foreground);
+  --color-pitch: var(--pitch);
+  --color-pitch-line: var(--pitch-line);
+  --shadow-card: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
+  --shadow-glow: var(--shadow-glow);
+  --ease-out-soft: var(--ease-out);
+  --ease-spring: var(--ease-spring);
+
+  /* Type scale (see section 5) */
+  --text-score: 3.5rem;    --text-score--line-height: 0.95;
+  --text-display: 2.25rem; --text-display--line-height: 1;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

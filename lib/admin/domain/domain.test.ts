@@ -243,3 +243,56 @@ describe("schedule warnings", () => {
     expect(warnings[0].key).toBe("row:3");
   });
 });
+
+describe("fixture labels", () => {
+  it("matches Tayo's dashboard labels", async () => {
+    const { fixtureLabel } = await import("./fixtures");
+    expect(fixtureLabel("league", "Y1", "Y4")).toBe("Y1 v Y4");
+    expect(fixtureLabel("final", "Y5", "Y3")).toBe("Final: Y5 v Y3");
+    expect(fixtureLabel("third_place", null, null)).toBe("Third place (teams to be confirmed)");
+    expect(fixtureLabel("heat_1", null, null)).toBe("Entrants to be confirmed");
+  });
+});
+
+describe("watDayBounds", () => {
+  it("is the Lagos day, which starts at 23:00 UTC the day before", async () => {
+    const { watDayBounds } = await import("./wat");
+    const { start, end } = watDayBounds(new Date("2026-11-27T23:30:00Z")); // 00:30 WAT on the 28th
+    expect(start.toISOString()).toBe("2026-11-27T23:00:00.000Z");
+    expect(end.toISOString()).toBe("2026-11-28T23:00:00.000Z");
+  });
+  it("crosses a month end", async () => {
+    const { watDayBounds } = await import("./wat");
+    const { start, end } = watDayBounds(new Date("2026-11-30T12:00:00Z"));
+    expect([start.toISOString(), end.toISOString()]).toEqual(["2026-11-29T23:00:00.000Z", "2026-11-30T23:00:00.000Z"]);
+  });
+});
+
+describe("deadline drift", () => {
+  it("is fine when the first kickoff is at least the offset after the deadline", async () => {
+    const { findDeadlineDrift } = await import("./deadlines");
+    expect(findDeadlineDrift("2026-11-28T12:30:00Z", ["2026-11-28T13:00:00Z", "2026-11-28T15:00:00Z"], 30)).toBeNull();
+  });
+  it("warns when a kickoff moves to less than the offset after the deadline", async () => {
+    const { findDeadlineDrift } = await import("./deadlines");
+    expect(findDeadlineDrift("2026-11-28T12:30:00Z", ["2026-11-28T12:45:00Z", "2026-11-28T15:00:00Z"], 30)).toEqual({
+      firstKickoffAt: "2026-11-28T12:45:00.000Z",
+      minutesBetween: 15,
+      suggestedDeadlineAt: "2026-11-28T12:15:00.000Z",
+    });
+  });
+  it("warns when the first kickoff is before the deadline", async () => {
+    const { findDeadlineDrift } = await import("./deadlines");
+    expect(findDeadlineDrift("2026-11-28T12:30:00Z", ["2026-11-28T12:00:00Z"], 30)?.minutesBetween).toBe(-30);
+  });
+  it("uses the offset it's given, not 30", async () => {
+    const { findDeadlineDrift } = await import("./deadlines");
+    expect(findDeadlineDrift("2026-11-28T12:30:00Z", ["2026-11-28T13:00:00Z"], 45)?.minutesBetween).toBe(30);
+    expect(findDeadlineDrift("2026-11-28T12:30:00Z", ["2026-11-28T13:00:00Z"], 15)).toBeNull();
+  });
+  it("says nothing without a deadline or a kickoff", async () => {
+    const { findDeadlineDrift } = await import("./deadlines");
+    expect(findDeadlineDrift(null, ["2026-11-28T13:00:00Z"], 30)).toBeNull();
+    expect(findDeadlineDrift("2026-11-28T12:30:00Z", [null], 30)).toBeNull();
+  });
+});

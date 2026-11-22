@@ -33,3 +33,35 @@ export function checkDeadlineOverride(
   }
   return null;
 }
+
+export type DeadlineDrift = {
+  /** The matchday's earliest kickoff now. */
+  firstKickoffAt: string;
+  /** Minutes from the deadline to the first kickoff; negative when the kickoff is before the deadline. */
+  minutesBetween: number;
+  /** The latest deadline that keeps the rule: first kickoff minus the rules offset. */
+  suggestedDeadlineAt: string;
+};
+
+/**
+ * Deadlines don't follow kickoffs, so after a kickoff moves the first kickoff
+ * can end up too close to the deadline, or before it. Returns the drift when
+ * the first kickoff is less than `minutesBefore` (from admin_deadline_rules())
+ * after the deadline, or null when it's fine or there's nothing to compare.
+ */
+export function findDeadlineDrift(
+  deadlineAt: string | null,
+  kickoffs: ReadonlyArray<string | null>,
+  minutesBefore: number,
+): DeadlineDrift | null {
+  if (!deadlineAt) return null;
+  const firstKickoffAt = computeDeadline(kickoffs, 0);
+  if (!firstKickoffAt) return null;
+  const minutesBetween = (new Date(firstKickoffAt).getTime() - new Date(deadlineAt).getTime()) / 60_000;
+  if (minutesBetween >= minutesBefore) return null;
+  return {
+    firstKickoffAt,
+    minutesBetween: Math.round(minutesBetween),
+    suggestedDeadlineAt: computeDeadline([firstKickoffAt], minutesBefore) ?? firstKickoffAt,
+  };
+}

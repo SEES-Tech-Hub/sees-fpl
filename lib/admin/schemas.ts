@@ -164,7 +164,14 @@ export const setFixtureStatusInput = z.object({
   status: z.enum(ADMIN_SETTABLE_FIXTURE_STATUSES, { error: "scheduled, postponed or cancelled" }),
 });
 
-export const recordWalkoverInput = z.object({ fixtureId: id, awardedTeamId: id });
+/** clientEventId: crypto.randomUUID() made when the admin confirms, so a retry records once. */
+export const recordWalkoverInput = z.object({
+  fixtureId: id,
+  awardedTeamId: id,
+  clientEventId: id,
+  /** The awarded score. Bolu's default is 3 (football: 3-0). */
+  points: z.number().int().min(1).max(99).optional(),
+});
 
 export const fillKnockoutsInput = z.object({ eventId: id });
 
@@ -199,6 +206,18 @@ export const correctionReason = z
   .pipe(z.string().min(5, "Give a short reason (at least 5 characters)").max(300));
 
 export const voidEventInput = z.object({ clientEventId: id, reason: correctionReason });
+
+/**
+ * Void one event and, optionally, record its replacement (a RecordEventInput
+ * for the same fixture, with its own new clientEventId, checked by Bolu's
+ * recordMatchEvent). Retrying with the same ids is safe: voiding twice and
+ * recording the same clientEventId twice both happen once.
+ */
+export const correctMatchEventInput = z.object({
+  voidClientEventId: id,
+  reason: correctionReason,
+  replacement: z.object({ fixtureId: id, clientEventId: id, type: z.string() }).loose().optional(),
+});
 
 // ---------------------------------------------------------------------------
 // Announcements
@@ -266,3 +285,54 @@ export function parseInput<T extends z.ZodType>(schema: T, input: unknown): Pars
   const first = flat.formErrors[0] ?? Object.values(fieldErrors)[0]?.[0] ?? "Check the highlighted fields.";
   return { ok: false, result: fail("admin.invalid_input", first, { fieldErrors }) };
 }
+
+// ---------------------------------------------------------------------------
+// Import commits: the validated rows from a preview, plus their row numbers
+// (use commitRows() from lib/admin/csv/preview.ts). Shape only; the database
+// re-checks every rule.
+// ---------------------------------------------------------------------------
+
+const rowNumber = z.number().int().min(2);
+
+export const playerImportRowInput = z.object({
+  rowNumber,
+  existingId: id.nullable(),
+  teamId: id,
+  fullName: z.string().max(200),
+  displayName: z.string().max(200),
+  position,
+  shirtNumber: z.number().int().nullable(),
+  priceTenths: z.number().int(),
+  status: playerStatus,
+});
+
+export const priceImportRowInput = z.object({ rowNumber, playerId: id, priceTenths: z.number().int() });
+
+export const fixtureImportRowInput = z.object({
+  rowNumber,
+  existingId: id.nullable(),
+  ref: z.string().max(40).nullable(),
+  eventId: id,
+  stage: z.string().max(40),
+  homeTeamId: id.nullable(),
+  awayTeamId: id.nullable(),
+  kickoffAt: isoDateTime.nullable(),
+  venue: z.string().max(200).nullable(),
+  matchdayId: id.nullable(),
+});
+
+export const commitPlayersInput = importCommitInput(playerImportRowInput);
+export const commitPricesInput = importCommitInput(priceImportRowInput);
+export const commitFixturesInput = importCommitInput(fixtureImportRowInput);
+
+/** CSV text sent for a preview. About 1 MB is far more than any real file (ours are under 10 KB). */
+export const csvTextInput = z.string().max(1_000_000, "The file is too big. Split it into smaller files.");
+
+export const listPlayersFilter = z
+  .object({
+    teamId: id.optional(),
+    position: position.optional(),
+    status: playerStatus.optional(),
+    search: z.string().trim().max(80).optional(),
+  })
+  .default({});
