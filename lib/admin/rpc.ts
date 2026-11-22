@@ -6,8 +6,8 @@ import type { AdminSupabase } from "./server";
 
 // Owner: admin backend. Calls to the admin database functions.
 //
-// TODO(regen): the functions from the admin_players_prices, admin_fixtures_import,
-// admin_set_role and admin_fill_knockouts migrations aren't in
+// TODO(regen): the functions from the admin_players_prices, admin_fixtures_import
+// and admin_set_role migrations aren't in
 // lib/supabase/types.ts until Tayo applies them and regenerates it. Until
 // then they are called through an untyped client here, and every result is
 // checked with a schema, so nothing unchecked reaches the actions. After the
@@ -63,16 +63,8 @@ const setRoleSchema = z.object({
   releasedFixtures: z.array(releasedFixtureSchema),
 });
 
-const knockoutPairSchema = z.object({ fixtureId: z.string(), homeTeamId: z.string(), awayTeamId: z.string() });
-const fillKnockoutsSchema = z.object({
-  final: knockoutPairSchema,
-  thirdPlace: knockoutPairSchema.nullable(),
-  changed: z.number().int(),
-});
-
 export type ReleasedFixture = z.infer<typeof releasedFixtureSchema>;
 export type SetRoleResult = z.infer<typeof setRoleSchema>;
-export type FillKnockoutsResult = z.infer<typeof fillKnockoutsSchema>;
 
 // ---------------------------------------------------------------------------
 // Calls
@@ -126,8 +118,4 @@ export function rpcImportFixtures(supabase: AdminSupabase, importId: string, row
 
 export function rpcSetRole(supabase: AdminSupabase, profileId: string, role: "user" | "official") {
   return call(supabase, "admin_set_role", { p_profile_id: profileId, p_role: role }, setRoleSchema);
-}
-
-export function rpcFillKnockouts(supabase: AdminSupabase, eventId: string, ranking: string[]) {
-  return call(supabase, "admin_fill_knockouts", { p_event_id: eventId, p_ranking: ranking }, fillKnockoutsSchema);
 }

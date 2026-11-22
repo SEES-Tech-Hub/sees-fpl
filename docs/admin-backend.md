@@ -99,7 +99,6 @@ The server actions call these. They're listed so the rules are easy to find; pag
 | `admin_set_prices(import_id, rows)` | Prices CSV commit, same guarantees | `admin_players_prices` |
 | `admin_import_fixtures(import_id, rows)` | Fixtures CSV commit, same guarantees. Existing fixtures only get a new kickoff, venue and matchday; their event, stage and teams must match. Deadlines aren't recalculated: the admin sets them | `admin_fixtures_import` |
 | `admin_set_role(profile_id, role)` | Promote to official or back to user. Demoting releases the account's unfinished console holds and returns them. Refuses your own role (`admin.own_role`), anything involving admin (`admin.role_forbidden`) and the last admin (`admin.last_admin`). Safe to retry | `admin_set_role` |
-| `admin_fill_knockouts(event_id, ranking)` | Sets the final to ranking 1 v 2 and the third-place match to 3 v 4, once every league fixture has finished (`admin.league_not_finished`). Checks the ranking is exactly the league's teams. Safe to repeat. The ranking comes from Bolu's standings until they're in the database | `admin_fill_knockouts` |
 | `admin_audit_page(...)` | The audit feed: `audit_log` plus match event voids and admin-recorded events, keyset-paginated | `admin_audit_announcements` |
 
 Every import records its `import_id` in `admin_imports`. Committing the same import again returns the first run's counts with `alreadyApplied: true` and writes nothing.
@@ -274,6 +273,6 @@ How each piece behaves:
 - **Corrections take two calls**, because Bolu's API has no single void-and-record. If the void works and the replacement is refused, `correctMatchEvent` returns an error that starts "The old event was voided, but the corrected one wasn't recorded". Fix it and send the same input again (same ids): the void isn't repeated, and the replacement is recorded once.
 - **Points only recalculate on the deployed site.** Mary's engine uses the secret key, which exists only on Vercel. Locally, `finaliseMatchday` and `recalculateMatchday` return `admin.unavailable` with "Points can only be recalculated on the deployed site."
 
-### Knockout fill (PR 7, planned; needs Bolu's standings)
+### Knockout fill (planned)
 
-`fillKnockouts({ eventId })`.
+`fillKnockouts({ eventId })` (not built yet) calls Bolu's `fill_football_knockouts(event_id)`, which reads the final order from the `football_standings` view, so the database decides who plays in the final and the third-place match. See "Knockouts and bans" in docs/live-scores.md for its errors. The earlier `admin_fill_knockouts(event_id, ranking)`, which took the order from the app, was dropped before it was applied.
