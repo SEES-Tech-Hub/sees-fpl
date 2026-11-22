@@ -1455,6 +1455,12 @@ export type Database = {
         Args: { p_import_id: string; p_kind: string; p_rows: Json }
         Returns: Json
       }
+      admin_deadline_rules: {
+        Args: never
+        Returns: {
+          minutes_before_kickoff: number
+        }[]
+      }
       admin_fail: {
         Args: { p_code: string; p_message: string }
         Returns: undefined
