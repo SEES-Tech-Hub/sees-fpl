@@ -88,3 +88,21 @@ export function findScheduleWarnings(
   });
   return warnings;
 }
+
+// Same labels as Tayo's dashboard (app/admin/dashboard-data.ts).
+const STAGE_LABELS: Record<string, string> = {
+  final: "Final",
+  third_place: "Third place",
+  semi_final: "Semi-final",
+};
+
+export function fixtureLabel(stage: string, home: string | null, away: string | null): string {
+  const stageLabel = STAGE_LABELS[stage];
+  const teams =
+    home && away
+      ? `${home} v ${away}`
+      : stageLabel
+        ? `${stageLabel} (teams to be confirmed)`
+        : (home ?? "Entrants to be confirmed");
+  return stageLabel && home && away ? `${stageLabel}: ${teams}` : teams;
+}
