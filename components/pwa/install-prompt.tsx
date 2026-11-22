@@ -21,13 +21,23 @@ import { EARLY_INSTALL_EVENT_KEY } from "./early-install-capture";
 // - iPhone and iPad: there is no install button on iOS, so the card explains
 //   the Share > Add to Home Screen steps, and that push alerts on iPhone only
 //   work once the app is on the home screen (iOS 16.4 or later).
-// Hidden when the app is already installed, after "Not now" for a week, and
-// on pages where it would get in the way.
+// Hidden when the app is already installed and after "Not now" for a week.
+// Shown only on browsing pages: the fantasy squad, lineup and transfer screens
+// (and the pinned row on rankings) have their own bars fixed to the bottom,
+// which this card would cover, and the console and admin need the screen.
 
 const DISMISSED_KEY = "sees:install-prompt-dismissed-at";
 const DISMISS_FOR_MS = 7 * 24 * 60 * 60 * 1000;
 const SHOW_AFTER_MS = 4000;
-const HIDDEN_ON = ["/console", "/offline"];
+const SHOW_ON_EXACT = ["/", "/fantasy", "/fantasy/points", "/fantasy/rules"];
+const SHOW_ON_SECTIONS = ["/matches", "/sports"];
+
+function showsOn(pathname: string) {
+  return (
+    SHOW_ON_EXACT.includes(pathname) ||
+    SHOW_ON_SECTIONS.some((section) => pathname === section || pathname.startsWith(`${section}/`))
+  );
+}
 
 // Not in TypeScript's DOM types yet (Chromium only).
 interface BeforeInstallPromptEvent extends Event {
@@ -73,7 +83,7 @@ export function InstallPrompt() {
     };
   }, []);
 
-  if (!mode || dismissed || HIDDEN_ON.some((path) => pathname.startsWith(path))) return null;
+  if (!mode || dismissed || !showsOn(pathname)) return null;
 
   function notNow() {
     try {
@@ -86,11 +96,16 @@ export function InstallPrompt() {
 
   async function install() {
     if (mode?.kind !== "native") return;
-    await mode.event.prompt();
-    const { outcome } = await mode.event.userChoice;
-    // The event can only be used once, so hide the card either way.
-    if (outcome === "dismissed") notNow();
-    else setMode(null);
+    try {
+      await mode.event.prompt();
+      const { outcome } = await mode.event.userChoice;
+      // The event can only be used once, so hide the card either way.
+      if (outcome === "dismissed") notNow();
+      else setMode(null);
+    } catch {
+      // The browser had already used this event; there is nothing to install now.
+      setMode(null);
+    }
   }
 
   return (
