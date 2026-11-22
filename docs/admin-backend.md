@@ -43,10 +43,12 @@ Defined in `lib/admin/errors.ts`.
 | `admin.forbidden` | The database refused the write for this account |
 | `admin.own_role` | You can't change your own role |
 | `admin.role_forbidden` | Admin is granted or removed only in the database (by Tayo) |
+| `admin.last_admin` | The last admin account can't be demoted |
 | `admin.price_locked` | Price change after the matchday 1 deadline |
 | `admin.price_out_of_range` | Price outside `admin_price_rules()` (₦4.0m to ₦10.0m in steps of ₦0.5m) |
 | `admin.player_ambiguous` | Two players share that name; give a display name |
 | `admin.import_invalid` | The import has rows with errors; nothing was written |
+| `admin.league_not_finished` | Knockout fill before every league fixture has finished |
 | `admin.rule_violation` | Another database rule refused it |
 | `admin.not_ready` | Depends on a teammate's function that hasn't landed |
 | `admin.unavailable` | Network or database busy (`retryable: true`) |
@@ -82,7 +84,7 @@ Fixture changes will also expire Bolu's `liveTags.fixtureList` once `lib/live` i
 | `lib/admin/domain/display-names.ts` | `assignDisplayNames` |
 | `lib/admin/domain/deadlines.ts` | `computeDeadline`, `checkDeadlineOverride` |
 | `lib/admin/domain/fixtures.ts` | `findScheduleWarnings`, `estimateDurationMinutes` |
-| `lib/admin/csv/*` | `previewPlayersCsv`, `previewPricesCsv`, `previewFixturesCsv` (pure; the preview actions wrap them) |
+| `lib/admin/csv/*` | `previewPlayersCsv`, `previewPricesCsv`, `previewFixturesCsv` (pure; the preview actions wrap them), and `commitRows(preview)` for commits |
 
 ## Database functions
 
@@ -115,9 +117,45 @@ Each section is filled in by the PR named. Inputs are the schemas in `lib/admin/
 | `getActiveAnnouncement()` | none | the banner showing now, or `null` (for Fortune's home page) |
 | `createAnnouncement` / `updateAnnouncement` / `endAnnouncement` | `announcementInput` and friends | the banner |
 
-### Players and prices (PR 3, planned)
+### Players and prices
 
-`listPlayers`, `createPlayer`, `updatePlayer`, `setPlayerStatus`, `setPlayerPrice`, `getPriceRules`, `previewPlayersImport(csvText)`, `commitPlayersImport({ importId, rows })`, `previewPricesImport`, `commitPricesImport`.
+Queries (`lib/admin/queries/players.ts`):
+
+| Function | Input | Output |
+| --- | --- | --- |
+| `listPlayers(filter?)` | `{ teamId?, position?, status?, search? }` (search matches full or display name) | `AdminPlayer[]`, by year, position, display name |
+| `getPlayer(playerId)` | id | `AdminPlayer \| null` |
+| `getPriceSettings()` | none | `{ rules: { minTenths, maxTenths, stepTenths }, lockAt, locked }`. Use `rules` for the price picker and `locked` to disable price inputs |
+
+`AdminPlayer` is `{ id, teamId, teamYear, teamShortName, fullName, displayName, position, shirtNumber, priceTenths, status, updatedAt }`.
+
+Actions (`lib/admin/actions/players.ts`):
+
+| Action | Input (`schemas.ts`) | Output | Errors to expect |
+| --- | --- | --- | --- |
+| `createPlayer` | `createPlayerInput`: `teamId, fullName, displayName?, position, shirtNumber?, priceTenths?, status?` | `{ player, chosenDisplayName, lateAdditionPrice }` | `invalid_input`, `price_out_of_range`, `price_locked`, `conflict` (display name taken) |
+| `updatePlayer` | `updatePlayerInput`: `playerId` and any of `fullName, displayName, position, shirtNumber` | `AdminPlayer` | `invalid_input`, `conflict`, `not_found` |
+| `setPlayerStatus` | `{ playerId, status }` | `AdminPlayer` | `not_found`. Allowed after the price lock |
+| `setPlayerPrice` | `{ playerId, priceTenths }` | `AdminPlayer` | `price_out_of_range`, `price_locked` |
+
+- `createPlayer`: leave `displayName` empty to have one chosen. If the full name is taken in that year, the result's `chosenDisplayName` says what was picked ("Samuel (DEF)"), so show it.
+- After the lock, leave `priceTenths` empty and the player joins at the lowest price (`lateAdditionPrice` is set).
+
+Imports (`lib/admin/actions/imports.ts`). Formats: [`admin-csv-formats.md`](admin-csv-formats.md).
+
+| Action | Input | Output |
+| --- | --- | --- |
+| `previewPlayersImport(csvText)` | the file's text (up to 1 MB) | `ImportPreview<PlayerImportRow>`: `fileErrors`, `rows` (each with `rowNumber, status, errors, warnings, changes, value`), `counts`, `canCommit`. Nothing is written |
+| `commitPlayersImport({ importId, rows })` | `importId`: `crypto.randomUUID()` made when the admin opens the import; `rows`: `commitRows(preview)` from `lib/admin/csv/preview.ts` | `ImportCounts`: `{ inserted, updated, unchanged, alreadyApplied }` |
+| `previewPricesImport(csvText)` | as above | `ImportPreview<PriceImportRow>` |
+| `commitPricesImport({ importId, rows })` | as above | `ImportCounts` |
+
+How to wire the import screen:
+1. Read the file with `file.text()` and call `preview*Import`.
+2. Show `fileErrors` if there are any. Otherwise show the rows: errors in red, warnings in amber, and `changes` as the "what will happen" column.
+3. Enable **Import** only when `canCommit` is true.
+4. On **Import**, call `commit*Import({ importId, rows: commitRows(preview) })`. Keep the same `importId` for retries.
+5. A commit can still fail with `admin.import_invalid` if the data changed since the preview. Its `message` names the rows; preview again.
 
 ### Sports, events, teams and fixtures (PR 4, planned)
 
