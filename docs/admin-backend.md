@@ -93,6 +93,7 @@ The server actions call these. They're listed so the rules are easy to find; pag
 | Function | What it does | Migration |
 | --- | --- | --- |
 | `admin_price_rules()` | The allowed price range and step: min 40, max 100, step 5 (tenths). The single source; when Mary adds price columns to `fantasy_rules`, only this function changes | `admin_players_prices` |
+| `admin_deadline_rules()` | How many minutes before a matchday's first kickoff its deadline should be (30). The single source for the admin backend; when Mary adds a column to `fantasy_rules`, only this function changes | `admin_deadline_rules` |
 | `admin_price_lock_at()` | Matchday 1's `deadline_at`. Prices lock at that moment; null means no lock | `admin_players_prices` |
 | `players_price_lock` (trigger) | From the app: prices must fit the rules (`admin.price_out_of_range`). After the lock: no price changes, and new players only at the lowest price (`admin.price_locked`). Status changes are always allowed | `admin_players_prices` |
 | `admin_import_players(import_id, rows)` | Players CSV commit: re-checks every row, all or nothing, never renames existing players, tags audit rows with the import id. Returns `{ inserted, updated, unchanged, alreadyApplied }` | `admin_players_prices` |
