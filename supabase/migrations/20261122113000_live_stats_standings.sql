@@ -524,7 +524,8 @@ $$;
 -- goes where (2nd and 3rd level, or 4th and 5th level): the organisers then
 -- decide, and the admin sets those teams by hand.
 -- Safe to call again: a fixture that already has the right teams is left
--- alone, and one with match events is never changed.
+-- alone, and one with match events is never changed. Audit rows are tagged
+-- {"action": "fill_knockouts"}.
 -- -----------------------------------------------------------------------------
 create or replace function public.fill_football_knockouts(p_event_id uuid)
 returns setof public.fixtures
@@ -600,6 +601,9 @@ begin
       perform public.live_fail('live.has_events',
         'A knockout fixture already has match events, so its teams can''t change. Void them first.');
     end if;
+
+    -- Tags the audit rows written by the fixtures audit trigger.
+    perform public.admin_set_audit_context(jsonb_build_object('action', 'fill_knockouts', 'eventId', p_event_id));
 
     update public.fixtures
     set home_team_id = v_home, away_team_id = v_away
