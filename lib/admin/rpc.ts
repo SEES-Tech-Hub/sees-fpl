@@ -1,30 +1,22 @@
 import "server-only";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import type { Json } from "@/lib/supabase/types";
 import type { DatabaseErrorLike } from "./errors";
 import type { AdminSupabase } from "./server";
 
-// Owner: admin backend. Calls to the admin database functions.
-//
-// TODO(regen): the functions from the admin_players_prices, admin_fixtures_import
-// and admin_set_role migrations aren't in
-// lib/supabase/types.ts until Tayo applies them and regenerates it. Until
-// then they are called through an untyped client here, and every result is
-// checked with a schema, so nothing unchecked reaches the actions. After the
-// regeneration, switch these to supabase.rpc() directly and delete the casts.
+// Owner: admin backend. Calls to the admin database functions, typed by the
+// generated lib/supabase/types.ts. The functions that return jsonb come back
+// as Json, so each result is checked with a schema before an action sees it.
 
 type RpcResult<T> = { ok: true; data: T } | { ok: false; error: DatabaseErrorLike };
 
-async function call<T>(
-  supabase: AdminSupabase,
+function checked<T>(
   fn: string,
-  args: Record<string, unknown>,
+  response: { data: unknown; error: DatabaseErrorLike | null },
   schema: z.ZodType<T>,
-): Promise<RpcResult<T>> {
-  const untyped = supabase as unknown as SupabaseClient;
-  const { data, error } = await untyped.rpc(fn, args);
-  if (error) return { ok: false, error };
-  const parsed = schema.safeParse(data);
+): RpcResult<T> {
+  if (response.error) return { ok: false, error: response.error };
+  const parsed = schema.safeParse(response.data);
   if (!parsed.success) {
     return { ok: false, error: { code: "XX000", message: `Unexpected result shape from ${fn}` } };
   }
@@ -70,12 +62,12 @@ export type SetRoleResult = z.infer<typeof setRoleSchema>;
 // Calls
 // ---------------------------------------------------------------------------
 
-export function rpcPriceRules(supabase: AdminSupabase) {
-  return call(supabase, "admin_price_rules", {}, priceRulesSchema);
+export async function rpcPriceRules(supabase: AdminSupabase) {
+  return checked("admin_price_rules", await supabase.rpc("admin_price_rules"), priceRulesSchema);
 }
 
-export function rpcPriceLockAt(supabase: AdminSupabase) {
-  return call(supabase, "admin_price_lock_at", {}, z.string().nullable());
+export async function rpcPriceLockAt(supabase: AdminSupabase) {
+  return checked("admin_price_lock_at", await supabase.rpc("admin_price_lock_at"), z.string().nullable());
 }
 
 export type PlayerImportRpcRow = {
@@ -90,14 +82,16 @@ export type PlayerImportRpcRow = {
   status: string;
 };
 
-export function rpcImportPlayers(supabase: AdminSupabase, importId: string, rows: PlayerImportRpcRow[]) {
-  return call(supabase, "admin_import_players", { p_import_id: importId, p_rows: rows }, importCountsSchema);
+export async function rpcImportPlayers(supabase: AdminSupabase, importId: string, rows: PlayerImportRpcRow[]) {
+  const response = await supabase.rpc("admin_import_players", { p_import_id: importId, p_rows: rows satisfies Json });
+  return checked("admin_import_players", response, importCountsSchema);
 }
 
 export type PriceImportRpcRow = { row_number: number; player_id: string; price_tenths: number };
 
-export function rpcSetPrices(supabase: AdminSupabase, importId: string, rows: PriceImportRpcRow[]) {
-  return call(supabase, "admin_set_prices", { p_import_id: importId, p_rows: rows }, importCountsSchema);
+export async function rpcSetPrices(supabase: AdminSupabase, importId: string, rows: PriceImportRpcRow[]) {
+  const response = await supabase.rpc("admin_set_prices", { p_import_id: importId, p_rows: rows satisfies Json });
+  return checked("admin_set_prices", response, importCountsSchema);
 }
 
 export type FixtureImportRpcRow = {
@@ -112,10 +106,12 @@ export type FixtureImportRpcRow = {
   matchday_id: string | null;
 };
 
-export function rpcImportFixtures(supabase: AdminSupabase, importId: string, rows: FixtureImportRpcRow[]) {
-  return call(supabase, "admin_import_fixtures", { p_import_id: importId, p_rows: rows }, importCountsSchema);
+export async function rpcImportFixtures(supabase: AdminSupabase, importId: string, rows: FixtureImportRpcRow[]) {
+  const response = await supabase.rpc("admin_import_fixtures", { p_import_id: importId, p_rows: rows satisfies Json });
+  return checked("admin_import_fixtures", response, importCountsSchema);
 }
 
-export function rpcSetRole(supabase: AdminSupabase, profileId: string, role: "user" | "official") {
-  return call(supabase, "admin_set_role", { p_profile_id: profileId, p_role: role }, setRoleSchema);
+export async function rpcSetRole(supabase: AdminSupabase, profileId: string, role: "user" | "official") {
+  const response = await supabase.rpc("admin_set_role", { p_profile_id: profileId, p_role: role });
+  return checked("admin_set_role", response, setRoleSchema);
 }

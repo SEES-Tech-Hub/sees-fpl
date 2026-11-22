@@ -9,7 +9,7 @@ import { expire } from "../revalidate";
 import { rpcImportFixtures, rpcImportPlayers, rpcSetPrices } from "../rpc";
 import { commitFixturesInput, commitPlayersInput, commitPricesInput, csvTextInput, parseInput } from "../schemas";
 import { databaseFailure, runAdminAction, type AdminSupabase } from "../server";
-import type { FixtureStatus, ImportCounts, ImportPreview, PlayerPosition, PlayerStatus } from "../types";
+import type { ImportCounts, ImportPreview } from "../types";
 import type { PlayerImportRow } from "../csv/players";
 import type { PriceImportRow } from "../csv/prices";
 
@@ -37,10 +37,10 @@ async function loadPlayerContext(supabase: AdminSupabase) {
         teamId: p.team_id,
         fullName: p.full_name,
         displayName: p.display_name,
-        position: p.position as PlayerPosition,
+        position: p.position,
         shirtNumber: p.shirt_number,
         priceTenths: p.price_tenths,
-        status: p.status as PlayerStatus,
+        status: p.status,
       })),
       priceRules: prices.rules,
       priceLocked: prices.locked,
@@ -150,7 +150,7 @@ async function loadFixtureContext(supabase: AdminSupabase) {
           kickoffAt: f.kickoff_at,
           venue: f.venue,
           matchdayId: f.matchday_id,
-          status: f.status as FixtureStatus,
+          status: f.status,
         }),
       ),
       // fixtures.ref isn't in the database (pending Tayo), so a ref column is refused.

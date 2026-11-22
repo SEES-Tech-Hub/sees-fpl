@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { z } from "zod";
+import { Constants } from "@/lib/supabase/types";
 import { fixtureLabel } from "../domain/fixtures";
 import { parseInput } from "../schemas";
 import { adminReadClient, throwReadError } from "../server";
@@ -99,7 +100,7 @@ export const listFixturesFilter = z
   .object({
     eventId: z.uuid().optional(),
     matchdayId: z.uuid().optional(),
-    status: z.string().max(20).optional(),
+    status: z.enum(Constants.public.Enums.fixture_status).optional(),
     /** Kickoff on or after (ISO). */
     from: z.iso.datetime({ offset: true }).optional(),
     /** Kickoff before (ISO). */
@@ -119,7 +120,7 @@ export const listFixtures = cache(async (filter?: z.input<typeof listFixturesFil
   let query = supabase.from("fixtures").select(FIXTURE_FIELDS);
   if (f.eventId) query = query.eq("event_id", f.eventId);
   if (f.matchdayId) query = query.eq("matchday_id", f.matchdayId);
-  if (f.status) query = query.eq("status", f.status as FixtureStatus);
+  if (f.status) query = query.eq("status", f.status);
   if (f.from) query = query.gte("kickoff_at", f.from);
   if (f.to) query = query.lt("kickoff_at", f.to);
   const { data, error } = await query.order("kickoff_at", { ascending: true, nullsFirst: false });
