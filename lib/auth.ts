@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 // Owner: Tayo. Shared by every area; see "Functions people call across areas"
@@ -29,6 +30,10 @@ export type CurrentUser = {
  * Cached per request, so calling it in several components costs one lookup.
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
+  // Who is signed in is only known at request time. Next's runtime prerender
+  // resolves cookies() but refuses Date.now(), which supabase-js calls to check
+  // whether the session has expired. connection() defers this to the request.
+  await connection();
   const supabase = await createClient();
   const {
     data: { user },
