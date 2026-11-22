@@ -43,3 +43,13 @@ export function finishRow<T>(
   if (errors.length > 0) return { rowNumber, status: "error", errors, warnings, changes, value: null };
   return { rowNumber, status, errors, warnings, changes, value };
 }
+
+/**
+ * The rows to send to a commit action: every row with a validated value
+ * (new, update and unchanged, so the counts add up), with its row number so
+ * the database can name rows in its messages. Empty if any row has an error.
+ */
+export function commitRows<T>(preview: ImportPreview<T>): Array<T & { rowNumber: number }> {
+  if (!preview.canCommit) return [];
+  return preview.rows.flatMap((row) => (row.value ? [{ ...row.value, rowNumber: row.rowNumber }] : []));
+}
