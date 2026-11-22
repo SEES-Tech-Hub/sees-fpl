@@ -174,8 +174,14 @@ export function useConsoleQueue(fixtureId: string, { onSent }: { onSent: () => v
   );
 
   /**
-   * Undo an event. Still on the phone: it's just removed. Already sent (or
-   * being sent right now): a void is queued after it.
+   * Undo an event. Still on the phone and nothing is sending: it's just
+   * removed. Already sent, or a send is running: a void is queued after it.
+   *
+   * While a send is running, the queue may already have read this event from
+   * the store without marking it in flight yet, so removing it here could
+   * still let it reach the server while it disappears from this screen.
+   * Queuing the void after it is always safe: the event is sent, then voided
+   * (or the void is refused with event_not_found if the event never landed).
    */
   const undo = useCallback(
     async (targetId: string, label: string) => {
@@ -183,7 +189,7 @@ export function useConsoleQueue(fixtureId: string, { onSent }: { onSent: () => v
       if (!store) return;
       setUndone((set) => new Set(set).add(targetId));
       const queued = (await store.list(fixtureId)).some((i) => i.id === targetId);
-      if (queued && inFlightRef.current !== targetId) {
+      if (queued && !flushingRef.current) {
         await store.remove(targetId);
         await reload();
         return;
