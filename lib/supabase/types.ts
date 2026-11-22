@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -14,6 +14,144 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          id: string
+          message: string
+          starts_at: string
+          tone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          ends_at: string
+          id?: string
+          message: string
+          starts_at: string
+          tone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          id?: string
+          message?: string
+          starts_at?: string
+          tone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_log: {
+        Row: {
+          action: string
+          actor: string | null
+          context: Json | null
+          id: number
+          new: Json | null
+          occurred_at: string
+          old: Json | null
+          row_id: string
+          table_name: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          context?: Json | null
+          id?: never
+          new?: Json | null
+          occurred_at?: string
+          old?: Json | null
+          row_id: string
+          table_name: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          context?: Json | null
+          id?: never
+          new?: Json | null
+          occurred_at?: string
+          old?: Json | null
+          row_id?: string
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chips: {
+        Row: {
+          chip_type: Database["public"]["Enums"]["fantasy_chip_type"]
+          created_at: string
+          id: string
+          manager_id: string
+          matchday_id: string
+        }
+        Insert: {
+          chip_type: Database["public"]["Enums"]["fantasy_chip_type"]
+          created_at?: string
+          id?: string
+          manager_id: string
+          matchday_id: string
+        }
+        Update: {
+          chip_type?: Database["public"]["Enums"]["fantasy_chip_type"]
+          created_at?: string
+          id?: string
+          manager_id?: string
+          matchday_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chips_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chips_matchday_id_fkey"
+            columns: ["matchday_id"]
+            isOneToOne: false
+            referencedRelation: "matchdays"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -54,6 +192,153 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fantasy_rules: {
+        Row: {
+          budget_tenths: number
+          captain_multiplier: number
+          def_quota: number
+          extra_transfer_cost: number
+          free_transfers_per_md: number
+          fwd_quota: number
+          gk_quota: number
+          id: number
+          max_per_team: number
+          max_saved_transfers: number
+          max_start_def: number
+          max_start_fwd: number
+          max_start_gk: number
+          max_start_mid: number
+          mid_quota: number
+          min_minutes_threshold: number
+          min_start_def: number
+          min_start_fwd: number
+          min_start_gk: number
+          min_start_mid: number
+          pts_30_mins: number
+          pts_appearance: number
+          pts_assist: number
+          pts_clean_sheet_def: number
+          pts_clean_sheet_fwd: number
+          pts_clean_sheet_gk: number
+          pts_clean_sheet_mid: number
+          pts_goal_def: number
+          pts_goal_fwd: number
+          pts_goal_gk: number
+          pts_goal_mid: number
+          pts_goals_conceded_def: number
+          pts_goals_conceded_fwd: number
+          pts_goals_conceded_gk: number
+          pts_goals_conceded_mid: number
+          pts_goals_conceded_step: number
+          pts_motm: number
+          pts_own_goal: number
+          pts_penalty_miss: number
+          pts_penalty_save: number
+          pts_red_card: number
+          pts_yellow_card: number
+          squad_size: number
+          starting_size: number
+          unlimited_transfer_matchdays: number[]
+          updated_at: string
+        }
+        Insert: {
+          budget_tenths?: number
+          captain_multiplier?: number
+          def_quota?: number
+          extra_transfer_cost?: number
+          free_transfers_per_md?: number
+          fwd_quota?: number
+          gk_quota?: number
+          id?: number
+          max_per_team?: number
+          max_saved_transfers?: number
+          max_start_def?: number
+          max_start_fwd?: number
+          max_start_gk?: number
+          max_start_mid?: number
+          mid_quota?: number
+          min_minutes_threshold?: number
+          min_start_def?: number
+          min_start_fwd?: number
+          min_start_gk?: number
+          min_start_mid?: number
+          pts_30_mins?: number
+          pts_appearance?: number
+          pts_assist?: number
+          pts_clean_sheet_def?: number
+          pts_clean_sheet_fwd?: number
+          pts_clean_sheet_gk?: number
+          pts_clean_sheet_mid?: number
+          pts_goal_def?: number
+          pts_goal_fwd?: number
+          pts_goal_gk?: number
+          pts_goal_mid?: number
+          pts_goals_conceded_def?: number
+          pts_goals_conceded_fwd?: number
+          pts_goals_conceded_gk?: number
+          pts_goals_conceded_mid?: number
+          pts_goals_conceded_step?: number
+          pts_motm?: number
+          pts_own_goal?: number
+          pts_penalty_miss?: number
+          pts_penalty_save?: number
+          pts_red_card?: number
+          pts_yellow_card?: number
+          squad_size?: number
+          starting_size?: number
+          unlimited_transfer_matchdays?: number[]
+          updated_at?: string
+        }
+        Update: {
+          budget_tenths?: number
+          captain_multiplier?: number
+          def_quota?: number
+          extra_transfer_cost?: number
+          free_transfers_per_md?: number
+          fwd_quota?: number
+          gk_quota?: number
+          id?: number
+          max_per_team?: number
+          max_saved_transfers?: number
+          max_start_def?: number
+          max_start_fwd?: number
+          max_start_gk?: number
+          max_start_mid?: number
+          mid_quota?: number
+          min_minutes_threshold?: number
+          min_start_def?: number
+          min_start_fwd?: number
+          min_start_gk?: number
+          min_start_mid?: number
+          pts_30_mins?: number
+          pts_appearance?: number
+          pts_assist?: number
+          pts_clean_sheet_def?: number
+          pts_clean_sheet_fwd?: number
+          pts_clean_sheet_gk?: number
+          pts_clean_sheet_mid?: number
+          pts_goal_def?: number
+          pts_goal_fwd?: number
+          pts_goal_gk?: number
+          pts_goal_mid?: number
+          pts_goals_conceded_def?: number
+          pts_goals_conceded_fwd?: number
+          pts_goals_conceded_gk?: number
+          pts_goals_conceded_mid?: number
+          pts_goals_conceded_step?: number
+          pts_motm?: number
+          pts_own_goal?: number
+          pts_penalty_miss?: number
+          pts_penalty_save?: number
+          pts_red_card?: number
+          pts_yellow_card?: number
+          squad_size?: number
+          starting_size?: number
+          unlimited_transfer_matchdays?: number[]
+          updated_at?: string
+        }
+        Relationships: []
       }
       fixtures: {
         Row: {
@@ -174,6 +459,71 @@ export type Database = {
           },
         ]
       }
+      league_members: {
+        Row: {
+          joined_at: string
+          league_id: string
+          manager_id: string
+        }
+        Insert: {
+          joined_at?: string
+          league_id: string
+          manager_id: string
+        }
+        Update: {
+          joined_at?: string
+          league_id?: string
+          manager_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_members_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_members_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leagues: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          invite_code: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          invite_code: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          invite_code?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leagues_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lineups: {
         Row: {
           fixture_id: string
@@ -233,6 +583,114 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manager_matchday_points: {
+        Row: {
+          breakdown: Json
+          calculated_at: string
+          gross_points: number
+          is_provisional: boolean
+          manager_id: string
+          matchday_id: string
+          net_points: number
+          transfer_cost: number
+        }
+        Insert: {
+          breakdown?: Json
+          calculated_at?: string
+          gross_points?: number
+          is_provisional?: boolean
+          manager_id: string
+          matchday_id: string
+          net_points?: number
+          transfer_cost?: number
+        }
+        Update: {
+          breakdown?: Json
+          calculated_at?: string
+          gross_points?: number
+          is_provisional?: boolean
+          manager_id?: string
+          matchday_id?: string
+          net_points?: number
+          transfer_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_matchday_points_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_matchday_points_matchday_id_fkey"
+            columns: ["matchday_id"]
+            isOneToOne: false
+            referencedRelation: "matchdays"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      managers: {
+        Row: {
+          created_at: string
+          free_transfers: number
+          id: string
+          last_rollover_matchday: number
+          overall_rank: number | null
+          team_name: string
+          total_points: number
+          updated_at: string
+          user_id: string
+          wildcard_used: boolean
+          year_group: number | null
+          year_rank: number | null
+        }
+        Insert: {
+          created_at?: string
+          free_transfers?: number
+          id?: string
+          last_rollover_matchday?: number
+          overall_rank?: number | null
+          team_name: string
+          total_points?: number
+          updated_at?: string
+          user_id: string
+          wildcard_used?: boolean
+          year_group?: number | null
+          year_rank?: number | null
+        }
+        Update: {
+          created_at?: string
+          free_transfers?: number
+          id?: string
+          last_rollover_matchday?: number
+          overall_rank?: number | null
+          team_name?: string
+          total_points?: number
+          updated_at?: string
+          user_id?: string
+          wildcard_used?: boolean
+          year_group?: number | null
+          year_rank?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "managers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "managers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -384,6 +842,67 @@ export type Database = {
         }
         Relationships: []
       }
+      picks: {
+        Row: {
+          bench_order: number | null
+          created_at: string
+          id: string
+          is_captain: boolean
+          is_starter: boolean
+          is_vice_captain: boolean
+          manager_id: string
+          matchday_id: string
+          player_id: string
+          updated_at: string
+        }
+        Insert: {
+          bench_order?: number | null
+          created_at?: string
+          id?: string
+          is_captain?: boolean
+          is_starter: boolean
+          is_vice_captain?: boolean
+          manager_id: string
+          matchday_id: string
+          player_id: string
+          updated_at?: string
+        }
+        Update: {
+          bench_order?: number | null
+          created_at?: string
+          id?: string
+          is_captain?: boolean
+          is_starter?: boolean
+          is_vice_captain?: boolean
+          manager_id?: string
+          matchday_id?: string
+          player_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "picks_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "picks_matchday_id_fkey"
+            columns: ["matchday_id"]
+            isOneToOne: false
+            referencedRelation: "matchdays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "picks_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           created_at: string
@@ -485,6 +1004,39 @@ export type Database = {
         }
         Relationships: []
       }
+      squads: {
+        Row: {
+          added_at: string
+          manager_id: string
+          player_id: string
+        }
+        Insert: {
+          added_at?: string
+          manager_id: string
+          player_id: string
+        }
+        Update: {
+          added_at?: string
+          manager_id?: string
+          player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squads_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "squads_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           class_label: string
@@ -514,6 +1066,65 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      transfers: {
+        Row: {
+          created_at: string
+          id: string
+          manager_id: string
+          matchday_id: string
+          player_in_id: string
+          player_out_id: string
+          points_cost: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          manager_id: string
+          matchday_id: string
+          player_in_id: string
+          player_out_id: string
+          points_cost?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          manager_id?: string
+          matchday_id?: string
+          player_in_id?: string
+          player_out_id?: string
+          points_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfers_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfers_matchday_id_fkey"
+            columns: ["matchday_id"]
+            isOneToOne: false
+            referencedRelation: "matchdays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfers_player_in_id_fkey"
+            columns: ["player_in_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfers_player_out_id_fkey"
+            columns: ["player_out_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -593,6 +1204,111 @@ export type Database = {
       }
     }
     Functions: {
+      activate_wildcard: { Args: never; Returns: Json }
+      admin_audit_page: {
+        Args: {
+          p_actor?: string
+          p_before_at?: string
+          p_before_id?: number
+          p_before_source?: string
+          p_from?: string
+          p_limit?: number
+          p_table?: string
+          p_to?: string
+        }
+        Returns: {
+          action: string
+          actor: string
+          actor_name: string
+          context: Json
+          id: number
+          new: Json
+          occurred_at: string
+          old: Json
+          row_id: string
+          source: string
+          table_name: string
+        }[]
+      }
+      admin_set_audit_context: { Args: { p_context: Json }; Returns: undefined }
+      create_league: { Args: { p_name: string }; Returns: Json }
+      create_manager: {
+        Args: { p_team_name: string; p_year_group?: number }
+        Returns: {
+          created_at: string
+          free_transfers: number
+          id: string
+          last_rollover_matchday: number
+          overall_rank: number | null
+          team_name: string
+          total_points: number
+          updated_at: string
+          user_id: string
+          wildcard_used: boolean
+          year_group: number | null
+          year_rank: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "managers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fantasy_fail: {
+        Args: { p_code: string; p_message: string }
+        Returns: undefined
+      }
+      fantasy_get_open_matchday: {
+        Args: never
+        Returns: {
+          deadline_at: string | null
+          id: string
+          name: string
+          number: number
+          status: Database["public"]["Enums"]["matchday_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matchdays"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fantasy_is_league_member: {
+        Args: { p_league_id: string }
+        Returns: boolean
+      }
+      fantasy_prepare_matchday_snapshots: {
+        Args: { p_matchday_id: string }
+        Returns: undefined
+      }
+      fantasy_sync_manager_for_matchday: {
+        Args: {
+          p_manager_id: string
+          p_target_md: Database["public"]["Tables"]["matchdays"]["Row"]
+        }
+        Returns: {
+          created_at: string
+          free_transfers: number
+          id: string
+          last_rollover_matchday: number
+          overall_rank: number | null
+          team_name: string
+          total_points: number
+          updated_at: string
+          user_id: string
+          wildcard_used: boolean
+          year_group: number | null
+          year_rank: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "managers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       fixture_player_state: {
         Args: { p_fixture_id: string }
         Returns: {
@@ -608,6 +1324,7 @@ export type Database = {
       holds_fixture: { Args: { p_fixture_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_official: { Args: never; Returns: boolean }
+      join_league: { Args: { p_code: string }; Returns: Json }
       live_check_on_pitch: {
         Args: {
           p_fixture_id: string
@@ -662,6 +1379,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      make_transfers: {
+        Args: {
+          p_in_ids: string[]
+          p_out_ids: string[]
+          p_use_wildcard?: boolean
+        }
+        Returns: Json
       }
       match_minute: {
         Args: {
@@ -755,6 +1480,11 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      save_lineup: { Args: { p_picks: Json }; Returns: Json }
+      save_squad: {
+        Args: { p_picks?: Json; p_player_ids: string[] }
+        Returns: Json
+      }
       set_lineup: {
         Args: {
           p_bench?: string[]
@@ -829,6 +1559,7 @@ export type Database = {
     Enums: {
       app_role: "user" | "official" | "admin"
       card_colour: "yellow" | "red"
+      fantasy_chip_type: "wildcard"
       fixture_status:
         | "scheduled"
         | "live"
@@ -988,6 +1719,7 @@ export const Constants = {
     Enums: {
       app_role: ["user", "official", "admin"],
       card_colour: ["yellow", "red"],
+      fantasy_chip_type: ["wildcard"],
       fixture_status: [
         "scheduled",
         "live",
