@@ -164,7 +164,14 @@ export const setFixtureStatusInput = z.object({
   status: z.enum(ADMIN_SETTABLE_FIXTURE_STATUSES, { error: "scheduled, postponed or cancelled" }),
 });
 
-export const recordWalkoverInput = z.object({ fixtureId: id, awardedTeamId: id });
+/** clientEventId: crypto.randomUUID() made when the admin confirms, so a retry records once. */
+export const recordWalkoverInput = z.object({
+  fixtureId: id,
+  awardedTeamId: id,
+  clientEventId: id,
+  /** The awarded score. Bolu's default is 3 (football: 3-0). */
+  points: z.number().int().min(1).max(99).optional(),
+});
 
 export const fillKnockoutsInput = z.object({ eventId: id });
 
@@ -199,6 +206,18 @@ export const correctionReason = z
   .pipe(z.string().min(5, "Give a short reason (at least 5 characters)").max(300));
 
 export const voidEventInput = z.object({ clientEventId: id, reason: correctionReason });
+
+/**
+ * Void one event and, optionally, record its replacement (a RecordEventInput
+ * for the same fixture, with its own new clientEventId, checked by Bolu's
+ * recordMatchEvent). Retrying with the same ids is safe: voiding twice and
+ * recording the same clientEventId twice both happen once.
+ */
+export const correctMatchEventInput = z.object({
+  voidClientEventId: id,
+  reason: correctionReason,
+  replacement: z.object({ fixtureId: id, clientEventId: id, type: z.string() }).loose().optional(),
+});
 
 // ---------------------------------------------------------------------------
 // Announcements
