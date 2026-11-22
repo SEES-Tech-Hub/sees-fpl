@@ -225,6 +225,9 @@ declare
     'inserted', p_inserted, 'updated', p_updated, 'unchanged', p_unchanged, 'alreadyApplied', false);
 begin
   update public.admin_imports set counts = v_counts - 'alreadyApplied' where import_id = p_import_id;
+  -- The audit context is transaction-local; clear it so later statements in
+  -- the same transaction aren't tagged with this import.
+  perform set_config('sees.audit_context', '', true);
   return v_counts;
 end;
 $$;
