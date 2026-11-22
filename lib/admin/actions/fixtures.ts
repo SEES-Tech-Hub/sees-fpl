@@ -1,5 +1,6 @@
 "use server";
 
+import { checkMatchdayDeadlines, type DeadlineWarning } from "../deadline-warning";
 import { FIXTURE_FIELDS, toAdminFixture, type AdminFixture, type FixtureRow } from "../queries/fixtures";
 import { fail, ok, type ActionResult } from "../result";
 import { expire } from "../revalidate";
@@ -14,13 +15,19 @@ import { databaseFailure, runAdminAction, type AdminSupabase } from "../server";
 import type { TablesUpdate } from "@/lib/supabase/types";
 import type { AdminSettableFixtureStatus } from "../types";
 
-// Owner: admin backend. Fixture actions (PRD admin item 4). Scores, periods,
-// winners and the live statuses come only from match events (Bolu's guard on
-// fixtures refuses them); walkovers go through recordWalkover in
-// actions/corrections.ts.
+// Owner: admin backend. Fixture actions (PRD admin item 4).
+//
+// Every action returns the fixture and a deadlineWarning: deadlines don't follow
+// kickoffs, so when the fixture's matchday now has its first kickoff less than
+// admin_deadline_rules() minutes after its deadline (or before it), the warning
+// says so and suggests a deadline. Show it, and offer setMatchdayDeadline.
+//
+// Scores, periods, winners and the live statuses come only from match events
+// (Bolu's guard on fixtures refuses them); walkovers go through recordWalkover
+// in actions/corrections.ts.
 
 /** Creates a fixture. Teams can be left empty for knockouts that aren't decided yet. */
-export async function createFixture(input: unknown): Promise<ActionResult<AdminFixture>> {
+export async function createFixture(input: unknown): Promise<ActionResult<FixtureWriteResult>> {
   return runAdminAction("fixtures.create", async ({ supabase }) => {
     const parsed = parseInput(createFixtureInput, input);
     if (!parsed.ok) return parsed.result;
@@ -48,7 +55,7 @@ export async function createFixture(input: unknown): Promise<ActionResult<AdminF
 
     const fixture = toAdminFixture(data as FixtureRow);
     expire(["fixtures"], [fixture.id]);
-    return ok(fixture);
+    return ok({ fixture, deadlineWarning: await deadlineWarningFor(supabase, fixture.matchdayId) });
   });
 }
 
@@ -56,7 +63,7 @@ export async function createFixture(input: unknown): Promise<ActionResult<AdminF
  * Edits a fixture's stage, venue, matchday or teams. Teams and event can't
  * change once it has match events (live.has_events).
  */
-export async function updateFixture(input: unknown): Promise<ActionResult<AdminFixture>> {
+export async function updateFixture(input: unknown): Promise<ActionResult<FixtureWriteResult>> {
   return runAdminAction("fixtures.update", async ({ supabase }) => {
     const parsed = parseInput(updateFixtureInput, input);
     if (!parsed.ok) return parsed.result;
@@ -81,7 +88,7 @@ export async function updateFixture(input: unknown): Promise<ActionResult<AdminF
 }
 
 /** Moves the kickoff (an ISO time; convert WAT input with watToUtc). Null means time to be confirmed. */
-export async function rescheduleFixture(input: unknown): Promise<ActionResult<AdminFixture>> {
+export async function rescheduleFixture(input: unknown): Promise<ActionResult<FixtureWriteResult>> {
   return runAdminAction("fixtures.reschedule", async ({ supabase }) => {
     const parsed = parseInput(rescheduleFixtureInput, input);
     if (!parsed.ok) return parsed.result;
@@ -93,21 +100,21 @@ export async function rescheduleFixture(input: unknown): Promise<ActionResult<Ad
 }
 
 /** Postpone. Only before any match events (live.has_events otherwise). */
-export async function postponeFixture(fixtureId: unknown): Promise<ActionResult<AdminFixture>> {
+export async function postponeFixture(fixtureId: unknown): Promise<ActionResult<FixtureWriteResult>> {
   return setStatus(fixtureId, "postponed");
 }
 
 /** Cancel. Only before any match events. */
-export async function cancelFixture(fixtureId: unknown): Promise<ActionResult<AdminFixture>> {
+export async function cancelFixture(fixtureId: unknown): Promise<ActionResult<FixtureWriteResult>> {
   return setStatus(fixtureId, "cancelled");
 }
 
 /** Back to scheduled, from postponed or cancelled. */
-export async function restoreFixture(fixtureId: unknown): Promise<ActionResult<AdminFixture>> {
+export async function restoreFixture(fixtureId: unknown): Promise<ActionResult<FixtureWriteResult>> {
   return setStatus(fixtureId, "scheduled");
 }
 
-async function setStatus(fixtureId: unknown, status: AdminSettableFixtureStatus): Promise<ActionResult<AdminFixture>> {
+async function setStatus(fixtureId: unknown, status: AdminSettableFixtureStatus): Promise<ActionResult<FixtureWriteResult>> {
   return runAdminAction(`fixtures.${status}`, async ({ supabase }) => {
     const parsed = parseInput(setFixtureStatusInput, { fixtureId, status });
     if (!parsed.ok) return parsed.result;
@@ -120,7 +127,7 @@ async function writeFixture(
   action: string,
   fixtureId: string,
   patch: Pick<TablesUpdate<"fixtures">, "stage" | "home_team_id" | "away_team_id" | "venue" | "matchday_id" | "kickoff_at" | "status">,
-): Promise<ActionResult<AdminFixture>> {
+): Promise<ActionResult<FixtureWriteResult>> {
   const { data, error } = await supabase
     .from("fixtures")
     .update(patch)
@@ -129,6 +136,18 @@ async function writeFixture(
     .single();
   if (error || !data) return databaseFailure(action, error, { fixtureId });
 
+  const fixture = toAdminFixture(data as FixtureRow);
   expire(["fixtures"], [fixtureId]);
-  return ok(toAdminFixture(data as FixtureRow));
+  return ok({ fixture, deadlineWarning: await deadlineWarningFor(supabase, fixture.matchdayId) });
+}
+
+export type FixtureWriteResult = {
+  fixture: AdminFixture;
+  /** Set when the fixture's matchday deadline now needs moving. See lib/admin/deadline-warning.ts. */
+  deadlineWarning: DeadlineWarning | null;
+};
+
+async function deadlineWarningFor(supabase: AdminSupabase, matchdayId: string | null): Promise<DeadlineWarning | null> {
+  const [warning] = await checkMatchdayDeadlines(supabase, [matchdayId]);
+  return warning ?? null;
 }
