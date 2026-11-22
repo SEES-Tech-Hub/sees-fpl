@@ -15,11 +15,24 @@ const TABS = [
 interface BottomTabBarProps {
   hasLiveMatch?: boolean;
   role?: "user" | "official" | "admin";
+  user?: { name?: string | null; avatarUrl?: string | null } | null;
 }
 
-export function BottomTabBar({ hasLiveMatch = false, role = "user" }: BottomTabBarProps) {
+export function BottomTabBar({
+  hasLiveMatch = false,
+  role = "user",
+  user,
+}: BottomTabBarProps) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+
+  if (
+    pathname.startsWith("/console") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/login")
+  ) {
+    return null;
+  }
 
   return (
     <>
@@ -67,27 +80,68 @@ export function BottomTabBar({ hasLiveMatch = false, role = "user" }: BottomTabB
       </nav>
 
       {moreOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/50 lg:hidden" onClick={() => setMoreOpen(false)}>
-          <div className="rounded-t-xl bg-card p-5 pb-8 shadow-raised" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/50 lg:hidden"
+          onClick={() => setMoreOpen(false)}
+        >
+          <div
+            className="rounded-t-xl bg-card p-5 pb-8 shadow-raised"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-4 flex items-center justify-between">
               <span className="font-heading text-lg font-semibold">More</span>
-              <button type="button" onClick={() => setMoreOpen(false)} aria-label="Close menu" className="p-2">
+              <button
+                type="button"
+                onClick={() => setMoreOpen(false)}
+                aria-label="Close menu"
+                className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-muted"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="flex flex-col gap-2 text-sm font-medium">
-              <Link href="/fantasy/rules" onClick={() => setMoreOpen(false)} className="rounded-lg p-3 hover:bg-muted">
+
+            <div className="flex flex-col gap-1.5 text-sm font-medium">
+              <Link
+                href="/fantasy/rules"
+                onClick={() => setMoreOpen(false)}
+                className="flex min-h-[44px] items-center rounded-lg px-3 hover:bg-muted"
+              >
                 Fantasy rules
               </Link>
+              <Link
+                href="/settings"
+                onClick={() => setMoreOpen(false)}
+                className="flex min-h-[44px] items-center rounded-lg px-3 hover:bg-muted"
+              >
+                Settings &amp; push alerts
+              </Link>
               {(role === "official" || role === "admin") && (
-                <Link href="/console" onClick={() => setMoreOpen(false)} className="rounded-lg p-3 text-primary hover:bg-muted">
+                <Link
+                  href="/console"
+                  onClick={() => setMoreOpen(false)}
+                  className="flex min-h-[44px] items-center rounded-lg px-3 text-primary hover:bg-muted"
+                >
                   Match console
                 </Link>
               )}
               {role === "admin" && (
-                <Link href="/admin" onClick={() => setMoreOpen(false)} className="rounded-lg p-3 text-primary hover:bg-muted">
+                <Link
+                  href="/admin"
+                  onClick={() => setMoreOpen(false)}
+                  className="flex min-h-[44px] items-center rounded-lg px-3 text-primary hover:bg-muted"
+                >
                   Admin portal
                 </Link>
+              )}
+              {user && (
+                <form action="/auth/signout" method="post" className="mt-2 border-t border-border pt-2">
+                  <button
+                    type="submit"
+                    className="flex min-h-[44px] w-full items-center rounded-lg px-3 text-left text-destructive hover:bg-muted"
+                  >
+                    Sign out
+                  </button>
+                </form>
               )}
             </div>
           </div>

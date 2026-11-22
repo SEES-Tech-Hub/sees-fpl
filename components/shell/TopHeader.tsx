@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Megaphone, CloudOff, X } from "lucide-react";
-import { SeesMark } from '@/components/ui/shared/SeesMark'
+import { Megaphone, CloudOff, X, ChevronDown } from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -16,15 +16,18 @@ const NAV_LINKS = [
 interface TopHeaderProps {
   user?: { name?: string | null; avatarUrl?: string | null } | null;
   announcement?: { id: string; message: string } | null;
+  role?: "user" | "official" | "admin";
 }
 
-export function TopHeader({ user, announcement }: TopHeaderProps) {
+export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps) {
   const pathname = usePathname();
   const [dismissedId, setDismissedId] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setIsOffline(!navigator.onLine);
+    (() => setIsOffline(!navigator.onLine))();
     const goOffline = () => setIsOffline(true);
     const goOnline = () => setIsOffline(false);
     window.addEventListener("offline", goOffline);
@@ -35,13 +38,31 @@ export function TopHeader({ user, announcement }: TopHeaderProps) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  if (
+    pathname.startsWith("/console") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/login")
+  ) {
+    return null;
+  }
+
   const showAnnouncement = announcement && dismissedId !== announcement.id;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <img src="/icons/icon.svg" alt="" className="h-6 w-6" />
+          <Image src="/icons/icon.svg" alt="SEES Logo" width={24} height={24} />
           <span className="font-heading text-lg font-semibold tracking-tight text-foreground">
             SEES Games
           </span>
@@ -62,6 +83,65 @@ export function TopHeader({ user, announcement }: TopHeaderProps) {
               </Link>
             );
           })}
+
+          <div ref={moreRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setMoreOpen((prev) => !prev)}
+              aria-expanded={moreOpen}
+              className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span>More</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {moreOpen && (
+              <div className="absolute right-0 mt-2 w-52 rounded-xl border border-border bg-card p-1.5 text-sm font-medium shadow-raised">
+                <Link
+                  href="/fantasy/rules"
+                  onClick={() => setMoreOpen(false)}
+                  className="block rounded-lg px-3 py-2 hover:bg-muted"
+                >
+                  Fantasy rules
+                </Link>
+                <Link
+                  href="/settings"
+                  onClick={() => setMoreOpen(false)}
+                  className="block rounded-lg px-3 py-2 hover:bg-muted"
+                >
+                  Settings &amp; push alerts
+                </Link>
+                {(role === "official" || role === "admin") && (
+                  <Link
+                    href="/console"
+                    onClick={() => setMoreOpen(false)}
+                    className="block rounded-lg px-3 py-2 text-primary hover:bg-muted"
+                  >
+                    Match console
+                  </Link>
+                )}
+                {role === "admin" && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMoreOpen(false)}
+                    className="block rounded-lg px-3 py-2 text-primary hover:bg-muted"
+                  >
+                    Admin portal
+                  </Link>
+                )}
+                {user && (
+                  <form action="/auth/signout" method="post" className="mt-1 border-t border-border pt-1">
+                    <button
+                      type="submit"
+                      className="w-full rounded-lg px-3 py-2 text-left text-destructive hover:bg-muted"
+                    >
+                      Sign out
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -86,7 +166,7 @@ export function TopHeader({ user, announcement }: TopHeaderProps) {
 
       {showAnnouncement && (
         <div className="flex items-center justify-between gap-2 bg-highlight px-4 py-2 text-xs font-semibold text-team-foreground">
-          <div className="mx-auto flex max-w-300 flex-1 items-center gap-2">
+          <div className="mx-auto flex max-w-[1200px] flex-1 items-center gap-2">
             <Megaphone className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span>{announcement.message}</span>
           </div>
