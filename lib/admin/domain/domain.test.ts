@@ -243,3 +243,13 @@ describe("schedule warnings", () => {
     expect(warnings[0].key).toBe("row:3");
   });
 });
+
+describe("fixture labels", () => {
+  it("matches Tayo's dashboard labels", async () => {
+    const { fixtureLabel } = await import("./fixtures");
+    expect(fixtureLabel("league", "Y1", "Y4")).toBe("Y1 v Y4");
+    expect(fixtureLabel("final", "Y5", "Y3")).toBe("Final: Y5 v Y3");
+    expect(fixtureLabel("third_place", null, null)).toBe("Third place (teams to be confirmed)");
+    expect(fixtureLabel("heat_1", null, null)).toBe("Entrants to be confirmed");
+  });
+});
