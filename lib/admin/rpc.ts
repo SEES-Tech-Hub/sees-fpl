@@ -115,3 +115,19 @@ export async function rpcSetRole(supabase: AdminSupabase, profileId: string, rol
   const response = await supabase.rpc("admin_set_role", { p_profile_id: profileId, p_role: role });
   return checked("admin_set_role", response, setRoleSchema);
 }
+
+const deadlineRulesSchema = z
+  .array(z.object({ minutes_before_kickoff: z.number().int() }))
+  .length(1)
+  .transform(([r]) => r.minutes_before_kickoff);
+
+/**
+ * Minutes before a matchday's first kickoff its deadline should be (admin_deadline_rules()).
+ * TODO(regen): admin_deadline_rules isn't in lib/supabase/types.ts until the
+ * 20261122130032 migration is applied and the types are regenerated; then call
+ * supabase.rpc("admin_deadline_rules") directly and drop this cast.
+ */
+export async function rpcDeadlineRules(supabase: AdminSupabase) {
+  const untyped = supabase as unknown as { rpc(fn: string): PromiseLike<{ data: unknown; error: DatabaseErrorLike | null }> };
+  return checked("admin_deadline_rules", await untyped.rpc("admin_deadline_rules"), deadlineRulesSchema);
+}

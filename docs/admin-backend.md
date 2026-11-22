@@ -212,7 +212,7 @@ Queries (`lib/admin/queries/fixtures.ts`):
 
 `AdminFixture` is `{ id, eventId, eventName, sportId, sportName, sportSlug, stage, homeTeamId, awayTeamId, home, away, label, kickoffAt, venue, status, matchdayId, matchdayNumber, consoleHolderId, holderName, homeScore, awayScore, updatedAt }`. `label` reads like "Y1 v Y4" or "Final (teams to be confirmed)", the same as the dashboard.
 
-Actions (`lib/admin/actions/fixtures.ts`), each returning the updated `AdminFixture`:
+Actions (`lib/admin/actions/fixtures.ts`), each returning `{ fixture: AdminFixture, deadlineWarning: DeadlineWarning | null }`:
 
 | Action | Input | Errors to expect |
 | --- | --- | --- |
@@ -231,7 +231,17 @@ Matchdays (`lib/admin/actions/matchdays.ts`):
 
 Deadlines are **never recalculated automatically**. Moving a kickoff doesn't move its matchday's deadline. Show `firstKickoffAt` next to each deadline so the admin can set it. Matchday 1's deadline is also when prices lock.
 
-Fixtures import (`lib/admin/actions/imports.ts`): `previewFixturesImport(csvText)` and `commitFixturesImport({ importId, rows })` work like the players import. A file with a `ref` column is refused until `fixtures.ref` exists.
+**Deadline warning.** After every fixture write, the action checks the fixture's matchday.
+- **When it's set:** if the matchday's first kickoff (ignoring postponed and cancelled fixtures) is now less than `admin_deadline_rules()` minutes after the deadline, or before it, `deadlineWarning` comes back set (`lib/admin/deadline-warning.ts`):
+  - `kind: "drift"`;
+  - `matchdayId`, `matchdayNumber`, `deadlineAt`, `firstKickoffAt`;
+  - `minutesBetween` (negative when the kickoff comes first), `requiredMinutes` (the rule) and `suggestedDeadlineAt` (first kickoff minus the rule);
+  - `message`, ready to show: "Matchday 2's first kickoff (Mon 30 Nov, 14:15) is now only 15 minutes after its deadline (Mon 30 Nov, 14:00). The deadline should be at least 30 minutes before it: move it to Mon 30 Nov, 13:45 or earlier."
+- **What the page does:** show it in amber, with a button that calls `setMatchdayDeadline({ matchdayId, deadlineAt: suggestedDeadlineAt })`.
+- **The write has already happened.** The warning doesn't undo it.
+- **If the check itself fails**, the warning is `kind: "check_failed"`, with a message to check the matchdays page, rather than null.
+
+Fixtures import (`lib/admin/actions/imports.ts`): `previewFixturesImport(csvText)` and `commitFixturesImport({ importId, rows })` work like the players import. The commit also returns `deadlineWarnings: DeadlineWarning[]`, one for each matchday in the file whose deadline now needs moving. A file with a `ref` column is refused until `fixtures.ref` exists.
 
 ### Officials and console holders
 

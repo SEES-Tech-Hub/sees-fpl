@@ -1,5 +1,6 @@
 "use server";
 
+import { checkMatchdayDeadlines, type DeadlineWarning } from "../deadline-warning";
 import { previewFixturesCsv, type ExistingFixture, type FixtureImportRow } from "../csv/fixtures";
 import { previewPlayersCsv } from "../csv/players";
 import { previewPricesCsv } from "../csv/prices";
@@ -170,7 +171,9 @@ export async function previewFixturesImport(csvText: unknown): Promise<ActionRes
   });
 }
 
-export async function commitFixturesImport(input: unknown): Promise<ActionResult<ImportCounts>> {
+export async function commitFixturesImport(
+  input: unknown,
+): Promise<ActionResult<ImportCounts & { deadlineWarnings: DeadlineWarning[] }>> {
   return runAdminAction("imports.commitFixtures", async ({ supabase }) => {
     const parsed = parseInput(commitFixturesInput, input);
     if (!parsed.ok) return parsed.result;
@@ -194,6 +197,8 @@ export async function commitFixturesImport(input: unknown): Promise<ActionResult
     if (!result.ok) return databaseFailure("imports.commitFixtures", result.error, { importId });
 
     if (!result.data.alreadyApplied) expire(["fixtures", "matchdays"]);
-    return ok(result.data);
+    // Kickoffs moved, and deadlines don't follow them: check every matchday the file touched.
+    const deadlineWarnings = await checkMatchdayDeadlines(supabase, rows.map((r) => r.matchdayId));
+    return ok({ ...result.data, deadlineWarnings });
   });
 }

@@ -8,7 +8,7 @@ A checklist to run once on a preview deployment, once the admin migrations (#15,
 
 ## Before you start
 
-- [ ] **Migrations:** #15, #16 and #17 are applied, and Tayo has confirmed their verify blocks.
+- [ ] **Migrations:** #15, #16 and #17 are applied, and Tayo has confirmed their verify blocks. Step 4.2 also needs #31 (`admin_deadline_rules()`); without it, the warning comes back as `check_failed`.
 - [ ] **Deployment:** a preview deployment of `main` (or of this branch until it merges). Points recalculation only works on a deployment, not on a laptop.
 - [ ] **Admin account:** you're signed in as the admin. Call your profile id `ADMIN`.
 - [ ] **Second account:** a second Google account has signed in once (call it `B`). It becomes an official in step 6.
@@ -84,11 +84,19 @@ Use the matchday 1 fixture **Y1 v Y4**. Note its current kickoff first (the seed
 1. **Action:** `rescheduleFixture({ fixtureId: <Y1 v Y4>, kickoffAt: "2026-11-28T15:30:00+01:00" })`
 
    **Expected:**
-   - `ok: true`, and the returned fixture has `kickoffAt` `2026-11-28T14:30:00+00:00`;
+   - `ok: true`, and `data.fixture.kickoffAt` is `2026-11-28T14:30:00+00:00`;
    - **Table Editor › fixtures:** `kickoff_at` shows the same instant;
    - **Audit feed:** a `fixtures` update with only `kickoff_at` changed, old and new, by you;
-   - if the deadline-drift check has landed, `deadlineWarning` is null here, because the first kickoff moved later.
-2. **Action:** `cancelFixture(<Y1 v Y4>)`, then `restoreFixture(<Y1 v Y4>)`
+   - `data.deadlineWarning` is null, because the first kickoff moved later.
+2. **Deadline drift.** **Action:** `rescheduleFixture({ fixtureId: <Y1 v Y4>, kickoffAt: "2026-11-28T13:45:00+01:00" })` (the deadline is 13:30)
+
+   **Expected:**
+   - `ok: true`, and `data.deadlineWarning.kind` is `"drift"`, with `minutesBetween: 15` and `requiredMinutes: 30`;
+   - the message ends "move it to Sat 28 Nov, 13:15 or earlier";
+   - the matchday's deadline itself is unchanged.
+
+   Then move the kickoff back to 15:30 with `rescheduleFixture` and check `deadlineWarning` is null again.
+3. **Action:** `cancelFixture(<Y1 v Y4>)`, then `restoreFixture(<Y1 v Y4>)`
 
    **Expected:**
    - status goes `cancelled`, then back to `scheduled`;
@@ -235,7 +243,7 @@ Expected, at least the following, every one with `actorName` = your name:
 | 1 | players | update | Kolade `price_tenths` 60 → 75, `importId` IMPORT_1 |
 | 1 | players | insert | Smoke Test Player, `importId` IMPORT_1 |
 | 3 | players | update | Kolade 75 → 80, `importId` IMPORT_2 |
-| 4 | fixtures | update ×3 | `kickoff_at`; then `status` → cancelled; then → scheduled |
+| 4 | fixtures | update ×5 | `kickoff_at` three times; then `status` → cancelled; then → scheduled |
 | 5 | matchdays | update | `deadline_at` |
 | 6 | profiles | update ×2 (or ×3) | `role` user → official, then → user, `context.action` set_role |
 | 6 | fixtures | update ×2 | `console_holder` null → B, then B → null |
