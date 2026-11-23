@@ -14,7 +14,7 @@ import type { MatchPageData } from "@/lib/live/match-page";
 import type { LineupPlayer, TeamSummary, TimelineEntry } from "@/lib/live/types";
 import { useLiveFixture } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
-import { MatchStatus, ReconnectingPill, RollingScore, useClock, useGoalFlash } from "./live-bits";
+import { MatchStatus, ReconnectingPill, RollingScore, useClock, useFullTimeConfetti, useGoalFlash } from "./live-bits";
 import { NotifyBell } from "./notify-bell";
 import { RaceView } from "./race-view";
 import { EmptyIllustration } from "@/components/brand/empty-art";
@@ -100,6 +100,7 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
     extraPeriodMinutes: fixture.event.extraPeriodMinutes,
   });
   const flash = useGoalFlash(state.homeScore, state.awayScore);
+  useFullTimeConfetti(state, fixture.home?.id ?? null, fixture.home?.year, fixture.away?.year);
   const notStarted = state.status === "scheduled";
   const goals = timeline.filter((e) => e.type === "goal");
   const scorers = (team: TeamSummary | null) => {

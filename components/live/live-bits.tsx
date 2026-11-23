@@ -134,3 +134,38 @@ export function ReconnectingPill({ show }: { show: boolean }) {
     </p>
   );
 }
+
+/**
+ * Confetti from the winner's side when a match you're watching ends (both
+ * sides for a draw). Only on the live transition to full time, never when
+ * opening a finished match. Off for reduced motion.
+ */
+export function useFullTimeConfetti(state: FixtureState, homeTeamId: string | null, homeYear?: number, awayYear?: number) {
+  const prev = useRef(state.status);
+  useEffect(() => {
+    const before = prev.current;
+    prev.current = state.status;
+    if (state.status !== "full_time" || before === "full_time" || before === "scheduled") return;
+    void (async () => {
+      const { default: confetti } = await import("canvas-confetti");
+      const css = getComputedStyle(document.documentElement);
+      const tone = (year?: number) => (year ? css.getPropertyValue(`--team-y${year}`).trim() : "");
+      const brand = [css.getPropertyValue("--brand-light").trim(), css.getPropertyValue("--highlight").trim()].filter(Boolean);
+      const winnerHome = state.winnerTeamId ? state.winnerTeamId === homeTeamId : (state.homeScore ?? 0) > (state.awayScore ?? 0);
+      const draw = !state.winnerTeamId && state.homeScore === state.awayScore;
+      const burst = (x: number, angle: number, year?: number) =>
+        confetti({
+          particleCount: 120,
+          spread: 70,
+          startVelocity: 58,
+          angle,
+          origin: { x, y: 0.7 },
+          colors: [tone(year), ...brand].filter(Boolean),
+          disableForReducedMotion: true,
+          zIndex: 200,
+        });
+      if (draw || winnerHome) burst(0.1, 60, homeYear);
+      if (draw || !winnerHome) burst(0.9, 120, awayYear);
+    })();
+  }, [state.status, state.winnerTeamId, state.homeScore, state.awayScore, homeTeamId, homeYear, awayYear]);
+}

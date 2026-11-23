@@ -26,6 +26,9 @@ export type SheetContext = {
   close: () => void;
 };
 
+// Forwards first: they're the likeliest scorers, so the right name is usually on top.
+const ATTACK_FIRST = { FWD: 0, MID: 1, DEF: 2, GK: 3 } as const;
+
 function useTeamTools(ctx: SheetContext) {
   const opponentOf = (teamId: string) => (teamId === ctx.home.id ? ctx.away.id : ctx.home.id);
   const teamName = (teamId: string) => (teamId === ctx.home.id ? ctx.home.shortName : ctx.away.shortName);
@@ -33,7 +36,9 @@ function useTeamTools(ctx: SheetContext) {
     if (!teamId) return [];
     const squad = ctx.squads.filter((p) => p.teamId === teamId);
     const ids = new Set(eligiblePlayers(ctx.state, teamId, squad, need));
-    return squad.filter((p) => ids.has(p.id) && !exclude.includes(p.id));
+    return squad
+      .filter((p) => ids.has(p.id) && !exclude.includes(p.id))
+      .sort((a, b) => ATTACK_FIRST[a.position] - ATTACK_FIRST[b.position] || (a.shirtNumber ?? 99) - (b.shirtNumber ?? 99));
   };
   const teamOptions = [
     { value: ctx.home.id, label: ctx.home.shortName },
@@ -80,8 +85,12 @@ export function GoalSheet({ ctx, teamId }: { ctx: SheetContext; teamId: string }
   const [scorerId, setScorerId] = useState<string | null>(null);
   const [assistId, setAssistId] = useState<string | null>(null);
 
+  const [step, setStep] = useState<"scorer" | "assist">("scorer");
+
   // An own goal is put in by a player of the other team.
   const scorerTeam = ownGoal ? opponentOf(teamId) : teamId;
+  const showAssist = !ownGoal && !penalty;
+  const nameOf = (id: string) => ctx.squads.find((p) => p.id === id)?.name ?? "Player";
 
   return (
     <Sheet
@@ -117,22 +126,46 @@ export function GoalSheet({ ctx, teamId }: { ctx: SheetContext; teamId: string }
             setOwnGoal(on);
             setScorerId(null);
             setAssistId(null);
+            setStep("scorer");
             if (on) setPenalty(false);
           }}
         />
       </div>
-      <PlayerPicker
-        label={ownGoal ? `Who put it in their own net? (${teamName(scorerTeam)})` : "Scorer"}
-        players={pick(scorerTeam, "on_pitch")}
-        value={scorerId}
-        onChange={(id) => {
-          setScorerId(id);
-          if (id === assistId) setAssistId(null);
-        }}
-        noneLabel="Not sure"
-      />
-      {!ownGoal && !penalty && (
+      {/* What will be recorded, always visible above the lists */}
+      <p className="rounded-lg bg-muted px-3 py-2 text-sm">
+        <span className="font-semibold">{scorerId ? nameOf(scorerId) : "Scorer not picked"}</span>
+        {ownGoal && <span className="text-muted-foreground"> (own goal)</span>}
+        {penalty && <span className="text-muted-foreground"> (penalty)</span>}
+        {showAssist && <span className="text-muted-foreground"> · assist {assistId ? nameOf(assistId) : "none"}</span>}
+      </p>
+      {showAssist && (
+        <Choice
+          label="Pick"
+          options={[
+            { value: "scorer", label: scorerId ? `Scorer ✓` : "1. Scorer" },
+            { value: "assist", label: assistId ? `Assist ✓` : "2. Assist" },
+          ]}
+          value={step}
+          onChange={setStep}
+        />
+      )}
+      {step === "scorer" || !showAssist ? (
         <PlayerPicker
+          layout="grid"
+          label={ownGoal ? `Who put it in their own net? (${teamName(scorerTeam)})` : "Scorer"}
+          players={pick(scorerTeam, "on_pitch")}
+          value={scorerId}
+          onChange={(id) => {
+            setScorerId(id);
+            // The scorer can't also be the assister.
+            if (id && id === assistId) setAssistId(null);
+            if (id && showAssist) setStep("assist");
+          }}
+          noneLabel="Not sure"
+        />
+      ) : (
+        <PlayerPicker
+          layout="grid"
           label="Assist"
           players={pick(teamId, "on_pitch", [scorerId])}
           value={assistId}
@@ -208,6 +241,7 @@ export function SubSheet({ ctx }: { ctx: SheetContext }) {
   const [teamId, setTeamId] = useState<string | null>(null);
   const [offId, setOffId] = useState<string | null>(null);
   const [onId, setOnId] = useState<string | null>(null);
+  const nameOf = (id: string) => ctx.squads.find((p) => p.id === id)?.name ?? "Player";
 
   return (
     <Sheet
@@ -232,19 +266,28 @@ export function SubSheet({ ctx }: { ctx: SheetContext }) {
       />
       {teamId && (
         <>
-          <PlayerPicker
-            label={`Coming off (${teamName(teamId)})`}
-            players={pick(teamId, "on_pitch", [onId])}
-            value={offId}
-            onChange={setOffId}
-          />
-          <PlayerPicker
-            label="Coming on"
-            players={pick(teamId, "unused_sub", [offId])}
-            value={onId}
-            onChange={setOnId}
-            emptyText="No unused substitutes left."
-          />
+          <p className="rounded-lg bg-muted px-3 py-2 text-sm">
+            <span className="font-semibold text-live">↓ {offId ? nameOf(offId) : "Off: pick"}</span>
+            <span className="mx-2 text-muted-foreground">for</span>
+            <span className="font-semibold text-success">↑ {onId ? nameOf(onId) : "On: pick"}</span>
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <PlayerPicker
+              layout="column"
+              label={`Off (${teamName(teamId)})`}
+              players={pick(teamId, "on_pitch", [onId])}
+              value={offId}
+              onChange={setOffId}
+            />
+            <PlayerPicker
+              layout="column"
+              label="On (bench)"
+              players={pick(teamId, "unused_sub", [offId])}
+              value={onId}
+              onChange={setOnId}
+              emptyText="No unused subs left."
+            />
+          </div>
         </>
       )}
     </Sheet>

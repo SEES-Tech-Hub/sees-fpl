@@ -14,6 +14,7 @@ export function PlayerPicker({
   onChange,
   noneLabel,
   emptyText = "No players to pick from.",
+  layout = "list",
 }: {
   label: string;
   players: SquadPlayer[];
@@ -22,23 +23,29 @@ export function PlayerPicker({
   /** Offer a "nobody" option, such as "No assist". */
   noneLabel?: string;
   emptyText?: string;
+  /** list: full-width rows. grid: two big tiles per row. column: compact rows for side-by-side lists. */
+  layout?: "list" | "grid" | "column";
 }) {
   return (
     <fieldset className="flex flex-col gap-1.5">
       <legend className="mb-1.5 text-sm font-medium text-muted-foreground">{label}</legend>
-      <div role="radiogroup" aria-label={label} className="flex flex-col gap-1.5">
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className={cn(layout === "grid" ? "grid grid-cols-2 gap-2" : "flex flex-col gap-1.5")}
+      >
         {noneLabel && (
-          <Row selected={value === null} onSelect={() => onChange(null)}>
+          <Row selected={value === null} onSelect={() => onChange(null)} className={cn(layout === "grid" && "col-span-2")}>
             <span className="text-muted-foreground">{noneLabel}</span>
           </Row>
         )}
         {players.map((p) => (
-          <Row key={p.id} label={playerLabel(p)} selected={value === p.id} onSelect={() => onChange(p.id)}>
-            <span className="w-7 shrink-0 text-right font-mono text-sm text-muted-foreground tabular-nums">
+          <Row key={p.id} label={playerLabel(p)} selected={value === p.id} onSelect={() => onChange(p.id)} compact={layout !== "list"}>
+            <span className="w-6 shrink-0 text-right font-heading text-base font-bold text-muted-foreground tabular-nums">
               {p.shirtNumber ?? ""}
             </span>
             <span className="flex-1 truncate font-medium">{p.name}</span>
-            <span className="text-xs text-muted-foreground">{p.position}</span>
+            {layout !== "column" && <span className="text-xs text-muted-foreground">{p.position}</span>}
           </Row>
         ))}
         {players.length === 0 && !noneLabel && <p className="text-sm text-muted-foreground">{emptyText}</p>}
@@ -57,11 +64,15 @@ function Row({
   selected,
   onSelect,
   children,
+  compact,
+  className,
 }: {
   label?: string;
   selected: boolean;
   onSelect: () => void;
   children: React.ReactNode;
+  compact?: boolean;
+  className?: string;
 }) {
   return (
     <button
@@ -71,13 +82,15 @@ function Row({
       aria-label={label}
       onClick={onSelect}
       className={cn(
-        "flex min-h-12 w-full items-center gap-3 rounded-lg border px-3 text-left transition-colors",
+        "flex min-h-12 w-full items-center rounded-lg border text-left transition-colors active:scale-[0.98]",
+        compact ? "gap-2 px-2" : "gap-3 px-3",
+        className,
         "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
         selected ? "border-primary bg-secondary text-secondary-foreground" : "border-border bg-card",
       )}
     >
       {children}
-      <Check aria-hidden className={cn("size-5 shrink-0 text-primary", !selected && "invisible")} />
+      <Check aria-hidden className={cn("size-5 shrink-0 text-primary", !selected && (compact ? "hidden" : "invisible"))} />
     </button>
   );
 }
