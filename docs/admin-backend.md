@@ -45,7 +45,7 @@ Defined in `lib/admin/errors.ts`.
 | `admin.role_forbidden` | Admin is granted or removed only in the database (by Tayo) |
 | `admin.last_admin` | The last admin account can't be demoted |
 | `admin.price_locked` | Price change after the matchday 1 deadline |
-| `admin.price_out_of_range` | Price outside `admin_price_rules()` (₦4.0m to ₦10.0m in steps of ₦0.5m) |
+| `admin.price_out_of_range` | Price outside `admin_price_rules()` (₦3.0m to ₦11.0m in steps of ₦0.5m) |
 | `admin.player_ambiguous` | Two players share that name; give a display name |
 | `admin.import_invalid` | The import has rows with errors; nothing was written |
 | `admin.league_not_finished` | Knockout fill before every league fixture has finished |
