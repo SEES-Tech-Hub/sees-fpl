@@ -13,24 +13,23 @@ function done<T>(result: ActionResult<T>) {
   return result;
 }
 
-export type OnboardingState = { error?: string; teamName?: string; yearGroup?: string };
-
-export async function createManagerAction(_prev: OnboardingState, formData: FormData): Promise<OnboardingState> {
-  const user = await api.requireFantasyUser("/fantasy/join");
-  const teamName = String(formData.get("teamName") ?? "");
-  const yearRaw = String(formData.get("yearGroup") ?? "");
-  const yearGroup = yearRaw === "none" ? null : Number(yearRaw);
-  if (yearRaw === "" || (yearGroup !== null && Number.isNaN(yearGroup))) {
-    return { error: "Pick your year, or “Not in a year team”.", teamName, yearGroup: yearRaw };
-  }
-  const result = done(await api.createManager(user, { teamName, yearGroup }));
-  if (!result.ok) return { error: result.error.message, teamName, yearGroup: yearRaw };
-  redirect("/fantasy/squad");
-}
-
 export async function saveSquadAction(playerIds: string[]) {
   const user = await api.requireFantasyUser("/fantasy/squad");
   return done(await api.saveSquad(user, { playerIds }));
+}
+
+/**
+ * New managers name their team and pick their squad in one go, so there's
+ * only one wait. Creates the team if it doesn't exist yet (a retry after a
+ * failed squad save skips straight to the squad), then saves the squad.
+ */
+export async function createTeamAndSquadAction(input: { teamName: string; yearGroup: number | null; playerIds: string[] }) {
+  const user = await api.requireFantasyUser("/fantasy/squad");
+  if (!(await api.getMyManager(user))) {
+    const created = await api.createManager(user, { teamName: input.teamName, yearGroup: input.yearGroup });
+    if (!created.ok) return created;
+  }
+  return done(await api.saveSquad(user, { playerIds: input.playerIds }));
 }
 
 export async function saveLineupAction(input: LineupInput) {

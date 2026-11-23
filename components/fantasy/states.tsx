@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/brand/brand-loader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -94,7 +95,7 @@ const shimmer = "motion-reduce:animate-none";
 /** Skeleton for list screens (rankings, leagues, transfers). */
 export function LoadingPage({ rows = 6 }: { rows?: number }) {
   return (
-    <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading">
+    <div className="flex flex-col gap-3 motion-safe:animate-sees-appear" aria-busy="true" aria-label="Loading">
       <Skeleton className={cn("h-3 w-32", shimmer)} />
       <Skeleton className={cn("h-8 w-48", shimmer)} />
       <Skeleton className={cn("mt-2 h-24 w-full rounded-xl", shimmer)} />
@@ -105,23 +106,7 @@ export function LoadingPage({ rows = 6 }: { rows?: number }) {
   );
 }
 
-/** Skeleton shaped like the pitch (team, squad, points). */
+/** Loading screen for the pitch screens (team, squad, points): the SEES mark. */
 export function LoadingPitch() {
-  return (
-    <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading">
-      <Skeleton className={cn("h-3 w-40", shimmer)} />
-      <Skeleton className={cn("h-9 w-56", shimmer)} />
-      <Skeleton className={cn("h-24 w-full rounded-xl", shimmer)} />
-      <div className="flex flex-col gap-5 rounded-xl bg-muted px-4 py-6">
-        {[2, 4, 4, 1].map((n, r) => (
-          <div key={r} className="flex justify-center gap-3">
-            {Array.from({ length: n }, (_, i) => (
-              <Skeleton key={i} className={cn("h-14 w-12 bg-background", shimmer)} />
-            ))}
-          </div>
-        ))}
-      </div>
-      <Skeleton className={cn("h-24 w-full rounded-xl", shimmer)} />
-    </div>
-  );
+  return <BrandLoader />;
 }

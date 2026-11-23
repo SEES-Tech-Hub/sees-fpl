@@ -33,7 +33,7 @@ async function Home() {
   const user = await getOptionalFantasyUser();
   if (!user) return <SignedOutHero />;
   const manager = await getMyManager(user);
-  if (!manager) redirect("/fantasy/join");
+  if (!manager) redirect("/fantasy/squad");
   const team = await getMyTeam(user);
   if (!team) redirect("/fantasy/squad");
 

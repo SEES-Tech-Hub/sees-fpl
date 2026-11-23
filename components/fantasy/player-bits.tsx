@@ -45,17 +45,21 @@ export function PlayerRow({
   action,
   highlight,
   as: Tag = "li",
+  bordered = true,
 }: {
   player: Player;
   reason?: ReactNode;
   action?: ReactNode;
   highlight?: boolean;
   as?: "li" | "div";
+  /** Draw the divider under the row (off when a wrapper draws it). */
+  bordered?: boolean;
 }) {
   return (
     <Tag
       className={cn(
-        "flex min-h-16 items-center gap-3 border-b border-border px-2 py-2 last:border-b-0",
+        "flex min-h-16 items-center gap-3 px-2 py-2 transition-colors duration-200",
+        bordered && "border-b border-border last:border-b-0",
         highlight && "bg-secondary",
       )}
     >

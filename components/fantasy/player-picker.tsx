@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { PlayerRow } from "@/components/fantasy/player-bits";
+import { AnimatePresence } from "motion/react";
+import { AnimatedPlayerRow, SlidingChoice } from "@/components/fantasy/motion-bits";
+import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatMoney } from "@/lib/fantasy/format";
 import { POSITIONS, type Player, type Position } from "@/lib/fantasy/types";
-import { cn } from "@/lib/utils";
 
 export type Sort = "price-desc" | "price-asc" | "points" | "picked";
 
@@ -50,22 +51,6 @@ export function activeFilterCount(f: Filters) {
   return (f.position !== "ALL" ? 1 : 0) + (f.year !== null ? 1 : 0) + (f.maxPrice !== null ? 1 : 0);
 }
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "h-11 min-w-11 rounded-full border border-border px-3 text-[0.9375rem] font-medium",
-        active && "border-primary bg-primary text-primary-foreground",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 /** Position segmented control, year chips, price cap and sort (design system §11.3). */
 export function FilterControls({
   filters,
@@ -84,36 +69,23 @@ export function FilterControls({
       {showPosition && (
         <div>
           <p className="mb-1.5 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Position</p>
-          <div role="group" aria-label="Position" className="grid grid-cols-5 rounded-lg bg-muted p-1">
-            {(["ALL", ...POSITIONS] as const).map((pos) => (
-              <button
-                key={pos}
-                type="button"
-                aria-pressed={filters.position === pos}
-                onClick={() => set({ position: pos })}
-                className={cn(
-                  "h-10 rounded-md text-sm font-semibold text-muted-foreground",
-                  filters.position === pos && "bg-background text-foreground shadow-card",
-                )}
-              >
-                {pos === "ALL" ? "All" : pos}
-              </button>
-            ))}
-          </div>
+          <SlidingChoice
+            label="Position"
+            value={filters.position}
+            onChange={(position) => set({ position })}
+            options={(["ALL", ...POSITIONS] as const).map((pos) => ({ value: pos, label: pos === "ALL" ? "All" : pos }))}
+          />
         </div>
       )}
       <div>
         <p className="mb-1.5 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Year</p>
-        <div className="flex flex-wrap gap-2">
-          <Chip active={filters.year === null} onClick={() => set({ year: null })}>
-            All
-          </Chip>
-          {[1, 2, 3, 4, 5].map((y) => (
-            <Chip key={y} active={filters.year === y} onClick={() => set({ year: y })}>
-              Y{y}
-            </Chip>
-          ))}
-        </div>
+        <SlidingChoice
+          label="Year"
+          variant="pills"
+          value={filters.year}
+          onChange={(year) => set({ year })}
+          options={[{ value: null, label: "All" }, ...[1, 2, 3, 4, 5].map((y) => ({ value: y, label: `Y${y}` }))]}
+        />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
@@ -162,6 +134,7 @@ export function PlayerPickerList({
   renderAction,
   reasonFor,
   hideBlocked = false,
+  storageKey = null,
 }: {
   players: Player[];
   position: Position;
@@ -169,8 +142,18 @@ export function PlayerPickerList({
   reasonFor: (p: Player) => string | null;
   /** Show only players that can be picked, with a count of the rest. */
   hideBlocked?: boolean;
+  /** Where to remember the filters between visits (null: don't). */
+  storageKey?: string | null;
 }) {
-  const [filters, setFilters] = useState<Filters>({ ...DEFAULT_FILTERS, position });
+  const [saved, setSaved] = useLocalStorageState<Filters>(storageKey, { ...DEFAULT_FILTERS, position });
+  // Filters are remembered; the search box isn't (a stale search hides everyone).
+  const [search, setSearch] = useState("");
+  // The sheet is always for one position, whatever was saved.
+  const filters = { ...saved, position, search };
+  const setFilters = (f: Filters) => {
+    setSaved({ ...f, search: "" });
+    setSearch(f.search);
+  };
   const prices = useMemo(() => [...new Set(players.map((p) => p.priceTenths))].sort((a, b) => a - b), [players]);
   const list = applyFilters(players, filters);
   const blocked = hideBlocked ? list.filter((p) => reasonFor(p)) : [];
@@ -189,14 +172,18 @@ export function PlayerPickerList({
         />
         <FilterControls filters={filters} onChange={setFilters} prices={prices} showPosition={false} />
       </div>
-      <ul className="min-h-0 flex-1 overflow-y-auto border-t border-border px-2 pb-6">
-        {shown.length === 0 && (
-          <li className="py-8 text-center text-sm text-muted-foreground">No players match these filters.</li>
-        )}
-        {shown.map((p) => {
-          const reason = reasonFor(p);
-          return <PlayerRow key={p.id} player={p} reason={reason} action={renderAction(p, reason)} />;
-        })}
+      <ul className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto border-t border-border px-2 pb-6">
+        <AnimatePresence initial={false} mode="popLayout">
+          {shown.length === 0 && (
+            <li key="none" className="py-8 text-center text-sm text-muted-foreground">
+              No players match these filters.
+            </li>
+          )}
+          {shown.map((p, i) => {
+            const reason = reasonFor(p);
+            return <AnimatedPlayerRow key={p.id} index={i} player={p} reason={reason} action={renderAction(p, reason)} />;
+          })}
+        </AnimatePresence>
         {blocked.length > 0 && (
           <li className="py-3 text-center text-xs text-muted-foreground">
             {blocked.length} more hidden: not enough budget or year full.

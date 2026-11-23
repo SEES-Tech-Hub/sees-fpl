@@ -328,7 +328,7 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, serv
           setPickFor(null);
         }}
       >
-        <DrawerContent className="flex max-h-[90dvh] flex-col">
+        <DrawerContent className="flex flex-col data-[vaul-drawer-direction=bottom]:max-h-[90dvh]">
           {pickOut && (
             <>
               <DrawerHeader>

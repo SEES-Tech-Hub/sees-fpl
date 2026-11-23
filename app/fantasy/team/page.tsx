@@ -39,7 +39,7 @@ async function Team() {
       <PageHeader
         caption={md.next ? `Matchday ${md.next.number} · My team` : "My team"}
         title={manager.teamName}
-        description={`Squad value ${formatMoney(team.squadValueTenths)} · ${formatMoney(team.bankTenths)} in the bank`}
+        description={`${formatMoney(team.bankTenths)} in the bank`}
       />
       <LineupEditor
         // Re-mount when the saved lineup changes (after Save or a transfer).
