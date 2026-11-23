@@ -15,6 +15,7 @@ import type { LineupPlayer, TeamSummary, TimelineEntry } from "@/lib/live/types"
 import { useLiveFixture } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
 import { MatchStatus, ReconnectingPill, RollingScore, useClock, useGoalFlash } from "./live-bits";
+import { NotifyBell } from "./notify-bell";
 import { RaceView } from "./race-view";
 
 type Tab = "timeline" | "lineups";
@@ -138,10 +139,18 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
       )}
 
       <div className="relative mx-auto flex max-w-xl flex-col items-center gap-4">
-        <p className="flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase">
-          <SportIcon sport={fixture.sport.slug.replace(/-/g, "_")} size={14} />
-          {fixture.sport.name} · {stageLabel(fixture.stage)}
-        </p>
+        <div className="flex w-full items-center justify-between gap-2">
+          <span className="size-10" aria-hidden />
+          <p className="flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase">
+            <SportIcon sport={fixture.sport.slug.replace(/-/g, "_")} size={14} />
+            {fixture.sport.name} · {stageLabel(fixture.stage)}
+          </p>
+          {state.status === "full_time" || state.status === "walkover" || state.status === "cancelled" ? (
+            <span className="size-10" aria-hidden />
+          ) : (
+            <NotifyBell fixtureId={fixture.id} home={fixture.home} away={fixture.away} />
+          )}
+        </div>
 
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-start gap-2">
           <HeaderTeam team={fixture.home} lines={scorers(fixture.home)} align="end" />

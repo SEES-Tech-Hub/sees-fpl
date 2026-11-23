@@ -1156,6 +1156,36 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          p256dh: string
+          topics: string[]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          p256dh: string
+          topics?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          p256dh?: string
+          topics?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       race_entries: {
         Row: {
           athlete_name: string | null
@@ -2247,6 +2277,17 @@ export type Database = {
           minute: number
         }[]
       }
+      push_forget: { Args: { p_endpoints: string[] }; Returns: undefined }
+      push_subscribe: {
+        Args: { p_auth: string; p_endpoint: string; p_p256dh: string; p_replace?: boolean; p_topics: string[] }
+        Returns: string[]
+      }
+      push_targets: {
+        Args: { p_topics: string[] }
+        Returns: { auth: string; endpoint: string; p256dh: string }[]
+      }
+      push_topics: { Args: { p_endpoint: string }; Returns: string[] }
+      push_unsubscribe: { Args: { p_endpoint: string; p_topics?: string[] }; Returns: string[] }
       record_match_event: {
         Args: {
           p_card?: Database["public"]["Enums"]["card_colour"]

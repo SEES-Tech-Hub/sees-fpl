@@ -43,7 +43,7 @@ Adds new players and updates existing ones. Sample: [`samples/players.csv`](samp
 | `full_name` | yes | text, up to 80 characters | |
 | `year` | yes | `1` to `5` (`Y2` and `Year 2` also work) | The year team |
 | `position` | yes | `GK`, `DEF`, `MID`, `FWD` | `Goalkeeper`, `Defender`, `Midfielder`, `Forward`, `ATT` and `Striker` also work |
-| `price` | yes (column) | `4.0` to `10.0` | New players need one before the lock. Blank on an existing player leaves it unchanged |
+| `price` | yes (column) | `3.0` to `11.0` | New players need one before the lock. Blank on an existing player leaves it unchanged |
 | `shirt_number` | no | `0` to `99` | Blank leaves it unchanged |
 | `status` | no | `available`, `injured`, `suspended`, `left` | Blank means `available` for a new player and leaves an existing player unchanged |
 | `display_name` | no | text, up to 40 characters | Only needed when two players in one year share a full name (see below) |
@@ -84,7 +84,7 @@ Sets prices for players who already exist. Sample: [`samples/prices.csv`](sample
 | --- | --- | --- |
 | `full_name` | yes | must match a player in that year |
 | `year` | yes | `1` to `5` |
-| `price` | yes | `4.0` to `10.0` |
+| `price` | yes | `3.0` to `11.0` |
 | `display_name` | no | needed only for players who share a full name (the Year 2 Samuels) |
 
 ```csv
