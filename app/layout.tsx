@@ -14,6 +14,12 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const oswald = Oswald({ variable: "--font-oswald", subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  // Share cards need absolute URLs: the live domain in production, the
+  // Vercel URL on previews, localhost in dev.
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ??
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
+  ),
   title: { default: "SEES Games Hub", template: "%s · SEES Games Hub" },
   description: "Live scores, results and fantasy football for SEES Games 2026.",
   applicationName: "SEES Games Hub",
