@@ -44,6 +44,11 @@ function usePoll<T>(url: string | null, onData: (data: T) => void): LiveStatus {
       controller = new AbortController();
       try {
         const res = await fetch(url!, { cache: "no-store", signal: controller.signal });
+        // Gone (a deleted fixture): nothing more will change, so stop.
+        if (res.status === 404) {
+          stopped = true;
+          return;
+        }
         if (!res.ok) throw new Error(String(res.status));
         onDataRef.current((await res.json()) as T);
         failures = 0;
