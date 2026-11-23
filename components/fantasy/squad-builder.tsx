@@ -78,7 +78,7 @@ export function SquadBuilder({
   userId,
   matchdayNumber,
   caption,
-  newTeam,
+  newTeam: newTeamProp,
 }: {
   players: Player[];
   rules: FantasyRules;
@@ -88,6 +88,8 @@ export function SquadBuilder({
   /** Set when the manager has no team yet: who they are and their year. */
   newTeam: { managerName: string; defaultYear: number | null } | null;
 }) {
+  // Treat a missing prop like null (an open page can keep old props across a hot reload).
+  const newTeam = newTeamProp ?? null;
   const router = useRouter();
   const key = (name: string) => `sees-fantasy:${userId}:${name}`;
   const byId = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);

@@ -97,10 +97,10 @@ export function FilterControls({
             <SelectTrigger className="h-11 w-full" aria-label="Max price">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any price</SelectItem>
+            <SelectContent position="popper" sideOffset={4}>
+              <SelectItem value="any" className="h-10">Any price</SelectItem>
               {prices.map((p) => (
-                <SelectItem key={p} value={String(p)}>
+                <SelectItem key={p} value={String(p)} className="h-10">
                   Up to {formatMoney(p)}
                 </SelectItem>
               ))}
@@ -113,9 +113,9 @@ export function FilterControls({
             <SelectTrigger className="h-11 w-full" aria-label="Sort">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" sideOffset={4}>
               {(Object.keys(SORT_LABEL) as Sort[]).map((s) => (
-                <SelectItem key={s} value={s}>
+                <SelectItem key={s} value={s} className="h-10">
                   {SORT_LABEL[s]}
                 </SelectItem>
               ))}
