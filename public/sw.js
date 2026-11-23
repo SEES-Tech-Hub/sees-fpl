@@ -14,7 +14,7 @@
 //     if there were no service worker.
 //
 // When you change what this file caches, bump SHELL_VERSION so phones drop the
-// old cache. Push handlers will be added here in the push task.
+// old cache. Push handlers are at the bottom of this file.
 
 const SHELL_VERSION = "v1";
 const SHELL_CACHE = `sees-shell-${SHELL_VERSION}`;
@@ -137,3 +137,46 @@ async function trimCache(cache, limit) {
     await cache.delete(key);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Push notifications (lib/push/send.ts sends them; payload: title, body, url, tag)
+// ---------------------------------------------------------------------------
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "SEES Games", body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "SEES Games";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: data.tag || undefined,
+      renotify: Boolean(data.tag),
+      data: { url: data.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of windows) {
+        if (client.url === url && "focus" in client) return client.focus();
+      }
+      const open = windows.find((c) => "navigate" in c);
+      if (open) {
+        await open.navigate(url);
+        return open.focus();
+      }
+      return self.clients.openWindow(url);
+    })(),
+  );
+});

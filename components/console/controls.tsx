@@ -113,8 +113,9 @@ export function ConsoleControls({
           {confirmKickoff && (
             <p role="alert" className="flex items-start gap-2 rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
               <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
-              No lineup for {missingLineups.join(" or ")}. Minutes and fantasy points will be guesses. Set the
-              lineup first if you can.
+              No team sheet for {missingLineups.join(" or ")} yet. Tap the team above and tick who starts: fantasy
+              uses it for appearance and 30-minute points and clean sheets. You can still kick off; anyone you record
+              counts as having played.
             </p>
           )}
         </div>

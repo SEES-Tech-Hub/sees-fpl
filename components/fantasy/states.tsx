@@ -1,8 +1,7 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/brand/brand-loader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -44,40 +43,8 @@ export function PageHeader({
   );
 }
 
-/** A small hand-drawn underline, the one "human" mark on empty states. */
-function HandMark() {
-  return (
-    <svg viewBox="0 0 120 14" className="h-3 w-28 stroke-highlight" fill="none" strokeWidth="3" strokeLinecap="round" aria-hidden>
-      <path d="M3 9 C 25 4, 50 5, 70 7 S 105 9, 117 5" />
-      <path d="M10 12 C 35 9, 70 10, 100 10" strokeWidth="2" opacity="0.7" />
-    </svg>
-  );
-}
 
-export function EmptyState({
-  title,
-  description,
-  href,
-  cta,
-}: {
-  title: string;
-  description?: string;
-  href?: string;
-  cta?: string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-10 text-center">
-      <p className="font-heading text-xl font-semibold">{title}</p>
-      <HandMark />
-      {description && <p className="max-w-xs text-sm text-muted-foreground">{description}</p>}
-      {href && cta && (
-        <Button asChild size="lg" className="mt-2 h-11 px-5 text-[0.9375rem]">
-          <Link href={href}>{cta}</Link>
-        </Button>
-      )}
-    </div>
-  );
-}
+export { EmptyState } from "@/components/brand/empty-state";
 
 export function InlineError({ title = "That didn't work", message }: { title?: string; message: string }) {
   return (
@@ -94,7 +61,7 @@ const shimmer = "motion-reduce:animate-none";
 /** Skeleton for list screens (rankings, leagues, transfers). */
 export function LoadingPage({ rows = 6 }: { rows?: number }) {
   return (
-    <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading">
+    <div className="flex flex-col gap-3 motion-safe:animate-sees-appear" aria-busy="true" aria-label="Loading">
       <Skeleton className={cn("h-3 w-32", shimmer)} />
       <Skeleton className={cn("h-8 w-48", shimmer)} />
       <Skeleton className={cn("mt-2 h-24 w-full rounded-xl", shimmer)} />
@@ -105,23 +72,7 @@ export function LoadingPage({ rows = 6 }: { rows?: number }) {
   );
 }
 
-/** Skeleton shaped like the pitch (team, squad, points). */
+/** Loading screen for the pitch screens (team, squad, points): the SEES mark. */
 export function LoadingPitch() {
-  return (
-    <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading">
-      <Skeleton className={cn("h-3 w-40", shimmer)} />
-      <Skeleton className={cn("h-9 w-56", shimmer)} />
-      <Skeleton className={cn("h-24 w-full rounded-xl", shimmer)} />
-      <div className="flex flex-col gap-5 rounded-xl bg-muted px-4 py-6">
-        {[2, 4, 4, 1].map((n, r) => (
-          <div key={r} className="flex justify-center gap-3">
-            {Array.from({ length: n }, (_, i) => (
-              <Skeleton key={i} className={cn("h-14 w-12 bg-background", shimmer)} />
-            ))}
-          </div>
-        ))}
-      </div>
-      <Skeleton className={cn("h-24 w-full rounded-xl", shimmer)} />
-    </div>
-  );
+  return <BrandLoader />;
 }

@@ -1156,6 +1156,51 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          p256dh: string
+          topics: string[]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          p256dh: string
+          topics?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          p256dh?: string
+          topics?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       race_entries: {
         Row: {
           athlete_name: string | null
@@ -1983,6 +2028,13 @@ export type Database = {
         Args: { p_league_id: string }
         Returns: boolean
       }
+      fantasy_player_selection: {
+        Args: never
+        Returns: {
+          player_id: string
+          selected_by_pct: number
+        }[]
+      }
       fantasy_prepare_matchday_snapshots: {
         Args: { p_matchday_id: string }
         Returns: undefined
@@ -2239,6 +2291,30 @@ export type Database = {
           added_minutes: number
           minute: number
         }[]
+      }
+      push_forget: { Args: { p_endpoints: string[] }; Returns: undefined }
+      push_subscribe: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_replace?: boolean
+          p_topics: string[]
+        }
+        Returns: string[]
+      }
+      push_targets: {
+        Args: { p_topics: string[] }
+        Returns: {
+          auth: string
+          endpoint: string
+          p256dh: string
+        }[]
+      }
+      push_topics: { Args: { p_endpoint: string }; Returns: string[] }
+      push_unsubscribe: {
+        Args: { p_endpoint: string; p_topics?: string[] }
+        Returns: string[]
       }
       record_match_event: {
         Args: {

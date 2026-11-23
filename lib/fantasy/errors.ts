@@ -17,6 +17,7 @@ export const ERROR_COPY: Record<FantasyErrorCode, string> = {
   OVER_BUDGET: "Your squad is over budget.",
   TEAM_LIMIT: "Too many players from one year.",
   PLAYER_UNKNOWN: "One of those players no longer exists. Refresh and try again.",
+  PLAYER_UNAVAILABLE: "One of those players has left their squad. Pick someone else.",
   PLAYER_DUPLICATE: "A player is in your squad twice.",
   LINEUP_NOT_IN_SQUAD: "Your lineup doesn't match your squad. Refresh and try again.",
   FORMATION_INVALID: "That formation isn't allowed.",

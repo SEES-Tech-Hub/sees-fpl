@@ -89,7 +89,7 @@ async function Rankings({ searchParams }: { searchParams: PageProps<"/fantasy/ra
         </p>
       ) : !manager ? (
         <p className="rounded-lg bg-muted px-3 py-2 text-sm">
-          <Link href="/fantasy/join" className="font-medium text-primary underline-offset-4 hover:underline">
+          <Link href="/fantasy/squad" className="font-medium text-primary underline-offset-4 hover:underline">
             Create your team
           </Link>{" "}
           to appear in the rankings.
@@ -107,6 +107,7 @@ async function Rankings({ searchParams }: { searchParams: PageProps<"/fantasy/ra
 
       {ranking.rows.length === 0 ? (
         <EmptyState
+          art="stands"
           title="No managers here yet"
           description={activeYear ? `No Year ${activeYear} managers have points yet.` : "Rankings start after the first matchday."}
         />

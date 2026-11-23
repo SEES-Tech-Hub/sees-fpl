@@ -1,6 +1,8 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import { after } from "next/server";
+import { notifyMatchEvent } from "@/lib/push/send";
 import { createClient } from "@/lib/supabase/server";
 import {
   parseFixtureId,
@@ -68,7 +70,10 @@ export async function recordMatchEvent(input: RecordEventInput): Promise<ActionR
     if (data.type === "full_time" || data.type === "walkover" || data.type === "goal") {
       updateTag(liveTags.standings);
     }
-    return { ok: true, data: toMatchEvent(data) };
+    const event = toMatchEvent(data);
+    // Push alerts go out after the console has its answer (lib/push/send.ts).
+    after(() => notifyMatchEvent(event).catch((e) => console.error("[push] notify failed:", e)));
+    return { ok: true, data: event };
   } catch (thrown) {
     return failure(toLiveErrorFromThrown(thrown));
   }

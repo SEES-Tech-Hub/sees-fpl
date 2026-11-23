@@ -4,9 +4,11 @@ import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeftRight, Lock } from "lucide-react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { toast } from "sonner";
 import { saveLineupAction } from "@/app/fantasy/actions";
 import { DeadlineCard } from "@/components/fantasy/deadline-card";
+import { SPRING } from "@/components/fantasy/motion-bits";
 import { BenchTray, Pitch, PitchRow } from "@/components/fantasy/pitch";
 import { PlayerChip } from "@/components/fantasy/player-chip";
 import { StatusFlag } from "@/components/fantasy/player-bits";
@@ -52,14 +54,17 @@ export function LineupEditor(props: Props) {
   const [swapFrom, setSwapFrom] = useState<string | null>(null);
   const [locked, setLocked] = useState(props.locked);
   const [error, setError] = useState<string | null>(null);
-  const [saving, startSaving] = useTransition();
+  const [, startSaving] = useTransition();
+  // The last lineup the server has (or is about to have). Saving moves it
+  // forward at once, so the Save bar goes away instantly; if the server
+  // refuses, it moves back and the bar returns with the reason.
+  const [base, setBase] = useState(() => ({ order: props.squad.map((p) => p.id), captain: props.captainId, vice: props.viceId }));
 
   const byId = new Map(props.squad.map((p) => [p.id, p]));
   const players = order.map((id) => byId.get(id)!);
   const xi = players.slice(0, xiSize);
   const bench = players.slice(xiSize);
-  const changed =
-    order.join() !== props.squad.map((p) => p.id).join() || captain !== props.captainId || vice !== props.viceId;
+  const changed = order.join() !== base.order.join() || captain !== base.captain || vice !== base.vice;
   const formationProblem = formationIssue(xi, rules);
   const captainProblem =
     !captain || !vice || captain === vice || !xi.some((p) => p.id === captain) || !xi.some((p) => p.id === vice)
@@ -137,23 +142,22 @@ export function LineupEditor(props: Props) {
 
   function save() {
     if (!captain || !vice) return;
+    const before = base;
+    const input = { starters: order.slice(0, xiSize), bench: order.slice(xiSize), captainId: captain, viceCaptainId: vice };
+    setBase({ order, captain, vice });
+    setError(null);
+    toast.success("Lineup saved");
     startSaving(async () => {
       try {
-        const result = await saveLineupAction({
-          starters: order.slice(0, xiSize),
-          bench: order.slice(xiSize),
-          captainId: captain,
-          viceCaptainId: vice,
-        });
+        const result = await saveLineupAction(input);
         if (!result.ok) {
+          setBase(before);
           setError(result.error.message);
-          toast.error(result.error.message);
+          toast.error(`Lineup not saved: ${result.error.message}`);
           if (result.error.code === "DEADLINE_PASSED") onPassed();
-          return;
         }
-        toast.success("Lineup saved");
-        router.refresh();
       } catch {
+        setBase(before);
         setError(ERROR_COPY.UNKNOWN);
         toast.error(ERROR_COPY.UNKNOWN);
       }
@@ -161,9 +165,9 @@ export function LineupEditor(props: Props) {
   }
 
   function reset() {
-    setOrder(props.squad.map((p) => p.id));
-    setCaptain(props.captainId);
-    setVice(props.viceId);
+    setOrder(base.order);
+    setCaptain(base.captain);
+    setVice(base.vice);
     setSwapFrom(null);
     setError(null);
   }
@@ -174,18 +178,21 @@ export function LineupEditor(props: Props) {
 
   const chip = (p: Player) => {
     const isTarget = swapFrom !== null && p.id !== swapFrom && swapped(swapFrom, p.id) !== null;
+    // layoutId lets a swapped pair glide into each other's places,
+    // including between the pitch and the bench.
     return (
-      <PlayerChip
-        key={p.id}
-        player={p}
-        tag={sub(p)}
-        captain={p.id === captain}
-        vice={p.id === vice}
-        selected={p.id === swapFrom}
-        target={isTarget}
-        dimmed={swapFrom !== null && p.id !== swapFrom && !isTarget}
-        onClick={locked ? undefined : () => tap(p.id)}
-      />
+      <motion.div key={p.id} layoutId={`lineup-${p.id}`} layout transition={SPRING}>
+        <PlayerChip
+          player={p}
+          tag={sub(p)}
+          captain={p.id === captain}
+          vice={p.id === vice}
+          selected={p.id === swapFrom}
+          target={isTarget}
+          dimmed={swapFrom !== null && p.id !== swapFrom && !isTarget}
+          onClick={locked ? undefined : () => tap(p.id)}
+        />
+      </motion.div>
     );
   };
 
@@ -218,6 +225,7 @@ export function LineupEditor(props: Props) {
         <p className="text-sm text-muted-foreground">Tap a player to make them captain or to substitute them.</p>
       )}
 
+      <LayoutGroup id="lineup">
       <Pitch caption={formationLabel(xi)}>
         {PITCH_ORDER.map((pos) => {
           const row = xi.filter((p) => p.position === pos);
@@ -231,31 +239,41 @@ export function LineupEditor(props: Props) {
 
       <BenchTray
         note="Auto-subs come on in this order. A goalkeeper only replaces a goalkeeper."
-        items={bench.map((p, i) => ({ key: p.id, label: i === 0 ? "GK" : undefined, node: chip(p) }))}
+        items={bench.map((p, i) => ({ key: `bench-${i}`, label: i === 0 ? "GK" : undefined, node: chip(p) }))}
       />
+      </LayoutGroup>
 
       {error && <InlineError title="Lineup not saved" message={error} />}
       {!locked && (formationProblem || captainProblem) && (
         <p className="text-sm text-destructive">{formationProblem ?? captainProblem}</p>
       )}
 
-      {!locked && changed && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/80 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-raised backdrop-blur-md">
-          <div className="mx-auto flex max-w-2xl gap-3">
-            <Button variant="outline" size="lg" className="h-11 flex-1 text-[0.9375rem]" onClick={reset} disabled={saving}>
-              Undo changes
-            </Button>
-            <Button
-              size="lg"
-              className="h-11 flex-1 text-[0.9375rem]"
-              onClick={save}
-              disabled={saving || Boolean(formationProblem || captainProblem)}
-            >
-              {saving ? "Saving…" : "Save lineup"}
-            </Button>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {!locked && changed && (
+          <motion.div
+            key="save-bar"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={SPRING}
+            className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/80 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-raised backdrop-blur-md"
+          >
+            <div className="mx-auto flex max-w-2xl gap-3">
+              <Button variant="outline" size="lg" className="h-11 flex-1 text-[0.9375rem]" onClick={reset}>
+                Undo changes
+              </Button>
+              <Button
+                size="lg"
+                className="h-11 flex-1 text-[0.9375rem]"
+                onClick={save}
+                disabled={Boolean(formationProblem || captainProblem)}
+              >
+                Save lineup
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Drawer open={menuPlayer !== undefined} onOpenChange={(open) => !open && setMenuFor(null)}>
         <DrawerContent>

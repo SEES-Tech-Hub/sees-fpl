@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { safeNextPath } from "@/lib/safe-next";
@@ -14,6 +15,13 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
       <Suspense fallback={<SignInButton next="/fantasy" />}>
         <SignInForm searchParams={searchParams} />
       </Suspense>
+      <p className="text-xs text-muted-foreground">
+        By signing in you agree to how we use your data, explained in our{" "}
+        <Link href="/privacy" className="font-medium text-primary underline-offset-4 hover:underline">
+          privacy notice
+        </Link>
+        .
+      </p>
     </main>
   );
 }

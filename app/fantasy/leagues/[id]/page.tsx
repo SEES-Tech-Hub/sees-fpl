@@ -26,6 +26,7 @@ async function League({ params }: { params: PageProps<"/fantasy/leagues/[id]">["
       <>
         <PageHeader title="League" />
         <EmptyState
+          art="stands"
           title="League not found"
           description="It doesn't exist, or you're not a member. Join it with its code."
           href="/fantasy/leagues"

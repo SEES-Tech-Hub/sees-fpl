@@ -35,6 +35,7 @@ async function Points({ searchParams }: { searchParams: PageProps<"/fantasy/poin
       <>
         <PageHeader caption="Points" title={mine ? manager.teamName : "Points"} />
         <EmptyState
+          art="whistle"
           title="No points yet"
           description={
             mine
@@ -94,7 +95,7 @@ async function Points({ searchParams }: { searchParams: PageProps<"/fantasy/poin
       </nav>
 
       {!points ? (
-        <EmptyState title="No team that matchday" description="This manager hadn't picked a team by that deadline." />
+        <EmptyState art="ball" title="No team that matchday" description="This manager hadn't picked a team by that deadline." />
       ) : (
         <>
           <PointsHero points={points} />

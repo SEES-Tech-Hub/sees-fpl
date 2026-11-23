@@ -1,11 +1,35 @@
-import { Placeholder } from "@/components/placeholder";
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { BrandLoader } from "@/components/brand/brand-loader";
+import { ChampionshipStrip } from "@/components/live/championship-strip";
+import { HomeLive } from "@/components/live/home-live";
+import { getFixtureCards } from "@/lib/live/fixture-cards";
+import { getMedalTable } from "@/lib/live/results";
+
+// Owner: Fortune (built by Tayo). Home: Live now (or the next match), the
+// race for the championship, fixtures by date and the latest results.
+// Scores stay live by polling /api/live (lib/live/use-live.ts).
 
 export default function Home() {
   return (
-    <Placeholder
-      title="SEES Games Hub"
-      owner="Fortune"
-      notes="Home: Live now cards, today's fixtures by sport, latest results. See docs/PRD.md, live scores section."
-    />
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 py-4 pb-12 lg:max-w-4xl lg:px-6">
+      <Suspense fallback={<BrandLoader />}>
+        <HomeContent />
+      </Suspense>
+    </main>
   );
+}
+
+async function HomeContent() {
+  await connection();
+  const [cards, medals] = await Promise.all([getFixtureCards(), getMedalTable()]);
+  const serverNow = requestTime();
+  return (
+    <HomeLive cards={cards} serverNow={serverNow} championship={<ChampionshipStrip rows={medals} />} />
+  );
+}
+
+/** The time this request is served (after connection(), so it's per request). */
+function requestTime() {
+  return Date.now();
 }

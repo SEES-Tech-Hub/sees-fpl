@@ -8,7 +8,7 @@ import { getMyManager, getMyTeam, requireFantasyUser } from "./api";
 export async function requireManager(nextPath: string) {
   const user = await requireFantasyUser(nextPath);
   const manager = await getMyManager(user);
-  if (!manager) redirect("/fantasy/join");
+  if (!manager) redirect("/fantasy/squad");
   return { user, manager };
 }
 

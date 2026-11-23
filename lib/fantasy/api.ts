@@ -1,22 +1,30 @@
 import "server-only";
-// Owner: Henry. The ONLY place the fantasy screens talk to the backend.
-// Contract: docs/fantasy-backend-contract.md. Types: lib/fantasy/types.ts.
+// The ONLY place the fantasy screens talk to the backend.
+// Contract: docs/fantasy-backend-contract.md. UI types: lib/fantasy/types.ts.
 //
-// Real today: teams, players, matchdays and fixtures (base schema).
-// Everything else is marked `// STUB: replace with Mary's RPC` and keeps its
-// state in a cookie (lib/fantasy/stub/store.ts) so the preview is clickable.
-// When one of Mary's functions lands, replace that one function body here.
+// Reads go straight to the tables (RLS decides who sees what). Writes call
+// Mary's SECURITY DEFINER functions (save_squad, save_lineup, make_transfers,
+// activate_wildcard, create_manager, create_league, join_league), which raise
+// "CODE: message" on failure.
+//
+// A manager is identified to the screens by their user id (managers.user_id),
+// so links like /fantasy/points?manager=<id> and "is this me?" checks use the
+// same id as the signed-in user. managers.id stays internal to this file.
 
 import { cache } from "react";
 import { connection } from "next/server";
 import { getCurrentUser, requireSignedIn } from "@/lib/auth";
+import { getPlayerMatchStats } from "@/lib/live/stats";
 import { createClient } from "@/lib/supabase/server";
-import { fantasyError } from "./errors";
-import { defaultLineup, FAKE_MANAGERS, fakeManagerPoints, fakeMatchdayScore, rankRows } from "./stub/fake";
-import { STUB_MATCHDAYS, STUB_PLAYERS, STUB_TEAMS } from "./stub/reference";
-import { STUB_RULES } from "./stub/rules";
-import { hash, readStub, writeStub, type StubState } from "./stub/store";
-import { formationIssue, squadIssues } from "./validate";
+import type { Database } from "@/lib/supabase/types";
+import type {
+  FantasyPlayer as EnginePlayer,
+  FantasyRules as EngineRules,
+  PickInput,
+  PlayerMatchStats,
+} from "./engine-types";
+import { fantasyError, parseRpcError } from "./errors";
+import { aggregatePlayerStats, calculateManagerMatchdayScore, calculatePlayerPoints } from "./scoring";
 import type {
   ActionResult,
   FantasyRules,
@@ -29,29 +37,28 @@ import type {
   MatchdayHistoryRow,
   MatchdayState,
   MyTeam,
+  Pick as TeamPick,
   Player,
+  PlayerPoints,
+  Position,
   RankingPage,
   RankingRow,
   RankingScope,
+  ScoringRule,
   Team,
   TransferInput,
   TransferRecord,
   TransferState,
 } from "./types";
 
-/** Flip to true when Mary's backend is wired in; hides the "sample data" banner. */
-export const FANTASY_BACKEND_LIVE = false;
+type Tables = Database["public"]["Tables"];
+type RulesRow = Tables["fantasy_rules"]["Row"];
+type ManagerRow = Tables["managers"]["Row"];
+type PickRow = Pick<Tables["picks"]["Row"], "matchday_id" | "player_id" | "is_starter" | "bench_order" | "is_captain" | "is_vice_captain">;
 
-/**
- * Without Supabase env vars, or with FANTASY_LOCAL_STUB=1 (local testing with
- * dummy Supabase values, so proxy.ts can start), use stub reference data and
- * a stub user too. Never set FANTASY_LOCAL_STUB on Vercel.
- */
-const HAS_SUPABASE =
-  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) &&
-  process.env.FANTASY_LOCAL_STUB !== "1";
-
-export const usingStubReferenceData = !HAS_SUPABASE;
+function fail(message: string, context: string): never {
+  throw new Error(`Couldn't load ${context}: ${message}`);
+}
 
 // ===========================================================================
 // Who is calling
@@ -59,15 +66,8 @@ export const usingStubReferenceData = !HAS_SUPABASE;
 
 export type FantasyUser = { id: string; name: string; yearGroup: number | null };
 
-const STUB_USER: FantasyUser = { id: "local-stub-user", name: "Local tester", yearGroup: null };
-
 /** For signed-in pages: sends signed-out visitors to /login and back. */
 export async function requireFantasyUser(nextPath: string): Promise<FantasyUser> {
-  if (!HAS_SUPABASE) {
-    // Local dev without .env.local only. Production always has the env vars.
-    await connection();
-    return STUB_USER;
-  }
   const { profile } = await requireSignedIn(nextPath);
   return { id: profile.id, name: profile.display_name ?? "Manager", yearGroup: profile.year_group };
 }
@@ -75,7 +75,6 @@ export async function requireFantasyUser(nextPath: string): Promise<FantasyUser>
 /** For public pages (rankings, rules): the user if signed in, else null. */
 export async function getOptionalFantasyUser(): Promise<FantasyUser | null> {
   await connection();
-  if (!HAS_SUPABASE) return STUB_USER;
   const current = await getCurrentUser();
   if (!current) return null;
   const { profile } = current;
@@ -83,34 +82,141 @@ export async function getOptionalFantasyUser(): Promise<FantasyUser | null> {
 }
 
 // ===========================================================================
-// Reads: reference data (real)
+// Rules
 // ===========================================================================
 
-export const getFantasyRules = cache(async (): Promise<FantasyRules> => {
-  // STUB: replace with Mary's RPC (rules config table, contract §2.1).
-  return STUB_RULES;
+const getRulesRow = cache(async (): Promise<RulesRow> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("fantasy_rules").select("*").eq("id", 1).single();
+  if (error) fail(error.message, "the fantasy rules");
+  return data;
 });
 
-export const getTeams = cache(async (): Promise<Team[]> => {
-  if (!HAS_SUPABASE) return STUB_TEAMS;
+const getDeadlineMinutes = cache(async (): Promise<number> => {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("teams")
-    .select("id, year, name, short_name, class_label")
-    .order("year");
-  if (error) throw new Error(`Couldn't load teams: ${error.message}`);
+  const { data } = await supabase.rpc("admin_deadline_rules");
+  return data?.[0]?.minutes_before_kickoff ?? 30;
+});
+
+const same = (n: number): Record<Position, number> => ({ GK: n, DEF: n, MID: n, FWD: n });
+
+function scoringRules(r: RulesRow): ScoringRule[] {
+  return [
+    { key: "appeared", label: "Appeared", points: same(r.pts_appearance), note: "Any minutes" },
+    {
+      key: "played_30",
+      label: `Played ${r.min_minutes_threshold} min or more`,
+      points: same(r.pts_30_mins),
+      note: "On top of appearing. Extra time counts",
+    },
+    { key: "goal", label: "Goal", points: { GK: r.pts_goal_gk, DEF: r.pts_goal_def, MID: r.pts_goal_mid, FWD: r.pts_goal_fwd } },
+    { key: "assist", label: "Assist", points: same(r.pts_assist) },
+    {
+      key: "clean_sheet",
+      label: "Clean sheet",
+      points: { GK: r.pts_clean_sheet_gk, DEF: r.pts_clean_sheet_def, MID: r.pts_clean_sheet_mid, FWD: r.pts_clean_sheet_fwd },
+      note: `${r.min_minutes_threshold} min or more on the pitch, no goals conceded while on it`,
+    },
+    {
+      key: "goals_conceded_2",
+      label: `Every ${r.pts_goals_conceded_step} goals conceded`,
+      points: {
+        GK: r.pts_goals_conceded_gk,
+        DEF: r.pts_goals_conceded_def,
+        MID: r.pts_goals_conceded_mid,
+        FWD: r.pts_goals_conceded_fwd,
+      },
+      note: "Only while on the pitch",
+    },
+    { key: "penalty_saved", label: "Penalty saved", points: same(r.pts_penalty_save), note: "Normal or extra time, not shootouts" },
+    { key: "penalty_missed", label: "Penalty missed", points: same(r.pts_penalty_miss), note: "Not shootouts" },
+    { key: "yellow_card", label: "Yellow card", points: same(r.pts_yellow_card) },
+    { key: "red_card", label: "Red card", points: same(r.pts_red_card) },
+    { key: "own_goal", label: "Own goal", points: same(r.pts_own_goal) },
+    { key: "man_of_the_match", label: "Man of the Match", points: same(r.pts_motm), note: "Chosen by the match official" },
+  ];
+}
+
+export const getFantasyRules = cache(async (): Promise<FantasyRules> => {
+  const [r, deadlineMinutes] = await Promise.all([getRulesRow(), getDeadlineMinutes()]);
+  return {
+    budgetTenths: r.budget_tenths,
+    squadSize: r.squad_size,
+    squadPositions: { GK: r.gk_quota, DEF: r.def_quota, MID: r.mid_quota, FWD: r.fwd_quota },
+    maxPerTeam: r.max_per_team,
+    startingSize: r.starting_size,
+    formation: {
+      GK: { min: r.min_start_gk, max: r.max_start_gk },
+      DEF: { min: r.min_start_def, max: r.max_start_def },
+      MID: { min: r.min_start_mid, max: r.max_start_mid },
+      FWD: { min: r.min_start_fwd, max: r.max_start_fwd },
+    },
+    benchSize: r.squad_size - r.starting_size,
+    captainMultiplier: r.captain_multiplier,
+    freeTransfersPerMatchday: r.free_transfers_per_md,
+    maxSavedFreeTransfers: r.max_saved_transfers,
+    transferHitPoints: r.extra_transfer_cost,
+    unlimitedTransferMatchdays: r.unlimited_transfer_matchdays,
+    // The chips table allows one of each chip per manager.
+    wildcardsPerManager: 1,
+    deadlineMinutesBeforeKickoff: deadlineMinutes,
+    // Fixed by check constraints on leagues.invite_code and managers.team_name.
+    leagueCodeLength: 6,
+    teamNameMaxLength: 30,
+    scoring: scoringRules(r),
+  };
+});
+
+// ===========================================================================
+// Reference data: teams, players, matchdays
+// ===========================================================================
+
+export const getTeams = cache(async (): Promise<Team[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("teams").select("id, year, name, short_name, class_label").order("year");
+  if (error) fail(error.message, "teams");
   return data.map((t) => ({ id: t.id, year: t.year, name: t.name, shortName: t.short_name, classLabel: t.class_label }));
 });
 
+/** Every finished-or-live stat row that belongs to a matchday. */
+const getMatchdayStats = cache(async (): Promise<Map<string, PlayerMatchStats[]>> => {
+  const md = await getMatchdayState();
+  const byMatchday = new Map<string, PlayerMatchStats[]>();
+  const played = md.matchdays.filter((m) => m.fixtures.some((f) => f.status !== "scheduled" && f.status !== "postponed" && f.status !== "cancelled"));
+  await Promise.all(
+    played.map(async (m) => {
+      byMatchday.set(m.id, await getPlayerMatchStats({ matchdayId: m.id }));
+    }),
+  );
+  return byMatchday;
+});
+
 export const getPlayers = cache(async (): Promise<Player[]> => {
-  if (!HAS_SUPABASE) return STUB_PLAYERS;
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("players")
-    .select("id, team_id, full_name, display_name, position, price_tenths, status, shirt_number, teams(year, short_name)")
-    .order("display_name");
-  if (error) throw new Error(`Couldn't load players: ${error.message}`);
-  return data.map((p) => ({
+  const [players, selection, rules, stats] = await Promise.all([
+    supabase
+      .from("players")
+      .select("id, team_id, full_name, display_name, position, price_tenths, status, shirt_number, teams(year, short_name)")
+      .order("display_name"),
+    supabase.rpc("fantasy_player_selection"),
+    getRulesRow(),
+    getMatchdayStats(),
+  ]);
+  if (players.error) fail(players.error.message, "players");
+  const selectedBy = new Map((selection.data ?? []).map((s) => [s.player_id, Number(s.selected_by_pct)]));
+
+  // Fantasy points so far: each matchday's stats, scored with the live rules.
+  const totals = new Map<string, number>();
+  const positionOf = new Map(players.data.map((p) => [p.id, p.position]));
+  for (const rows of stats.values()) {
+    for (const [playerId, s] of aggregatePlayerStats(rows)) {
+      const position = positionOf.get(playerId);
+      if (!position) continue;
+      totals.set(playerId, (totals.get(playerId) ?? 0) + calculatePlayerPoints(position, s, rules as EngineRules).points);
+    }
+  }
+
+  return players.data.map((p) => ({
     id: p.id,
     teamId: p.team_id,
     teamShort: p.teams?.short_name ?? "?",
@@ -121,166 +227,322 @@ export const getPlayers = cache(async (): Promise<Player[]> => {
     priceTenths: p.price_tenths,
     status: p.status,
     shirtNumber: p.shirt_number,
-    // STUB: replace with Mary's RPC (player_fantasy_stats view, contract §2.2).
-    totalPoints: 0,
-    selectedByPct: 0,
+    totalPoints: totals.get(p.id) ?? 0,
+    selectedByPct: selectedBy.get(p.id) ?? 0,
   }));
 });
 
 export const getMatchdayState = cache(async (): Promise<MatchdayState> => {
   await connection();
-  let matchdays: Matchday[];
-  if (!HAS_SUPABASE) {
-    matchdays = STUB_MATCHDAYS;
-  } else {
-    const supabase = await createClient();
-    const [mds, fx] = await Promise.all([
-      supabase.from("matchdays").select("id, number, name, deadline_at, status").order("number"),
-      supabase
-        .from("fixtures")
-        .select(
-          "id, matchday_id, stage, kickoff_at, status, venue, home_team_id, away_team_id, home_score, away_score, home:teams!fixtures_home_team_id_fkey(short_name), away:teams!fixtures_away_team_id_fkey(short_name)",
-        )
-        .not("matchday_id", "is", null)
-        .order("kickoff_at"),
-    ]);
-    if (mds.error) throw new Error(`Couldn't load matchdays: ${mds.error.message}`);
-    if (fx.error) throw new Error(`Couldn't load fixtures: ${fx.error.message}`);
-    matchdays = mds.data.map((m) => ({
-      id: m.id,
-      number: m.number,
-      name: m.name,
-      deadlineAt: m.deadline_at,
-      status: m.status,
-      fixtures: fx.data
-        .filter((f) => f.matchday_id === m.id)
-        .map((f) => ({
-          id: f.id,
-          matchdayId: f.matchday_id,
-          stage: f.stage,
-          kickoffAt: f.kickoff_at,
-          status: f.status,
-          venue: f.venue,
-          homeTeamId: f.home_team_id,
-          awayTeamId: f.away_team_id,
-          homeShort: f.home?.short_name ?? null,
-          awayShort: f.away?.short_name ?? null,
-          homeScore: f.home_score,
-          awayScore: f.away_score,
-        })),
-    }));
-  }
+  const supabase = await createClient();
+  const [mds, fx] = await Promise.all([
+    supabase.from("matchdays").select("id, number, name, deadline_at, status").order("number"),
+    supabase
+      .from("fixtures")
+      .select(
+        "id, matchday_id, stage, kickoff_at, status, venue, home_team_id, away_team_id, home_score, away_score, home:teams!fixtures_home_team_id_fkey(short_name), away:teams!fixtures_away_team_id_fkey(short_name)",
+      )
+      .not("matchday_id", "is", null)
+      .order("kickoff_at"),
+  ]);
+  if (mds.error) fail(mds.error.message, "matchdays");
+  if (fx.error) fail(fx.error.message, "fixtures");
+  const matchdays: Matchday[] = mds.data.map((m) => ({
+    id: m.id,
+    number: m.number,
+    name: m.name,
+    deadlineAt: m.deadline_at,
+    status: m.status,
+    fixtures: fx.data
+      .filter((f) => f.matchday_id === m.id)
+      .map((f) => ({
+        id: f.id,
+        matchdayId: f.matchday_id,
+        stage: f.stage,
+        kickoffAt: f.kickoff_at,
+        status: f.status,
+        venue: f.venue,
+        homeTeamId: f.home_team_id,
+        awayTeamId: f.away_team_id,
+        homeShort: f.home?.short_name ?? null,
+        awayShort: f.away?.short_name ?? null,
+        homeScore: f.home_score,
+        awayScore: f.away_score,
+      })),
+  }));
   const now = Date.now();
   const passed = (m: Matchday) => m.deadlineAt !== null && new Date(m.deadlineAt).getTime() <= now;
-  const next = matchdays.find((m) => m.deadlineAt !== null && !passed(m) && m.status !== "finalised") ?? null;
-  const current = [...matchdays].reverse().find(passed) ?? null;
+  // Same rule as fantasy_get_open_matchday(): the first matchday that is still open.
+  const next = matchdays.find((m) => (m.status === "upcoming" || m.status === "open") && !passed(m)) ?? null;
+  const current = [...matchdays].reverse().find((m) => passed(m) || m.status === "locked" || m.status === "finalised") ?? null;
   return { matchdays, next, current, serverNow: now };
 });
 
 // ===========================================================================
-// Reads: the manager (STUB)
+// Managers
 // ===========================================================================
 
-async function stubFor(user: FantasyUser) {
-  return readStub(user.id);
-}
+/** Every manager, with the name from their public profile. Small: one per student. */
+const getAllManagers = cache(async () => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("managers")
+    .select("id, user_id, team_name, year_group, total_points, overall_rank, created_at");
+  if (error) fail(error.message, "managers");
+  const ids = data.map((m) => m.user_id);
+  const names = new Map<string, string>();
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data: profiles } = await supabase.from("public_profiles").select("id, display_name").in("id", ids.slice(i, i + 200));
+    for (const p of profiles ?? []) if (p.id) names.set(p.id, p.display_name ?? "Manager");
+  }
+  return data.map((m) => ({ ...m, managerName: names.get(m.user_id) ?? "Manager" }));
+});
 
-function playersById(players: Player[]) {
-  return new Map(players.map((p) => [p.id, p]));
-}
-
-/** The stub squad as players, or null if missing or out of date. */
-function stubSquad(state: StubState, players: Player[]): Player[] | null {
-  if (!state.squad || state.squad.length !== 15) return null;
-  const byId = playersById(players);
-  const squad = state.squad.map((id) => byId.get(id));
-  return squad.every(Boolean) ? (squad as Player[]) : null;
-}
+const getManagerRow = cache(async (userId: string): Promise<ManagerRow | null> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("managers").select("*").eq("user_id", userId).maybeSingle();
+  if (error) fail(error.message, "your fantasy team");
+  return data;
+});
 
 export async function getMyManager(user: FantasyUser): Promise<Manager | null> {
-  // STUB: replace with Mary's RPC (managers table, contract §2.4).
-  const state = await stubFor(user);
-  if (!state.manager) return null;
-  return {
-    id: user.id,
-    teamName: state.manager.teamName,
-    managerName: user.name,
-    yearGroup: state.manager.yearGroup,
-    createdAt: state.manager.createdAt,
-  };
+  const m = await getManagerRow(user.id);
+  if (!m) return null;
+  return { id: user.id, teamName: m.team_name, managerName: user.name, yearGroup: m.year_group, createdAt: m.created_at };
+}
+
+// ===========================================================================
+// Squad and picks
+// ===========================================================================
+
+const POSITION_ORDER: Record<Position, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3 };
+
+/**
+ * A manager's picks for a matchday. Picks are copied forward only when the
+ * manager next saves, so a matchday with no picks of its own uses the latest
+ * earlier matchday's, exactly as fantasy_sync_manager_for_matchday would.
+ */
+const getPicksFor = cache(async (managerRowId: string, matchdayNumber: number): Promise<PickRow[]> => {
+  const md = await getMatchdayState();
+  const numberOf = new Map(md.matchdays.map((m) => [m.id, m.number]));
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("picks")
+    .select("matchday_id, player_id, is_starter, bench_order, is_captain, is_vice_captain")
+    .eq("manager_id", managerRowId);
+  if (error) fail(error.message, "picks");
+  const usable = data.filter((p) => (numberOf.get(p.matchday_id) ?? Infinity) <= matchdayNumber);
+  const latest = Math.max(...usable.map((p) => numberOf.get(p.matchday_id)!), -Infinity);
+  return usable.filter((p) => numberOf.get(p.matchday_id) === latest);
+});
+
+/** Picks in slot order: starters GK, DEF, MID, FWD, then the bench in order. */
+function orderPicks(picks: PickRow[], positionOf: (id: string) => Position | undefined): PickRow[] {
+  const starters = picks
+    .filter((p) => p.is_starter)
+    .sort((a, b) => POSITION_ORDER[positionOf(a.player_id) ?? "FWD"] - POSITION_ORDER[positionOf(b.player_id) ?? "FWD"]);
+  const bench = picks.filter((p) => !p.is_starter).sort((a, b) => (a.bench_order ?? 9) - (b.bench_order ?? 9));
+  return [...starters, ...bench];
 }
 
 export async function getMyTeam(user: FantasyUser): Promise<MyTeam | null> {
-  // STUB: replace with Mary's RPC (squad_players / picks, contract §2.5).
-  const [state, players, rules, md] = await Promise.all([stubFor(user), getPlayers(), getFantasyRules(), getMatchdayState()]);
-  const squad = stubSquad(state, players);
-  if (!squad) return null;
-  const value = squad.reduce((s, p) => s + p.priceTenths, 0);
+  const mgr = await getManagerRow(user.id);
+  if (!mgr) return null;
+  const supabase = await createClient();
+  const [squad, players, rules, md] = await Promise.all([
+    supabase.from("squads").select("player_id").eq("manager_id", mgr.id),
+    getPlayers(),
+    getFantasyRules(),
+    getMatchdayState(),
+  ]);
+  if (squad.error) fail(squad.error.message, "your squad");
+  if (squad.data.length === 0) return null;
+
   const target = md.next ?? md.current;
+  const byId = new Map(players.map((p) => [p.id, p]));
+  const squadIds = new Set(squad.data.map((s) => s.player_id));
+  // Transfers swap the player inside the open matchday's picks, so picks and
+  // squad agree; anything else (picks from before a transfer) falls back to
+  // the squad in position order with no armbands.
+  const picks = orderPicks(await getPicksFor(mgr.id, target?.number ?? Infinity), (id) => byId.get(id)?.position).filter(
+    (p) => squadIds.has(p.player_id),
+  );
+  const ordered: TeamPick[] =
+    picks.length === squadIds.size
+      ? picks.map((p, i) => ({ playerId: p.player_id, slot: i + 1, isCaptain: p.is_captain, isViceCaptain: p.is_vice_captain }))
+      : [...squadIds]
+          .sort((a, b) => POSITION_ORDER[byId.get(a)?.position ?? "FWD"] - POSITION_ORDER[byId.get(b)?.position ?? "FWD"])
+          .map((id, i) => ({ playerId: id, slot: i + 1, isCaptain: false, isViceCaptain: false }));
+
+  const value = [...squadIds].reduce((s, id) => s + (byId.get(id)?.priceTenths ?? 0), 0);
   return {
     matchdayId: target?.id ?? "",
     matchdayNumber: target?.number ?? 0,
-    picks: squad.map((p, i) => ({
-      playerId: p.id,
-      slot: i + 1,
-      isCaptain: p.id === state.captain,
-      isViceCaptain: p.id === state.vice,
-    })),
+    picks: ordered,
     bankTenths: rules.budgetTenths - value,
     squadValueTenths: value,
     locked: md.next === null,
   };
 }
 
-function stubTransferState(state: StubState, md: MatchdayState, rules: FantasyRules, bank: number): TransferState | null {
-  const target = md.next;
-  if (!target) return null;
-  const t = state.transfers?.md === target.number ? state.transfers : { md: target.number, made: 0, cost: 0 };
-  const wildcardActive = state.wildcardMd === target.number;
-  const unlimited =
-    md.current === null || rules.unlimitedTransferMatchdays.includes(target.number) || wildcardActive;
+// ===========================================================================
+// Transfers
+// ===========================================================================
+
+export async function getTransferState(user: FantasyUser): Promise<TransferState | null> {
+  const [mgr, md, rules, team] = await Promise.all([
+    getManagerRow(user.id),
+    getMatchdayState(),
+    getFantasyRules(),
+    getMyTeam(user),
+  ]);
+  if (!mgr || !team || !md.next) return null;
+  const next = md.next;
+  const supabase = await createClient();
+  const [transfers, chips] = await Promise.all([
+    supabase.from("transfers").select("points_cost").eq("manager_id", mgr.id).eq("matchday_id", next.id),
+    supabase.from("chips").select("matchday_id, chip_type").eq("manager_id", mgr.id),
+  ]);
+  if (transfers.error) fail(transfers.error.message, "transfers");
+  if (chips.error) fail(chips.error.message, "chips");
+
+  const wildcard = chips.data.find((c) => c.chip_type === "wildcard");
+  const wildcardMd = wildcard ? md.matchdays.find((m) => m.id === wildcard.matchday_id) : undefined;
+  const wildcardActive = wildcard?.matchday_id === next.id;
+  const unlimited = rules.unlimitedTransferMatchdays.includes(next.number) || wildcardActive;
+
+  // free_transfers is topped up when the manager next saves; show the
+  // topped-up number now (same sum as fantasy_sync_manager_for_matchday).
+  let free = mgr.free_transfers;
+  if (next.number > mgr.last_rollover_matchday) {
+    const now = md.serverNow;
+    const passedCount = md.matchdays.filter(
+      (m) =>
+        m.number > Math.max(1, mgr.last_rollover_matchday) &&
+        m.number <= next.number &&
+        m.deadlineAt !== null &&
+        new Date(m.deadlineAt).getTime() <= now &&
+        !rules.unlimitedTransferMatchdays.includes(m.number),
+    ).length;
+    free = Math.min(rules.maxSavedFreeTransfers, free + passedCount * rules.freeTransfersPerMatchday);
+  }
+
   return {
-    matchdayId: target.id,
-    matchdayNumber: target.number,
-    freeTransfers: unlimited ? null : Math.max(0, rules.freeTransfersPerMatchday - t.made),
-    made: t.made,
-    costPoints: t.cost,
-    bankTenths: bank,
+    matchdayId: next.id,
+    matchdayNumber: next.number,
+    freeTransfers: unlimited ? null : free,
+    made: transfers.data.length,
+    costPoints: transfers.data.reduce((s, t) => s + t.points_cost, 0),
+    bankTenths: team.bankTenths,
     wildcard: {
-      available: state.wildcardMd === undefined,
+      available: !mgr.wildcard_used,
       activeThisMatchday: wildcardActive,
-      usedOnMatchday: state.wildcardMd ?? null,
+      usedOnMatchday: wildcardMd?.number ?? null,
     },
     locked: false,
   };
 }
 
-export async function getTransferState(user: FantasyUser): Promise<TransferState | null> {
-  // STUB: replace with Mary's RPC (transfers, chips, contract §2.6).
-  const [state, md, rules, team] = await Promise.all([stubFor(user), getMatchdayState(), getFantasyRules(), getMyTeam(user)]);
-  if (!team) return null;
-  return stubTransferState(state, md, rules, team.bankTenths);
-}
-
 export async function getTransferHistory(user: FantasyUser): Promise<TransferRecord[]> {
-  // STUB: replace with Mary's RPC (transfers table, contract §2.6). The stub keeps no history.
-  void user;
-  return [];
+  const mgr = await getManagerRow(user.id);
+  if (!mgr) return [];
+  const [md, supabase] = await Promise.all([getMatchdayState(), createClient()]);
+  const { data, error } = await supabase
+    .from("transfers")
+    .select("matchday_id, player_out_id, player_in_id, created_at")
+    .eq("manager_id", mgr.id)
+    .order("created_at");
+  if (error) fail(error.message, "transfers");
+  const numberOf = new Map(md.matchdays.map((m) => [m.id, m.number]));
+  return data.map((t) => ({
+    matchdayNumber: numberOf.get(t.matchday_id) ?? 0,
+    outPlayerId: t.player_out_id,
+    inPlayerId: t.player_in_id,
+    madeAt: t.created_at,
+  }));
 }
 
 // ===========================================================================
-// Reads: points, rankings, leagues (STUB)
+// Points
 // ===========================================================================
+
+const getPointsRows = cache(async () => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("manager_matchday_points")
+    .select("manager_id, matchday_id, gross_points, transfer_cost, net_points, is_provisional, breakdown");
+  if (error) fail(error.message, "points");
+  return data;
+});
+
+function passedMatchdays(md: MatchdayState): Matchday[] {
+  return md.current ? md.matchdays.filter((m) => m.number <= md.current!.number) : [];
+}
+
+function fixtureLabelFor(matchday: Matchday, teamId: string): string | null {
+  const f = matchday.fixtures.find((x) => x.homeTeamId === teamId || x.awayTeamId === teamId);
+  if (!f) return null;
+  return f.homeTeamId === teamId ? `v ${f.awayShort ?? "TBD"}` : `v ${f.homeShort ?? "TBD"}`;
+}
+
+const toEnginePlayer = (p: Player): EnginePlayer => ({
+  id: p.id,
+  team_id: p.teamId,
+  display_name: p.displayName,
+  position: p.position,
+  price_tenths: p.priceTenths,
+  status: p.status,
+});
 
 /**
- * STUB helper: the matchdays that "have points". Real: matchdays whose
- * deadline has passed. Before MD1 locks, the stub shows MD1 as a sample so
- * the breakdown screen can be tested.
+ * One manager's score for one matchday. A finalised matchday uses the stored
+ * score. Otherwise it's worked out now from the latest match stats, so points
+ * move as goals go in without waiting for an admin to recalculate.
  */
-async function stubPointsMatchdays(): Promise<Matchday[]> {
-  const md = await getMatchdayState();
-  const passed = md.matchdays.filter((m) => m.deadlineAt && md.current && m.number <= md.current.number);
-  return passed.length ? passed : md.matchdays.slice(0, 1);
+async function scoreFor(managerRowId: string, matchday: Matchday) {
+  const [rows, rules, players, stats, supabase] = await Promise.all([
+    getPointsRows(),
+    getRulesRow(),
+    getPlayers(),
+    getMatchdayStats(),
+    createClient(),
+  ]);
+  const stored = rows.find((r) => r.manager_id === managerRowId && r.matchday_id === matchday.id);
+  const picks = await getPicksFor(managerRowId, matchday.number);
+  if (picks.length === 0) return null;
+
+  const [transfers, chips] = await Promise.all([
+    supabase.from("transfers").select("points_cost").eq("manager_id", managerRowId).eq("matchday_id", matchday.id),
+    supabase.from("chips").select("chip_type").eq("manager_id", managerRowId).eq("matchday_id", matchday.id),
+  ]);
+  const wildcardPlayed = (chips.data ?? []).some((c) => c.chip_type === "wildcard");
+
+  if (stored && (!stored.is_provisional || matchday.status === "finalised")) {
+    return { picks, stored, wildcardPlayed, breakdown: stored.breakdown as unknown as ReturnType<typeof calculateManagerMatchdayScore>["breakdown"], gross: stored.gross_points, cost: stored.transfer_cost, provisional: stored.is_provisional };
+  }
+  const transferCost = (transfers.data ?? []).reduce((s, t) => s + t.points_cost, 0);
+  const result = calculateManagerMatchdayScore({
+    picks: picks.map<PickInput>((p) => ({
+      player_id: p.player_id,
+      is_starter: p.is_starter,
+      bench_order: p.bench_order,
+      is_captain: p.is_captain,
+      is_vice_captain: p.is_vice_captain,
+    })),
+    players: players.map(toEnginePlayer),
+    statsRows: stats.get(matchday.id) ?? [],
+    rules: rules as EngineRules,
+    transferCost,
+  });
+  return {
+    picks,
+    stored,
+    wildcardPlayed,
+    breakdown: result.breakdown,
+    gross: result.gross_points,
+    cost: result.transfer_cost,
+    provisional: true,
+  };
 }
 
 export async function getManagerPoints(
@@ -288,101 +550,122 @@ export async function getManagerPoints(
   managerId: string,
   matchdayNumber: number,
 ): Promise<ManagerMatchdayPoints | null> {
-  // STUB: replace with Mary's RPC (manager_matchday_points + player_matchday_points, contract §2.7).
-  const [mds, players, rules] = await Promise.all([stubPointsMatchdays(), getPlayers(), getFantasyRules()]);
-  const matchday = mds.find((m) => m.number === matchdayNumber);
-  if (!matchday) return null;
+  void user;
+  const [mgr, md, players, rows, managers] = await Promise.all([
+    getManagerRow(managerId),
+    getMatchdayState(),
+    getPlayers(),
+    getPointsRows(),
+    getAllManagers(),
+  ]);
+  const matchday = passedMatchdays(md).find((m) => m.number === matchdayNumber);
+  if (!mgr || !matchday) return null;
+  const score = await scoreFor(mgr.id, matchday);
+  if (!score) return null;
 
-  if (managerId === user.id) {
-    const state = await stubFor(user);
-    const squad = stubSquad(state, players);
-    if (!squad || !state.manager) return null;
-    const cost = state.transfers?.md === matchdayNumber ? state.transfers.cost : 0;
-    const mine = fakeManagerPoints({
-      managerId,
-      teamName: state.manager.teamName,
-      squad,
-      captainId: state.captain,
-      viceId: state.vice,
-      matchday,
-      rules,
-      transferCost: cost,
-      wildcardPlayed: state.wildcardMd === matchdayNumber,
-    });
-    // STUB rank: where this total would sit among the fake managers.
-    const better = FAKE_MANAGERS.filter((m) => fakeMatchdayScore(m.id, matchdayNumber) > mine.total).length;
-    mine.overallRank = better + 1;
-    mine.previousOverallRank = matchdayNumber > 1 ? Math.min(FAKE_MANAGERS.length, better + 1 + (hash(user.id) % 40) - 15) : null;
-    return mine;
-  }
+  const byId = new Map(players.map((p) => [p.id, p]));
+  const slotOf = new Map(orderPicks(score.picks, (id) => byId.get(id)?.position).map((p, i) => [p.player_id, i + 1]));
+  const pickOf = new Map(score.picks.map((p) => [p.player_id, p]));
 
-  const other = FAKE_MANAGERS.find((m) => m.id === managerId);
-  if (!other) return null;
-  // A made-up but valid squad for another manager.
-  const pool = [...players].sort((a, b) => hash(`${managerId}${a.id}`) - hash(`${managerId}${b.id}`));
-  const pick = (pos: Player["position"], n: number) => pool.filter((p) => p.position === pos).slice(0, n);
-  const squad = [...pick("GK", 2), ...pick("DEF", 5), ...pick("MID", 5), ...pick("FWD", 3)];
-  const lineup = defaultLineup(squad);
-  const byId = playersById(squad);
-  return fakeManagerPoints({
+  const playerPoints: PlayerPoints[] = score.breakdown
+    .map((b) => {
+      const p = byId.get(b.player_id);
+      const pick = pickOf.get(b.player_id);
+      return {
+        playerId: b.player_id,
+        displayName: p?.displayName ?? "Player",
+        position: p?.position ?? "MID",
+        teamShort: p?.teamShort ?? "?",
+        slot: slotOf.get(b.player_id) ?? 99,
+        multiplier: b.multiplier,
+        isCaptain: pick?.is_captain ?? false,
+        isViceCaptain: pick?.is_vice_captain ?? false,
+        autoSubIn: b.subbed_in,
+        autoSubOut: b.subbed_out,
+        minutes: b.played_minutes,
+        fixtureLabel: p ? fixtureLabelFor(matchday, p.teamId) : null,
+        items: b.items,
+        basePoints: b.base_points,
+        totalPoints: b.applied_points,
+      };
+    })
+    .sort((a, b) => a.slot - b.slot);
+
+  const mdRows = rows.filter((r) => r.matchday_id === matchday.id);
+  const latestScored = Math.max(
+    ...rows.map((r) => md.matchdays.find((m) => m.id === r.matchday_id)?.number ?? 0),
+    0,
+  );
+  return {
     managerId,
-    teamName: other.teamName,
-    squad: lineup.order.map((id) => byId.get(id)!),
-    captainId: lineup.captain,
-    viceId: lineup.vice,
-    matchday,
-    rules,
-    transferCost: hash(managerId) % 7 === 0 ? 4 : 0,
-    wildcardPlayed: false,
-  });
+    teamName: mgr.team_name,
+    matchdayId: matchday.id,
+    matchdayNumber: matchday.number,
+    pointsBeforeCost: score.gross,
+    transferCost: score.cost,
+    total: score.gross - score.cost,
+    provisional: score.provisional,
+    wildcardPlayed: score.wildcardPlayed,
+    averagePoints: mdRows.length ? Math.round(mdRows.reduce((s, r) => s + r.net_points, 0) / mdRows.length) : null,
+    highestPoints: mdRows.length ? Math.max(...mdRows.map((r) => r.net_points)) : null,
+    overallRank:
+      matchday.number === latestScored ? (managers.find((m) => m.id === mgr.id)?.overall_rank ?? null) : null,
+    previousOverallRank: null,
+    players: playerPoints,
+  };
 }
 
 export async function getMatchdayHistory(user: FantasyUser, managerId: string): Promise<MatchdayHistoryRow[]> {
-  // STUB: replace with Mary's RPC (manager_matchday_points, contract §2.8).
-  const mds = await stubPointsMatchdays();
-  const rows: MatchdayHistoryRow[] = [];
-  for (const m of mds) {
-    const pts = await getManagerPoints(user, managerId, m.number);
-    if (!pts) continue;
-    rows.push({
+  void user;
+  const [mgr, md] = await Promise.all([getManagerRow(managerId), getMatchdayState()]);
+  if (!mgr) return [];
+  const history: MatchdayHistoryRow[] = [];
+  for (const m of passedMatchdays(md)) {
+    const score = await scoreFor(mgr.id, m);
+    if (!score) continue;
+    history.push({
       matchdayNumber: m.number,
-      points: pts.total,
-      transferCost: pts.transferCost,
+      points: score.gross - score.cost,
+      transferCost: score.cost,
       overallRank: null,
-      provisional: pts.provisional,
+      provisional: score.provisional,
     });
   }
-  return rows;
+  return history;
 }
 
-/** STUB helper: every manager's ranking row, including the caller if they've joined. */
-async function stubAllRankingRows(user: FantasyUser | null): Promise<Omit<RankingRow, "rank">[]> {
-  const mds = await stubPointsMatchdays();
-  const last = mds[mds.length - 1]?.number ?? 1;
-  const rows: Omit<RankingRow, "rank">[] = FAKE_MANAGERS.map((m) => ({
-    managerId: m.id,
-    teamName: m.teamName,
-    managerName: m.managerName,
-    yearGroup: m.yearGroup,
-    totalPoints: mds.reduce((s, md) => s + fakeMatchdayScore(m.id, md.number), 0),
-    lastMatchdayPoints: fakeMatchdayScore(m.id, last),
-  }));
-  if (user) {
-    const manager = await getMyManager(user);
-    if (manager) {
-      const history = await getMatchdayHistory(user, user.id);
-      rows.push({
-        managerId: user.id,
-        teamName: manager.teamName,
-        managerName: manager.managerName,
-        yearGroup: manager.yearGroup,
-        totalPoints: history.reduce((s, h) => s + h.points, 0),
-        lastMatchdayPoints: history[history.length - 1]?.points ?? 0,
-      });
-    }
-  }
-  return rows;
+// ===========================================================================
+// Rankings and leagues
+// ===========================================================================
+
+function rankRows(rows: Omit<RankingRow, "rank">[]): RankingRow[] {
+  const sorted = [...rows].sort((a, b) => b.totalPoints - a.totalPoints || a.teamName.localeCompare(b.teamName));
+  let rank = 0;
+  return sorted.map((row, i) => {
+    if (i === 0 || row.totalPoints !== sorted[i - 1].totalPoints) rank = i + 1;
+    return { ...row, rank };
+  });
 }
+
+/** Ranking rows for every manager, from the totals the scoring job stores. */
+const getRankingRows = cache(async (): Promise<{ rows: Omit<RankingRow, "rank">[]; byRowId: Map<string, string>; provisional: boolean }> => {
+  const [managers, rows, md] = await Promise.all([getAllManagers(), getPointsRows(), getMatchdayState()]);
+  const numberOf = new Map(md.matchdays.map((m) => [m.id, m.number]));
+  const latest = rows.reduce((best, r) => Math.max(best, numberOf.get(r.matchday_id) ?? 0), 0);
+  const lastPoints = new Map(rows.filter((r) => numberOf.get(r.matchday_id) === latest).map((r) => [r.manager_id, r.net_points]));
+  return {
+    rows: managers.map((m) => ({
+      managerId: m.user_id,
+      teamName: m.team_name,
+      managerName: m.managerName,
+      yearGroup: m.year_group,
+      totalPoints: m.total_points,
+      lastMatchdayPoints: lastPoints.get(m.id) ?? 0,
+    })),
+    byRowId: new Map(managers.map((m) => [m.id, m.user_id])),
+    provisional: rows.some((r) => r.is_provisional),
+  };
+});
 
 export async function getRankings(
   user: FantasyUser | null,
@@ -390,9 +673,8 @@ export async function getRankings(
   page = 1,
   pageSize = 50,
 ): Promise<RankingPage> {
-  // STUB: replace with Mary's RPC (manager_rankings view, contract §2.9).
-  const all = await stubAllRankingRows(user);
-  const scoped = scope.kind === "year" ? all.filter((r) => r.yearGroup === scope.year) : all;
+  const { rows, provisional } = await getRankingRows();
+  const scoped = scope.kind === "year" ? rows.filter((r) => r.yearGroup === scope.year) : rows;
   const ranked = rankRows(scoped);
   const safePage = Math.max(1, page);
   return {
@@ -401,244 +683,147 @@ export async function getRankings(
     pageSize,
     totalManagers: ranked.length,
     me: user ? (ranked.find((r) => r.managerId === user.id) ?? null) : null,
-    provisional: true,
+    provisional,
   };
 }
 
-const STUB_PUBLIC_LEAGUE = { id: "00000000-0000-4000-8000-600000000001", name: "SEES Games 2026", code: "SEES26" };
+/** The caller's leagues with every member's managers.id (RLS: members only). */
+async function loadLeagues(mgr: ManagerRow, onlyId?: string) {
+  const supabase = await createClient();
+  const mine = await supabase.from("league_members").select("league_id").eq("manager_id", mgr.id);
+  if (mine.error) fail(mine.error.message, "your leagues");
+  const ids = mine.data.map((m) => m.league_id).filter((id) => !onlyId || id === onlyId);
+  if (ids.length === 0) return [];
+  const [leagues, members] = await Promise.all([
+    supabase.from("leagues").select("id, name, invite_code, created_by, created_at").in("id", ids).order("created_at"),
+    supabase.from("league_members").select("league_id, manager_id").in("league_id", ids),
+  ]);
+  if (leagues.error) fail(leagues.error.message, "your leagues");
+  if (members.error) fail(members.error.message, "league members");
+  return leagues.data.map((l) => ({ ...l, memberRowIds: members.data.filter((m) => m.league_id === l.id).map((m) => m.manager_id) }));
+}
 
-function stubLeagueMembers(leagueId: string) {
-  if (leagueId === STUB_PUBLIC_LEAGUE.id) return FAKE_MANAGERS;
-  const n = 3 + (hash(leagueId) % 9);
-  return [...FAKE_MANAGERS].sort((a, b) => hash(leagueId + a.id) - hash(leagueId + b.id)).slice(0, n);
+async function standingsFor(user: FantasyUser, mgr: ManagerRow, league: Awaited<ReturnType<typeof loadLeagues>>[number]) {
+  const { rows, byRowId, provisional } = await getRankingRows();
+  const members = new Set(league.memberRowIds.map((id) => byRowId.get(id)));
+  const ranked = rankRows(rows.filter((r) => members.has(r.managerId)));
+  const summary: League = {
+    id: league.id,
+    name: league.name,
+    code: league.invite_code,
+    memberCount: league.memberRowIds.length,
+    isOwner: league.created_by === mgr.id,
+    myRank: ranked.find((r) => r.managerId === user.id)?.rank ?? null,
+  };
+  return { league: summary, rows: ranked, provisional };
 }
 
 export async function getMyLeagues(user: FantasyUser): Promise<League[]> {
-  // STUB: replace with Mary's RPC (leagues, league_members, contract §2.10).
-  const state = await stubFor(user);
-  const leagues = state.leagues ?? [];
-  return Promise.all(
-    leagues.map(async (l) => {
-      const standings = await getLeagueStandings(user, l.id);
-      return standings?.league ?? { id: l.id, name: l.name, code: l.code, memberCount: 1, isOwner: l.owner, myRank: null };
-    }),
-  );
+  const mgr = await getManagerRow(user.id);
+  if (!mgr) return [];
+  const leagues = await loadLeagues(mgr);
+  return Promise.all(leagues.map(async (l) => (await standingsFor(user, mgr, l)).league));
 }
 
 export async function getLeagueStandings(user: FantasyUser, leagueId: string): Promise<LeagueStandings | null> {
-  // STUB: replace with Mary's RPC (leagues + manager_rankings, contract §2.10).
-  const state = await stubFor(user);
-  const mine = state.leagues?.find((l) => l.id === leagueId);
-  if (!mine) return null;
-  const memberIds = new Set([user.id, ...stubLeagueMembers(leagueId).map((m) => m.id)]);
-  const rows = rankRows((await stubAllRankingRows(user)).filter((r) => memberIds.has(r.managerId)));
-  return {
-    league: {
-      id: mine.id,
-      name: mine.name,
-      code: mine.code,
-      memberCount: rows.length,
-      isOwner: mine.owner,
-      myRank: rows.find((r) => r.managerId === user.id)?.rank ?? null,
-    },
-    rows,
-    provisional: true,
-  };
+  const mgr = await getManagerRow(user.id);
+  if (!mgr || !/^[0-9a-f-]{36}$/i.test(leagueId)) return null;
+  const [league] = await loadLeagues(mgr, leagueId);
+  if (!league) return null;
+  return standingsFor(user, mgr, league);
 }
 
 // ===========================================================================
-// Writes (STUB). Call these from Server Actions only.
-// Each stub re-checks the rules so the UI's error paths can be tested; the
-// real checks are Mary's (contract §3).
+// Writes. Call these from Server Actions only. The database checks every rule.
 // ===========================================================================
 
-async function openMatchday(): Promise<ActionResult<Matchday>> {
-  const md = await getMatchdayState();
-  if (!md.next) return { ok: false, error: fantasyError("NO_OPEN_MATCHDAY") };
-  return { ok: true, data: md.next };
+type RpcError = { message: string } | null;
+
+function rpcFailure(error: RpcError): { ok: false; error: ReturnType<typeof parseRpcError> } {
+  if (error && !/^[A-Z_]+:/.test(error.message)) console.error("[fantasy] unexpected RPC error:", error.message);
+  return { ok: false, error: parseRpcError(error?.message) };
 }
 
 export async function createManager(
   user: FantasyUser,
   input: { teamName: string; yearGroup: number | null },
 ): Promise<ActionResult<Manager>> {
-  // STUB: replace with Mary's RPC create_manager (contract §3.1).
-  const rules = await getFantasyRules();
-  const state = await stubFor(user);
-  if (state.manager) return { ok: false, error: fantasyError("MANAGER_EXISTS") };
-  const teamName = input.teamName.trim().replace(/\s+/g, " ");
-  if (teamName.length < 3 || teamName.length > rules.teamNameMaxLength) {
-    return {
-      ok: false,
-      error: fantasyError("TEAM_NAME_INVALID", `Team names need 3 to ${rules.teamNameMaxLength} characters.`),
-    };
-  }
-  if (input.yearGroup !== null && !(input.yearGroup >= 1 && input.yearGroup <= 5)) {
-    return { ok: false, error: fantasyError("YEAR_GROUP_INVALID") };
-  }
-  const createdAt = new Date().toISOString();
-  await writeStub({ ...state, manager: { teamName, yearGroup: input.yearGroup, createdAt } });
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_manager", {
+    p_team_name: input.teamName.trim().replace(/\s+/g, " "),
+    ...(input.yearGroup !== null ? { p_year_group: input.yearGroup } : {}),
+  });
+  if (error || !data) return rpcFailure(error);
   return {
     ok: true,
-    data: { id: user.id, teamName, managerName: user.name, yearGroup: input.yearGroup, createdAt },
+    data: { id: user.id, teamName: data.team_name, managerName: user.name, yearGroup: input.yearGroup, createdAt: data.created_at },
   };
 }
 
 export async function saveSquad(user: FantasyUser, input: { playerIds: string[] }): Promise<ActionResult<null>> {
-  // STUB: replace with Mary's RPC save_squad (contract §3.2).
-  const [state, players, rules, open] = await Promise.all([stubFor(user), getPlayers(), getFantasyRules(), openMatchday()]);
-  if (!state.manager) return { ok: false, error: fantasyError("NO_MANAGER") };
-  if (stubSquad(state, players)) return { ok: false, error: fantasyError("SQUAD_EXISTS") };
-  if (!open.ok) return open;
-  const byId = playersById(players);
-  const picked = input.playerIds.map((id) => byId.get(id));
-  if (picked.some((p) => !p)) return { ok: false, error: fantasyError("PLAYER_UNKNOWN") };
-  const squad = picked as Player[];
-  const issues = squadIssues(squad, rules);
-  const first = issues.find((i) => i.blocking) ?? issues[0];
-  if (first) return { ok: false, error: fantasyError(first.code, first.message, first.playerIds) };
-  const lineup = defaultLineup(squad);
-  await writeStub({ ...state, squad: lineup.order, captain: lineup.captain, vice: lineup.vice });
+  void user;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("save_squad", { p_player_ids: input.playerIds });
+  if (error) return rpcFailure(error);
   return { ok: true, data: null };
 }
 
 export async function saveLineup(user: FantasyUser, input: LineupInput): Promise<ActionResult<null>> {
-  // STUB: replace with Mary's RPC save_lineup (contract §3.3).
-  const [state, players, rules, open] = await Promise.all([stubFor(user), getPlayers(), getFantasyRules(), openMatchday()]);
-  if (!open.ok) return { ok: false, error: fantasyError("DEADLINE_PASSED") };
-  const squad = stubSquad(state, players);
-  if (!squad) return { ok: false, error: fantasyError("NO_SQUAD") };
-  const order = [...input.starters, ...input.bench];
-  const squadIds = new Set(squad.map((p) => p.id));
-  if (order.length !== 15 || new Set(order).size !== 15 || order.some((id) => !squadIds.has(id))) {
-    return { ok: false, error: fantasyError("LINEUP_NOT_IN_SQUAD") };
-  }
-  const byId = playersById(squad);
-  const formation = formationIssue(input.starters.map((id) => byId.get(id)!), rules);
-  if (formation) return { ok: false, error: fantasyError("FORMATION_INVALID", formation) };
-  if (byId.get(input.bench[0])?.position !== "GK") return { ok: false, error: fantasyError("BENCH_GK_INVALID") };
-  if (
-    input.captainId === input.viceCaptainId ||
-    !input.starters.includes(input.captainId) ||
-    !input.starters.includes(input.viceCaptainId)
-  ) {
-    return { ok: false, error: fantasyError("CAPTAIN_INVALID") };
-  }
-  await writeStub({ ...state, squad: order, captain: input.captainId, vice: input.viceCaptainId });
+  void user;
+  const picks = [
+    ...input.starters.map((id) => ({
+      player_id: id,
+      is_starter: true,
+      bench_order: null,
+      is_captain: id === input.captainId,
+      is_vice_captain: id === input.viceCaptainId,
+    })),
+    ...input.bench.map((id, i) => ({
+      player_id: id,
+      is_starter: false,
+      bench_order: i + 1,
+      is_captain: false,
+      is_vice_captain: false,
+    })),
+  ];
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("save_lineup", { p_picks: picks });
+  if (error) return rpcFailure(error);
   return { ok: true, data: null };
 }
 
 export async function makeTransfers(user: FantasyUser, input: TransferInput): Promise<ActionResult<TransferState>> {
-  // STUB: replace with Mary's RPC make_transfers (contract §3.4).
-  const [state, players, rules, md, open] = await Promise.all([
-    stubFor(user),
-    getPlayers(),
-    getFantasyRules(),
-    getMatchdayState(),
-    openMatchday(),
-  ]);
-  if (!open.ok) return { ok: false, error: fantasyError("DEADLINE_PASSED") };
-  const squad = stubSquad(state, players);
-  if (!squad) return { ok: false, error: fantasyError("NO_SQUAD") };
-  const byId = playersById(players);
-  const squadIds = squad.map((p) => p.id);
-  const ins = input.in.map((id) => byId.get(id));
-  if (
-    input.out.length === 0 ||
-    input.out.length !== input.in.length ||
-    new Set(input.out).size !== input.out.length ||
-    new Set(input.in).size !== input.in.length ||
-    input.out.some((id) => !squadIds.includes(id)) ||
-    input.in.some((id) => squadIds.includes(id)) ||
-    ins.some((p) => !p)
-  ) {
-    return { ok: false, error: fantasyError("TRANSFER_INVALID") };
-  }
-  if (input.out.some((id, i) => byId.get(id)!.position !== ins[i]!.position)) {
-    return { ok: false, error: fantasyError("TRANSFER_POSITION") };
-  }
-  const order = squadIds.map((id) => {
-    const i = input.out.indexOf(id);
-    return i === -1 ? id : input.in[i];
-  });
-  const newSquad = order.map((id) => byId.get(id)!);
-  const blocking = squadIssues(newSquad, rules).find((i) => i.blocking);
-  if (blocking) return { ok: false, error: fantasyError(blocking.code, blocking.message, blocking.playerIds) };
-
-  const before = stubTransferState(state, md, rules, 0)!;
-  const extra = before.freeTransfers === null ? 0 : Math.max(0, input.out.length - before.freeTransfers);
-  const swap = (id: string | undefined) => {
-    const i = id ? input.out.indexOf(id) : -1;
-    return i === -1 ? id : input.in[i];
-  };
-  const next: StubState = {
-    ...state,
-    squad: order,
-    captain: swap(state.captain),
-    vice: swap(state.vice),
-    transfers: {
-      md: open.data.number,
-      made: before.made + input.out.length,
-      cost: before.costPoints + extra * rules.transferHitPoints,
-    },
-  };
-  await writeStub(next);
-  const bank = rules.budgetTenths - newSquad.reduce((s, p) => s + p.priceTenths, 0);
-  return { ok: true, data: stubTransferState(next, md, rules, bank)! };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("make_transfers", { p_out_ids: input.out, p_in_ids: input.in });
+  if (error) return rpcFailure(error);
+  const state = await getTransferState(user);
+  if (!state) return { ok: false, error: fantasyError("DEADLINE_PASSED") };
+  return { ok: true, data: state };
 }
 
 export async function activateWildcard(user: FantasyUser): Promise<ActionResult<null>> {
-  // STUB: replace with Mary's RPC activate_wildcard (contract §3.5).
-  const [state, rules, md, open] = await Promise.all([stubFor(user), getFantasyRules(), getMatchdayState(), openMatchday()]);
-  if (!open.ok) return { ok: false, error: fantasyError("DEADLINE_PASSED") };
-  if (state.wildcardMd !== undefined) return { ok: false, error: fantasyError("WILDCARD_USED") };
-  if (md.current === null || rules.unlimitedTransferMatchdays.includes(open.data.number)) {
-    // Q7 Version A in the scoring doc; Mary may change this.
-    return {
-      ok: false,
-      error: fantasyError("WILDCARD_NOT_ALLOWED", "Transfers are already free this matchday, so save your Wildcard."),
-    };
-  }
-  const t = state.transfers?.md === open.data.number ? state.transfers : undefined;
-  await writeStub({
-    ...state,
-    wildcardMd: open.data.number,
-    // Playing the Wildcard refunds this matchday's transfer costs.
-    transfers: t ? { ...t, cost: 0 } : undefined,
-  });
+  void user;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("activate_wildcard");
+  if (error) return rpcFailure(error);
   return { ok: true, data: null };
 }
 
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
 export async function createLeague(user: FantasyUser, input: { name: string }): Promise<ActionResult<League>> {
-  // STUB: replace with Mary's RPC create_league (contract §3.6).
-  const [state, rules] = await Promise.all([stubFor(user), getFantasyRules()]);
-  if (!state.manager) return { ok: false, error: fantasyError("NO_MANAGER") };
-  const name = input.name.trim().replace(/\s+/g, " ");
-  if (name.length < 3 || name.length > 30) return { ok: false, error: fantasyError("LEAGUE_NAME_INVALID") };
-  const id = crypto.randomUUID();
-  const code = Array.from(crypto.getRandomValues(new Uint8Array(rules.leagueCodeLength)))
-    .map((b) => CODE_ALPHABET[b % CODE_ALPHABET.length])
-    .join("");
-  await writeStub({ ...state, leagues: [...(state.leagues ?? []), { id, name, code, owner: true }] });
-  return { ok: true, data: { id, name, code, memberCount: 1, isOwner: true, myRank: 1 } };
+  void user;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_league", { p_name: input.name.trim().replace(/\s+/g, " ") });
+  if (error || !data) return rpcFailure(error);
+  const league = data as { id: string; name: string; invite_code: string };
+  return { ok: true, data: { id: league.id, name: league.name, code: league.invite_code, memberCount: 1, isOwner: true, myRank: 1 } };
 }
 
 export async function joinLeague(user: FantasyUser, input: { code: string }): Promise<ActionResult<League>> {
-  // STUB: replace with Mary's RPC join_league (contract §3.7).
-  // The stub knows one league: code SEES26.
-  const [state, rules] = await Promise.all([stubFor(user), getFantasyRules()]);
-  if (!state.manager) return { ok: false, error: fantasyError("NO_MANAGER") };
-  const code = input.code.trim().toUpperCase();
-  if (code.length !== rules.leagueCodeLength || [...code].some((c) => !CODE_ALPHABET.includes(c))) {
-    return { ok: false, error: fantasyError("LEAGUE_CODE_INVALID") };
-  }
-  if (state.leagues?.some((l) => l.code === code)) return { ok: false, error: fantasyError("LEAGUE_ALREADY_MEMBER") };
-  if (code !== STUB_PUBLIC_LEAGUE.code) return { ok: false, error: fantasyError("LEAGUE_NOT_FOUND") };
-  await writeStub({ ...state, leagues: [...(state.leagues ?? []), { ...STUB_PUBLIC_LEAGUE, owner: false }] });
-  return {
-    ok: true,
-    data: { ...STUB_PUBLIC_LEAGUE, memberCount: FAKE_MANAGERS.length + 1, isOwner: false, myRank: null },
-  };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("join_league", { p_code: input.code });
+  if (error || !data) return rpcFailure(error);
+  const { leagueId } = data as { leagueId: string; leagueName: string };
+  const standings = await getLeagueStandings(user, leagueId);
+  if (!standings) return { ok: false, error: fantasyError("LEAGUE_NOT_FOUND") };
+  return { ok: true, data: standings.league };
 }

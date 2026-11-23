@@ -10,6 +10,7 @@ import { BenchTray, Pitch, PitchRow } from "@/components/fantasy/pitch";
 import { PositionTag, StatusFlag } from "@/components/fantasy/player-bits";
 import { PlayerChip } from "@/components/fantasy/player-chip";
 import { PlayerPickerList } from "@/components/fantasy/player-picker";
+import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { RoundButton } from "@/components/fantasy/squad-builder";
 import { InlineError } from "@/components/fantasy/states";
 import { Button } from "@/components/ui/button";
@@ -52,8 +53,19 @@ type Props = {
 export function TransferPlanner({ squad, players, state, rules, deadlineAt, serverNow, matchdayName }: Props) {
   const router = useRouter();
   const byId = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
-  // out player id → in player id (null while choosing)
-  const [plan, setPlan] = useState<Map<string, string | null>>(new Map());
+  // out player id → in player id (null while choosing). Kept in this browser
+  // per matchday, so a reload carries on with the same plan.
+  const squadIds = new Set(squad.map((p) => p.id));
+  const [savedPlan, setSavedPlan, clearPlan] = useLocalStorageState<[string, string | null][]>(
+    `sees-fantasy:transfer-plan:md${state.matchdayNumber}`,
+    [],
+    {
+      validate: (entries) =>
+        entries.filter(([out, inn]) => squadIds.has(out) && (inn === null || (byId.has(inn) && !squadIds.has(inn)))),
+    },
+  );
+  const plan = new Map(savedPlan);
+  const setPlan = (next: Map<string, string | null>) => setSavedPlan([...next]);
   const [sheetFor, setSheetFor] = useState<string | null>(null);
   const [pickFor, setPickFor] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -118,7 +130,7 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, serv
           return;
         }
         toast.success(complete.length === 1 ? "Transfer confirmed" : "Transfers confirmed");
-        setPlan(new Map());
+        clearPlan();
         router.refresh();
       } catch {
         setError(ERROR_COPY.UNKNOWN);
@@ -328,7 +340,7 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, serv
           setPickFor(null);
         }}
       >
-        <DrawerContent className="flex max-h-[90dvh] flex-col">
+        <DrawerContent className="flex flex-col data-[vaul-drawer-direction=bottom]:max-h-[90dvh]">
           {pickOut && (
             <>
               <DrawerHeader>
@@ -339,7 +351,7 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, serv
               </DrawerHeader>
               <PlayerPickerList
                 key={pickOut.id}
-                players={players.filter((p) => p.position === pickOut.position && !inSquad.has(p.id))}
+                players={players.filter((p) => p.position === pickOut.position && !inSquad.has(p.id) && p.status !== "left")}
                 position={pickOut.position}
                 hideBlocked
                 reasonFor={(p) => reasonFor(pickOut.id, p)}
