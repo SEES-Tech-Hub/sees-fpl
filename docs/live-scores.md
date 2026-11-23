@@ -7,8 +7,11 @@ This guide is for everyone who builds on live scores:
 - **Samuel** (match console): [Console API](#console-api-samuel)
 - **Fortune** (match, sport and home pages): [Reading data](#reading-data-fortune) and [Realtime guide](#realtime-guide)
 - **Fortune** (table and stats pages): [Football table and stats](#football-table-and-stats-fortune)
+- **Samuel** (console for other sports): [Sets, head-to-head and races](#sets-head-to-head-and-races-samuel)
+- **Fortune** (results for every sport, medal table): [Results for every sport](#results-for-every-sport-fortune)
 - **Mary** (fantasy engine): [player_match_stats](#player_match_stats-mary)
 - **Henry and Tayo** (admin and database): [What changed on fixtures](#what-changed-on-fixtures-henry-and-tayo) and [Knockouts and bans](#knockouts-and-bans-henry)
+- **Akeem and Tayo** (admin for every sport): [Event rules, knockouts, races and the championship](#event-rules-knockouts-races-and-the-championship-admin)
 
 ## The idea in one paragraph
 
@@ -41,13 +44,16 @@ console button
 | --- | --- | --- |
 | `supabase/migrations/20261119203500_live_match_events.sql` | Phase 1: tables, rules, console functions, Realtime | — |
 | `supabase/migrations/20261122113000_live_stats_standings.sql` | Phase 2: player stats, table, totals, bans, knockout fill | — |
+| `supabase/migrations/20261123064500_live_phase3_types.sql` | Phase 3, part 1: new event types, basketball periods, race outcomes | — |
+| `supabase/migrations/20261123065000_live_phase3_formats.sql` | Phase 3, part 2: every format, group tables, knockouts, races, medals | — |
 | `lib/live/types.ts` | Shared types: requests, results, errors, stats and table rows | Anywhere |
 | `lib/live/actions.ts` | Console API (server actions) | Client or server |
 | `lib/live/queries.ts` | Reads for the match page and console | Server Components |
 | `lib/live/realtime.ts` | Realtime subscriptions | Client Components |
 | `lib/live/clock.ts` | Live clock and match minute | Anywhere |
 | `lib/live/stats.ts` | Player match stats, football table, top scorers, totals, bans | Server |
-| `lib/live/commands.ts`, `errors.ts`, `stats-rows.ts` | Request checking, error mapping, row mapping (internal) | — |
+| `lib/live/results.ts` | Set scores, group tables, race results, medals, medal table | Server |
+| `lib/live/commands.ts`, `errors.ts`, `stats-rows.ts`, `results-rows.ts` | Request checking, error mapping, row mapping (internal) | — |
 | `lib/live/*.test.ts` | Unit tests: `pnpm test` | — |
 
 ---
@@ -71,7 +77,9 @@ type ActionResult<T> =
 | `takeFixture(fixtureId)` | "Take this match" | Officials, when nobody holds it |
 | `releaseFixture(fixtureId)` | "Hand over" | The holder (or admin) |
 | `setLineup({ fixtureId, teamId, starters, bench })` | Ticked starters (1 to 11) and the rest of the squad as bench | Holder before kickoff; admin any time |
-| `recordMatchEvent(input)` | One event (table below) | Holder or admin |
+| `recordMatchEvent(input)` | One event (table below; sets and head-to-head further down) | Holder or admin |
+| `setRaceEntries({ fixtureId, entries })` | Races: who runs | Holder until results are in; admin any time |
+| `recordRaceResults({ fixtureId, results, publish? })` | Races: places, times, DNF/DNS/DQ | Holder until published; admin any time |
 | `undoMatchEvent({ clientEventId, reason? })` | Undo | Holder: own latest event, within 30 s. Admin: any event, reason required |
 
 **Hand-over** is two steps: `releaseFixture` on the old phone, then `takeFixture` on the new one. If the old phone is dead, the admin clears or reassigns `console_holder` in the admin portal. The new holder carries on from the same event log.
@@ -85,15 +93,15 @@ Every event needs `fixtureId`, `clientEventId` and `type`. `occurredAt` is optio
 
 | `type` | Extra fields | Notes |
 | --- | --- | --- |
-| `period_start` | `period` | Kick off. Order: first_half → second_half → (knockouts, if level) extra_first → extra_second → penalties. Penalties can also follow the second half. |
+| `period_start` | `period` | Kick off. Football and handball: first_half → second_half → (knockouts, if level) extra_first → extra_second → penalties (penalties can also follow the second half). Basketball: first_quarter → second_quarter → third_quarter → fourth_quarter → overtime, repeated while level. Handball has no extra time: a level knockout goes from second_half to penalties (7-metre throws, recorded as `shootout_kick`). Group-stage matches (`league` or `group`) can end level. |
 | `period_end` | — | Half time or end of a period. Status becomes `half_time` (a break). |
-| `goal` | `teamId`, `scorerId?`, `assistId?`, `penalty?`, `ownGoal?` | `teamId` is the team the goal counts for. For an own goal, `scorerId` is the opponent who put it in their own net, and there's no assist. |
+| `goal` | `teamId`, `scorerId?`, `assistId?`, `penalty?`, `ownGoal?`, `points?` | Basketball: `points` 1, 2 or 3. `teamId` is the team the goal counts for. For an own goal, `scorerId` is the opponent who put it in their own net, and there's no assist. |
 | `card` | `teamId`, `playerId`, `colour` | A second yellow: record a `red` (the console can warn using `yellowCards` from the lineup). |
 | `substitution` | `teamId`, `playerOffId`, `playerOnId` | Allowed at half time too. No re-entry: a player who came off can't come back on. |
 | `penalty_miss` | `teamId`, `takerId`, `savedById?` | Normal or extra time only. `savedById` is the goalkeeper if they saved it. |
 | `shootout_kick` | `teamId`, `takerId?`, `scored` | During `penalties` only. |
 | `man_of_the_match` | `playerId` | Once per match, during or after it. Undo it to change it. |
-| `full_time` | — | After the second half (league), or once there's a winner (knockout). |
+| `full_time` | — | After the last period (second half, fourth quarter or overtime), or once there's a winner (knockout). |
 | `walkover` | `teamId` (awarded), `points?` (default 3) | Admin only, instead of playing. Gives 3–0 and no player points. |
 
 Example:
@@ -121,6 +129,49 @@ if (!result.ok) toast.error(result.error.message);
 
 **Undo:** if the action is still in the queue, just remove it. If it was sent, call `undoMatchEvent({ clientEventId })`. The server allows the holder's undo for 30 s after the event reached it, so the console's 10-second button always works even on a slow connection. After that it returns `undo_expired`: tell the official to ask the admin.
 
+### Sets, head-to-head and races (Samuel)
+
+The same `recordMatchEvent`, offline queue and undo work for these. The database refuses an event that doesn't belong to the sport's format (`wrong_format`).
+
+**Sets** (volleyball, badminton, table tennis, lawn tennis):
+
+| `type` | Fields | Notes |
+| --- | --- | --- |
+| `point` | `teamId`, `playerId?` | One point (a game, in lawn tennis) per tap. The first point starts the match. |
+| `set_end` | — | Closes the set. Refused (`set_not_over`) unless the score is a finished set for the event's rules: volleyball 25 (15 in set 3) with a 2-point lead, so 25-20 and 27-25 but not 25-24. |
+| `full_time` | `winnerTeamId` | Admin only: ending a match early (a retirement). Normally a match ends by itself when a team wins enough sets. |
+
+After a set is won, more points are refused (`set_over`) until `set_end`, so the official can't miss closing a set. Between sets the status is `half_time` (show "Set break"). `getLiveFixture` gives `homeScore`/`awayScore` as **sets won**, plus `currentSet`, `homeSetPoints` and `awaySetPoints` for the set in play. Undo works on points like any event. The admin can enter a set's totals at once (`point` with `points: 25`, the other team's total, then `set_end`) when entering a match afterwards.
+
+**Head-to-head** (board games, mobile games, Mortal Kombat): `point` adds to a side's score (optional; a chess game may have none). `full_time` with `winnerTeamId` ends it with that winner. Without a winner it's a draw (league), or the higher score wins. A knockout can't end level without a winner (`needs_winner`).
+
+**Races** (athletics, swimming): a race is a fixture with no teams, the stage is `heat_1`, `heat_2` and so on, or `final`. Take it like any match, then:
+
+```ts
+await setRaceEntries({
+  fixtureId,
+  entries: [
+    { teamId: year1Id, athleteName: "Ada Okafor", lane: 1 },
+    { teamId: year2Id, athleteName: "Bayo Ade", lane: 2 },
+    { teamId: year3Id, lane: 3 }, // a relay team: no athlete name
+  ],
+});
+
+await recordRaceResults({
+  fixtureId,
+  results: [
+    { teamId: year2Id, athleteName: "Bayo Ade", outcome: "finished", position: 1, timeMs: 12050 },
+    { teamId: year1Id, athleteName: "Ada Okafor", outcome: "dq", note: "False start" },
+    { teamId: year3Id, outcome: "dnf" },
+  ],
+  publish: true, // false keeps the results private while you check them
+});
+```
+
+- Athletes are named, not picked from `players`, which is the football squad list the fantasy game uses.
+- Results can be saved in pieces (`publish: false`), and only officials and the admin see them until they're published. Publishing needs a result for every entrant, with places running 1, 2, 3 (equal places share a number: 1, 2, 2, 4).
+- Once published, officials can't change the race (`results_published`). The admin can.
+
 ### Who's on the pitch
 
 `getFixtureLineups(fixtureId)` (in `queries.ts`) returns each lineup player with `onPitch`, `appeared`, `sentOff` and `yellowCards`. Use it for the substitution picker (off: `onPitch`; on: bench players with `!appeared && !sentOff`) and to warn on a second yellow. When a team has a lineup, the server refuses goals, assists, cards and subs by players who aren't in the right place. With no lineup it only checks the player is in that team's squad.
@@ -134,7 +185,7 @@ if (!result.ok) toast.error(result.error.message);
 | `not_holder` | Someone else holds this match (or you lost the official role) |
 | `already_held` | Take failed: another official holds it |
 | `admin_only` | Walkovers are admin only |
-| `fixture_not_found`, `fixture_closed`, `teams_not_set`, `wrong_format` | The fixture doesn't exist, is over/postponed/cancelled, has no teams yet (knockouts), or isn't a timed match |
+| `fixture_not_found`, `fixture_closed`, `teams_not_set`, `wrong_format` | The fixture doesn't exist, is over/postponed/cancelled, has no teams yet (knockouts), or the event doesn't belong to this sport's format |
 | `invalid_state` | Not allowed right now (a goal at half time, full time before the second half) |
 | `invalid_period` | That period can't start now (extra time in a league match, or not level) |
 | `needs_winner` | Knockout full time while level: go to extra time or penalties |
@@ -146,7 +197,10 @@ if (!result.ok) toast.error(result.error.message);
 | `undo_expired`, `undo_not_latest`, `undo_not_allowed`, `event_not_found` | Undo checks |
 | `reason_required` | Admin corrections need a reason |
 | `too_old`, `invalid_time` | Event time more than 6 hours ago; correction time before kickoff |
-| `league_not_finished`, `standings_tied` | Knockout fill: league matches still to play, or a tie on every tie-breaker decides who qualifies |
+| `event_not_configured` | The event's period length or set rules are missing: the admin sets them |
+| `set_over`, `set_not_over` | Sets: close the set first; or the score isn't a finished set yet |
+| `not_entered`, `results_entered`, `results_published`, `results_incomplete`, `invalid_places` | Races: a result for someone not entered; entrants locked once results are in; published (admin only now); every entrant needs a result; places must run 1, 2, 3 |
+| `league_not_finished`, `standings_tied`, `heats_not_finished` | Knockout and final fill: group matches or heats still to finish, or a tie on every tie-breaker decides who qualifies |
 | `invalid_input`, `duplicate_id` | The request itself is malformed |
 | `unavailable` (retryable) | Network or database busy: try again |
 | `unknown` | Unexpected: it's logged on the server. Tell Bolu |
@@ -232,6 +286,28 @@ export function LiveFixtureUpdater({ fixtureId }: { fixtureId: string }) {
 - `subscribeToFixtures(client, { onFixture })` listens to every fixture. Use it for the home page "Live now" cards.
 - Always return the unsubscribe function from `useEffect` (as above), or channels pile up.
 - Accessibility: put the score in an element with `aria-live="polite"` so screen readers announce changes.
+
+---
+
+## Results for every sport (Fortune)
+
+Import from `@/lib/live/results` in Server Components. Same rules as the other reads: public, not cached on the server.
+
+| Function | Returns |
+| --- | --- |
+| `getSetScores(fixtureId)` | `SetScore[]`: each set's points, set 1 first. The last one has `complete: false` while it's being played |
+| `getEventStandings(eventId)` | `EventStandingRow[]`: the group table for any sport except football. `scoreFor`/`scoreAgainst` are goals or points, or rally points for sets (`setsFor`/`setsAgainst` hold sets) |
+| `getRaceResults(fixtureId)` | `RaceResultRow[]` in finishing order: athlete, year, lane, place, time, DNF/DNS/DQ, and `medal` in a published final. Results are hidden until published |
+| `getEventMedals(eventId)` | `MedalRow[]`: gold, silver and bronze once the final (and third-place match) is decided |
+| `getMedalTable()` | `MedalTableRow[]`: the overall championship, every year, ranked by the admin's setting (`rankBy`: medals or points) |
+
+`formatRaceTime(ms)` in `results-rows.ts` shows 12.41 s or 4:05.30.
+
+**Group tables** follow the basketball, handball and volleyball rulebooks: points (basketball and handball 2 per win and 1 per draw, volleyball 3 per win), then head-to-head among the teams level on points, then score difference, then score for. Teams level on everything share a position; the rulebook's coin toss is done by hand.
+
+**Live updates:** points, sets and quarters update the fixture row, so `subscribeToFixture`/`subscribeToFixtures` cover them. For a race page, `subscribeToRace(supabase, fixtureId, { onChange })` fires when entrants or published results change; call `router.refresh()`.
+
+**Basketball clock:** quarters are periods like halves, so `getClockState` works: minutes count from the tip-off (quarters start at 0', 10', 20', 30', overtime at 40'), and the breaks read "End of Q1", "HT", "End of Q3", "End of Q4" and "End of OT".
 
 ---
 
@@ -332,9 +408,43 @@ It doesn't run by itself when the last league match ends, because a late correct
 
 ---
 
+## Event rules, knockouts, races and the championship (admin)
+
+For the admin backend and pages (Akeem and Tayo).
+
+**Event rules** are columns on `events`, so the admin can change them without code:
+
+| Columns | For | Filled in now |
+| --- | --- | --- |
+| `period_minutes`, `period_count`, `extra_period_minutes` | Timed sports | Basketball 10 × 4, overtime 3. Handball 15 × 2, no extra time (a level knockout goes straight to 7-metre throws). Football 25 × 2, extra time 7. All from the rulebooks |
+| `sets_to_win`, `set_points`, `final_set_points`, `set_win_by`, `set_points_cap` | Sets | Volleyball best of 3, 25 (15 in set 3), win by 2 (rulebook). Badminton 21 capped at 30, table tennis 11, lawn tennis 6 games capped at 7, all best of 3 (standard rules; change if the organisers say otherwise) |
+| `win_points`, `draw_points`, `loss_points` | Group tables | Basketball 2/1/0, handball 2/1/0, volleyball 3/0/0 (rulebooks). Head-to-head 3/1/0 (standard) |
+| `qualifiers_per_heat` | Races | 2 (athletics rulebook) |
+
+A match won't start until its event has what it needs (`event_not_configured`).
+
+**Stage names** the knockout and race functions look for: `league` or `group` for group matches (these can end level; any other stage is a knockout and needs a winner); `best_loser`, `semi_final_a`, `semi_final_b`, `third_place`, `final` for knockouts; `heat_1`, `heat_2`, ... and `final` for races. For basketball, handball and volleyball, create `semi_final_a` with **Year 4 (last year's winner) as the home team**; the other slots fill themselves.
+
+**Filling knockouts** (`advance_knockouts`, admin only, any sport except football):
+
+```ts
+const { data, error } = await supabase.rpc("advance_knockouts", { p_event_id: eventId });
+// data: the event's knockout fixtures. Map error with toLiveError() from lib/live/errors.ts.
+```
+
+Call it once the group is finished, and again after each knockout round. It fills whatever is ready: best loser = 3rd v 4th; semi-final A away = 2nd; semi-final B = 1st v the best-loser winner; then the final (semi-final winners) and third-place match (losers). Without semi-finals it does final = 1st v 2nd and third place = 3rd v 4th. It refuses an unfinished group (`league_not_finished`) and a full tie that decides who goes where (`standings_tied`, so the organisers can toss a coin), and never changes a fixture that has events. Audit rows are tagged `{"action": "advance_knockouts"}`. Football keeps `fill_football_knockouts`.
+
+**Race finals** (`fill_race_final(p_event_id)`, admin only): once every heat is published, the top `qualifiers_per_heat` of each heat (ties at the cut included) become the final's entrants. Refused once the final has results.
+
+**The championship** (`set_championship_rule(p_rank_by, p_gold_points, p_silver_points, p_bronze_points)`, admin only): `'medals'` ranks by golds, then silvers, then bronzes; `'points'` by gold × gold_points + silver × silver_points + bronze × bronze_points (default 3, 2, 1), then golds. It's a setting because the organisers haven't decided the rule. Medals: the final's winner and loser get gold and silver, the third-place match winner bronze; in races, places 1 to 3 in the final.
+
+**For Tayo:** run `20261123064500_live_phase3_types.sql` on its own first, then `20261123065000_live_phase3_formats.sql`. Postgres can't use new enum values in the run that adds them.
+
+---
+
 ## Rules the database enforces
 
-These rules hold whatever the app does. They're tested in 170+ database scenarios:
+These rules hold whatever the app does. They're tested in 290+ database scenarios:
 
 - Only the console holder (or the admin) writes to a fixture, and only while they still have the official role.
 - Events are append-only: no edits, no deletes from the app. Undo is a void.
@@ -345,6 +455,9 @@ These rules hold whatever the app does. They're tested in 170+ database scenario
 - Officials undo only their own latest event, within 30 s. The admin's corrections need a reason.
 - A player sent off misses the team's next fixture (the admin can override).
 - Stats, the table, totals and bans are views: they can't be written to, and they always match the events.
+- Every sport only takes the events its format allows. A set closes only at a finished score; a sets match ends itself when a team wins enough sets.
+- Race results stay private until published, and published results change only through the admin. Every change is in the audit feed.
+- Group tables, knockouts, medals and the medal table are worked out from results; nothing is typed in.
 
 ---
 
@@ -362,17 +475,20 @@ Football works end to end on the database side: `match_events` and `lineups`, th
 - Top scorers, top assisters, clean sheets, cards, and 1-match bans enforced on lineups.
 - Corrections: everything is a view, so a void updates stats, the table and totals at once. Voids are already in Henry's audit feed.
 
-### Phase 3: other formats and the championship (21 Nov, hardened on the 22–23 Nov test days)
+### Phase 3: other formats and the championship (23 Nov)
 
-- Sets match (volleyball, badminton, table tennis, lawn tennis): set scores, set and match winner, best-of-3. Volleyball's group stage and best-loser match.
-- Head-to-head (board games, mobile games, Mortal Kombat): winner, optional score, round, brackets.
-- Ranked result (athletics, swimming): entrants, finishing order, times or marks, DQs, heats feeding finals.
-- Basketball and handball periods (quarters) on the timed format.
-- Medal table or overall points, once the organisers decide the rule.
-- Load check for 1,000 viewers at the final (moving hot paths from postgres changes to Realtime broadcast if needed), and a results export for the admin.
+- Event rules on `events`, filled from the basketball, handball, volleyball and athletics rulebooks.
+- Basketball quarters and overtime; handball 15-minute halves with 7-metre throws in level knockouts.
+- Sets: points, closing sets, match end, set scores. Head-to-head: score and result. Races: entrants, results, publishing, heats into finals.
+- Group tables for every sport, knockout fill for the best-loser, semi-final, final and third-place layout.
+- Medals per event and the medal table, ranked by medals or points (an admin setting).
+
+Still to do: a load check for 1,000 viewers at the final (moving hot paths from postgres changes to Realtime broadcast if needed), and a results export for the admin.
 
 ## Open questions (need answers from the organisers)
 
-- Volleyball: ranking points, tie-breakers, team size and the forfeit rule are blank in the rulebook.
-- How the overall champion is decided: medal count or points per placing.
-- Basketball and handball: period lengths and counts.
+- How the overall champion is decided: medal count or points per placing (the admin can switch either way).
+- Handball: 2-minute suspensions aren't recorded (they don't change any result). Say if the organisers want them on the timeline.
+- Basketball: can a group match end level, or does it always go to overtime? The rulebook only mentions overtime for knockouts; a group draw gets 1 point for now.
+- Badminton, table tennis and lawn tennis: no rulebooks yet, so standard rules are set.
+- Rulebook typo: volleyball's fixture list skips match 5.

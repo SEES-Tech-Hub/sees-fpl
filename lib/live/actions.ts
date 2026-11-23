@@ -5,9 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import {
   parseFixtureId,
   parseRecordEventInput,
+  parseRecordRaceResultsInput,
   parseSetLineupInput,
+  parseSetRaceEntriesInput,
   parseUndoEventInput,
   toMatchEvent,
+  toRaceEntriesJson,
+  toRaceResultsJson,
   toRecordEventArgs,
 } from "./commands";
 import { toLiveError, toLiveErrorFromThrown } from "./errors";
@@ -17,7 +21,9 @@ import type {
   LiveError,
   MatchEvent,
   RecordEventInput,
+  RecordRaceResultsInput,
   SetLineupInput,
+  SetRaceEntriesInput,
   UndoEventInput,
 } from "./types";
 
@@ -110,6 +116,56 @@ export async function setLineup(input: SetLineupInput): Promise<ActionResult<{ p
 
     expireFixture(parsed.data.fixtureId);
     return { ok: true, data: { playerCount: data } };
+  } catch (thrown) {
+    return failure(toLiveErrorFromThrown(thrown));
+  }
+}
+
+/**
+ * Races: set who runs (replaces the list). Officials can change it until
+ * results are entered; the admin at any time.
+ */
+export async function setRaceEntries(input: SetRaceEntriesInput): Promise<ActionResult<{ entrantCount: number }>> {
+  const parsed = parseSetRaceEntriesInput(input);
+  if (!parsed.ok) return parsed;
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("set_race_entries", {
+      p_fixture_id: parsed.data.fixtureId,
+      p_entries: toRaceEntriesJson(parsed.data.entries),
+    });
+    if (error || data === null) return failure(toLiveError(error));
+
+    expireFixture(parsed.data.fixtureId);
+    return { ok: true, data: { entrantCount: data } };
+  } catch (thrown) {
+    return failure(toLiveErrorFromThrown(thrown));
+  }
+}
+
+/**
+ * Races: enter places, times and DNF/DNS/DQ. Results stay private until
+ * publish: true, which needs a result for every entrant and makes the race
+ * final. Officials can't change a published race; the admin can.
+ */
+export async function recordRaceResults(
+  input: RecordRaceResultsInput,
+): Promise<ActionResult<{ resultCount: number; published: boolean }>> {
+  const parsed = parseRecordRaceResultsInput(input);
+  if (!parsed.ok) return parsed;
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("record_race_results", {
+      p_fixture_id: parsed.data.fixtureId,
+      p_results: toRaceResultsJson(parsed.data.results),
+      p_publish: parsed.data.publish ?? false,
+    });
+    if (error || data === null) return failure(toLiveError(error));
+
+    expireFixture(parsed.data.fixtureId);
+    return { ok: true, data: { resultCount: data, published: parsed.data.publish ?? false } };
   } catch (thrown) {
     return failure(toLiveErrorFromThrown(thrown));
   }

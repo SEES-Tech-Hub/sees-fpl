@@ -12,6 +12,7 @@
 //     response is router.refresh(), which reloads the server data
 //     (the console action already expired the cache).
 //   * lineups INSERT: a lineup was set. Refresh the lineups.
+//   * race_entries (races): entrants and published results. Refresh.
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/lib/supabase/types";
 import { toMatchEvent } from "./commands";
@@ -106,6 +107,34 @@ export function subscribeToFixtures(
     .channel(uniqueChannelName("live:fixtures"))
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "fixtures" }, (payload) =>
       handlers.onFixture?.(payload.new as FixtureRow),
+    )
+    .subscribe((status) => handlers.onStatus?.(toConnectionStatus(status)));
+
+  return unsubscriber(supabase, channel);
+}
+
+/**
+ * Changes to one race: entrants set, results entered or published, and the
+ * race's status. Results arrive only once published (the public can't read
+ * them before), so the simplest response is router.refresh().
+ */
+export function subscribeToRace(
+  supabase: Client,
+  fixtureId: string,
+  handlers: { onChange?: () => void; onStatus?: (status: ConnectionStatus) => void },
+): () => void {
+  handlers.onStatus?.("connecting");
+  const channel = supabase
+    .channel(uniqueChannelName(`live:race:${fixtureId}`))
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "race_entries", filter: `fixture_id=eq.${fixtureId}` },
+      () => handlers.onChange?.(),
+    )
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "fixtures", filter: `id=eq.${fixtureId}` },
+      () => handlers.onChange?.(),
     )
     .subscribe((status) => handlers.onStatus?.(toConnectionStatus(status)));
 

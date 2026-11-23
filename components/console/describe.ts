@@ -15,6 +15,11 @@ const PERIOD_START: Record<MatchPeriod, string> = {
   extra_first: "Extra time",
   extra_second: "Extra time, 2nd half",
   penalties: "Penalty shootout",
+  first_quarter: "Tip-off",
+  second_quarter: "Second quarter",
+  third_quarter: "Third quarter",
+  fourth_quarter: "Fourth quarter",
+  overtime: "Overtime",
 };
 
 const PERIOD_END: Record<MatchPeriod, string> = {
@@ -23,6 +28,11 @@ const PERIOD_END: Record<MatchPeriod, string> = {
   extra_first: "Half time in extra time",
   extra_second: "End of extra time",
   penalties: "End of shootout",
+  first_quarter: "End of first quarter",
+  second_quarter: "Half time",
+  third_quarter: "End of third quarter",
+  fourth_quarter: "End of fourth quarter",
+  overtime: "End of overtime",
 };
 
 export function describeEvent(event: ConsoleEvent, names: Names): string {
@@ -58,5 +68,9 @@ export function describeEvent(event: ConsoleEvent, names: Names): string {
       return `Man of the Match: ${player ?? "player"}`;
     case "walkover":
       return `Walkover awarded to ${team}`;
+    case "point":
+      return `Point ${team}${player ? ` (${player})` : ""}`;
+    case "set_end":
+      return "Set over";
   }
 }

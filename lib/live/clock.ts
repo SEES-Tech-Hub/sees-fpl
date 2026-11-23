@@ -14,7 +14,11 @@ function toMs(value: DateInput): number {
   return typeof value === "string" ? Date.parse(value) : value.getTime();
 }
 
-/** How far into the match each period starts, in minutes. Null for penalties. */
+/**
+ * How far into the match each period starts, in minutes. Null for penalties.
+ * Basketball quarters start at 0, 10, 20 and 30; overtime at 40 (every
+ * overtime counts from 40, as in the database).
+ */
 export function periodOffsetMinutes(
   period: MatchPeriod,
   periodMinutes: number,
@@ -31,16 +35,31 @@ export function periodOffsetMinutes(
       return 2 * periodMinutes + extraPeriodMinutes;
     case "penalties":
       return null;
+    case "first_quarter":
+      return 0;
+    case "second_quarter":
+      return periodMinutes;
+    case "third_quarter":
+      return 2 * periodMinutes;
+    case "fourth_quarter":
+      return 3 * periodMinutes;
+    case "overtime":
+      return 4 * periodMinutes;
   }
+}
+
+/** Extra time (football) and overtime (basketball) use the extra period length. */
+function isExtraPeriod(period: MatchPeriod): boolean {
+  return period === "extra_first" || period === "extra_second" || period === "overtime";
 }
 
 export type MinuteInput = {
   period: MatchPeriod | null;
   periodStartedAt: DateInput | null;
   at: DateInput;
-  /** Length of a normal period (football: 25). */
+  /** Length of a normal period (football: 25, basketball: 10). */
   periodMinutes: number | null;
-  /** Length of an extra-time period (football: 7). */
+  /** Length of an extra-time or overtime period (football: 7, basketball: 3). */
   extraPeriodMinutes: number | null;
 };
 
@@ -54,7 +73,7 @@ export function matchMinute(input: MinuteInput): { minute: number; addedMinutes:
   const { period, periodStartedAt, at, periodMinutes, extraPeriodMinutes } = input;
   if (!period || !periodStartedAt || periodMinutes == null) return null;
 
-  const isExtra = period === "extra_first" || period === "extra_second";
+  const isExtra = isExtraPeriod(period);
   if (isExtra && extraPeriodMinutes == null) return null;
 
   const offset = periodOffsetMinutes(period, periodMinutes, extraPeriodMinutes ?? 0);
@@ -100,6 +119,11 @@ const BREAK_LABELS: Record<MatchPeriod, string> = {
   extra_first: "ET half time",
   extra_second: "End of extra time",
   penalties: "Penalties",
+  first_quarter: "End of Q1",
+  second_quarter: "HT",
+  third_quarter: "End of Q3",
+  fourth_quarter: "End of Q4",
+  overtime: "End of OT",
 };
 
 /** What the live clock should show for a fixture at `now`. */

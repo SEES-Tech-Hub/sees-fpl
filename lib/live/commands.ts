@@ -13,8 +13,12 @@ import type {
   MatchEvent,
   MatchEventType,
   MatchPeriod,
+  RaceEntrant,
+  RaceResultInput,
   RecordEventInput,
+  RecordRaceResultsInput,
   SetLineupInput,
+  SetRaceEntriesInput,
   UndoEventInput,
 } from "./types";
 
@@ -85,8 +89,24 @@ export function parseRecordEventInput(input: unknown): Parsed<RecordEventInput> 
       return { ok: true, data: { ...base, type, period } };
     }
     case "period_end":
-    case "full_time":
+    case "set_end":
       return { ok: true, data: { ...base, type } };
+
+    case "full_time": {
+      const { winnerTeamId } = input;
+      if (!optionalUuid(winnerTeamId)) return invalid("winnerTeamId must be a UUID.");
+      return { ok: true, data: { ...base, type, ...(winnerTeamId ? { winnerTeamId } : {}) } };
+    }
+
+    case "point": {
+      const { teamId, playerId, points } = input;
+      if (!isUuid(teamId)) return invalid("A point needs teamId.");
+      if (!optionalUuid(playerId)) return invalid("playerId must be a UUID.");
+      if (points !== undefined && !(typeof points === "number" && Number.isInteger(points) && points >= 1 && points <= 99)) {
+        return invalid("points must be a whole number from 1 to 99.");
+      }
+      return { ok: true, data: { ...base, type, teamId, playerId, ...(points !== undefined ? { points } : {}) } };
+    }
 
     case "goal": {
       const { teamId, scorerId, assistId, penalty, ownGoal, points } = input;
@@ -235,8 +255,16 @@ export function toRecordEventArgs(input: RecordEventInput): RecordEventRpcArgs {
       args.p_team_id = input.teamId;
       if (input.points) args.p_points = input.points;
       break;
-    case "period_end":
+    case "point":
+      args.p_team_id = input.teamId;
+      if (input.playerId) args.p_player_id = input.playerId;
+      if (input.points) args.p_points = input.points;
+      break;
     case "full_time":
+      if (input.winnerTeamId) args.p_team_id = input.winnerTeamId;
+      break;
+    case "period_end":
+    case "set_end":
       break;
   }
   return args;
@@ -265,6 +293,114 @@ export function parseSetLineupInput(input: unknown): Parsed<SetLineupInput> {
   if (starters.length < 1 || starters.length > 11) return invalid("Pick between 1 and 11 starters.");
   if (bench.length > 30) return invalid("The bench is too long.");
   return { ok: true, data: { fixtureId, teamId, starters, bench } };
+}
+
+// -----------------------------------------------------------------------------
+// Races
+// -----------------------------------------------------------------------------
+
+const RACE_OUTCOMES: readonly string[] = Constants.public.Enums.race_outcome;
+
+function isWholeNumber(value: unknown, min: number, max: number): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
+}
+
+function optionalName(value: unknown): value is string | null | undefined {
+  return value === undefined || value === null || (typeof value === "string" && value.trim().length <= 80);
+}
+
+/** The JSON shape the race functions take (camelCase keys, nulls left out). */
+type RaceJson = Record<string, string | number>;
+
+function entrantJson(entrant: RaceEntrant): RaceJson {
+  const json: RaceJson = { teamId: entrant.teamId };
+  if (entrant.athleteName?.trim()) json.athleteName = entrant.athleteName.trim();
+  if (entrant.playerId) json.playerId = entrant.playerId;
+  return json;
+}
+
+function parseEntrant(value: Record<string, unknown>): string | null {
+  const { teamId, athleteName, playerId } = value;
+  if (!isUuid(teamId)) return "Each entrant needs teamId.";
+  if (!optionalName(athleteName)) return "athleteName must be text of at most 80 characters.";
+  if (!optionalUuid(playerId)) return "playerId must be a UUID.";
+  if (playerId && typeof athleteName === "string" && athleteName.trim()) {
+    return "Give playerId or athleteName, not both.";
+  }
+  return null;
+}
+
+export function parseSetRaceEntriesInput(input: unknown): Parsed<SetRaceEntriesInput> {
+  if (!isRecord(input)) return invalid("The request is empty.");
+  const { fixtureId, entries } = input;
+  if (!isUuid(fixtureId)) return invalid("fixtureId must be a UUID.");
+  if (!Array.isArray(entries) || entries.length === 0) return invalid("Add at least one entrant.");
+  if (entries.length > 40) return invalid("A race can have at most 40 entrants.");
+  for (const entry of entries) {
+    if (!isRecord(entry)) return invalid("Each entrant must be an object.");
+    const problem = parseEntrant(entry);
+    if (problem) return invalid(problem);
+    if (entry.lane !== undefined && entry.lane !== null && !isWholeNumber(entry.lane, 1, 20)) {
+      return invalid("lane must be a whole number from 1 to 20.");
+    }
+  }
+  return { ok: true, data: { fixtureId, entries: entries as SetRaceEntriesInput["entries"] } };
+}
+
+export function parseRecordRaceResultsInput(input: unknown): Parsed<RecordRaceResultsInput> {
+  if (!isRecord(input)) return invalid("The request is empty.");
+  const { fixtureId, results, publish } = input;
+  if (!isUuid(fixtureId)) return invalid("fixtureId must be a UUID.");
+  if (!Array.isArray(results)) return invalid("results must be a list.");
+  if (results.length > 40) return invalid("A race can have at most 40 results.");
+  if (!optionalBoolean(publish)) return invalid("publish must be true or false.");
+  for (const result of results) {
+    if (!isRecord(result)) return invalid("Each result must be an object.");
+    const problem = parseEntrant(result);
+    if (problem) return invalid(problem);
+    const { outcome, position, timeMs, markMm, note } = result;
+    if (typeof outcome !== "string" || !RACE_OUTCOMES.includes(outcome)) {
+      return invalid("outcome must be finished, dnf, dns or dq.");
+    }
+    const hasPosition = position !== undefined && position !== null;
+    if (outcome === "finished" && !isWholeNumber(position, 1, 99)) return invalid("A finisher needs a place from 1 to 99.");
+    if (outcome !== "finished" && hasPosition) return invalid("Only finishers have a place.");
+    if (timeMs !== undefined && timeMs !== null && !isWholeNumber(timeMs, 1, 86_400_000)) {
+      return invalid("timeMs must be a positive whole number of milliseconds.");
+    }
+    if (markMm !== undefined && markMm !== null && !isWholeNumber(markMm, 1, 1_000_000)) {
+      return invalid("markMm must be a positive whole number of millimetres.");
+    }
+    if (note !== undefined && note !== null && (typeof note !== "string" || note.length > 200)) {
+      return invalid("note must be text of at most 200 characters.");
+    }
+  }
+  return {
+    ok: true,
+    data: { fixtureId, results: results as RaceResultInput[], ...(publish ? { publish: true } : {}) },
+  };
+}
+
+/** The p_entries argument of set_race_entries. */
+export function toRaceEntriesJson(entries: SetRaceEntriesInput["entries"]): RaceJson[] {
+  return entries.map((entry) => {
+    const json = entrantJson(entry);
+    if (entry.lane) json.lane = entry.lane;
+    return json;
+  });
+}
+
+/** The p_results argument of record_race_results. */
+export function toRaceResultsJson(results: RaceResultInput[]): RaceJson[] {
+  return results.map((result) => {
+    const json = entrantJson(result);
+    json.outcome = result.outcome;
+    if (result.outcome === "finished" && result.position) json.position = result.position;
+    if (result.timeMs) json.timeMs = result.timeMs;
+    if (result.markMm) json.markMm = result.markMm;
+    if (result.note?.trim()) json.note = result.note.trim();
+    return json;
+  });
 }
 
 export function parseFixtureId(input: unknown): Parsed<string> {
