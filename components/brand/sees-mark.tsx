@@ -1,29 +1,58 @@
+import { useId } from "react";
 import { cn } from "@/lib/utils";
 
-// The SEES mark from public/icons/icon.svg, cropped to the shape. The outer
-// shape takes the text colour; the ball in the middle is its own element so
-// loaders can animate it. Decorative: pair it with visible or sr-only text.
+// The SEES (Society of Electrical & Electronics and Computer Engineering
+// Students) emblem: a chip with circuit traces on all four sides, redrawn as
+// SVG from public/brand/sees-logo.png (the full logo with its lettering).
+//
+// Everything takes the text colour. The traces (`tracesClassName`) and the
+// chip's centre (`ballClassName`) are separate so loaders can animate them.
 
-const SHAPE =
-  "M 1039.644531 584.625 C 1050 637.269531 1009.765625 683.597656 958.933594 683.597656 C 887.566406 683.597656 829.5 741.664062 829.5 813.03125 C 829.5 860.3125 789.453125 898.398438 741.527344 895.210938 C 698.351562 892.332031 665.320312 854.640625 664.769531 811.375 C 663.878906 740.777344 606.183594 683.597656 535.367188 683.597656 C 488.089844 683.597656 450 643.550781 453.1875 595.625 C 456.097656 552.207031 494.1875 519.632812 537.667969 518.867188 C 607.316406 517.640625 663.695312 461.136719 664.738281 391.457031 C 665.382812 350.917969 698.414062 311.542969 738.738281 307.53125 C 790.707031 302.351562 834.25 345.863281 829.070312 397.832031 C 824.84375 440.546875 786.695312 470.757812 743.796875 471.863281 C 671.847656 473.699219 614.273438 534.554688 617.886719 607.730469 C 621.042969 671.984375 673.105469 725.484375 737.238281 730.296875 C 793.648438 734.527344 843.136719 702.320312 864.769531 654.824219 C 871.816406 639.351562 860.296875 621.703125 843.257812 621.703125 C 833.789062 621.703125 825.609375 627.585938 821.59375 636.164062 C 808.449219 664.140625 780.042969 683.597656 747.136719 683.597656 C 696.300781 683.597656 656.066406 637.296875 666.394531 584.65625 C 672.707031 552.605469 698.566406 526.773438 730.617188 520.492188 C 766.101562 513.535156 798.582031 529.5625 816.046875 556.28125 C 823.433594 567.589844 835.8125 574.636719 849.324219 574.636719 L 856.773438 574.636719 C 870.285156 574.636719 882.664062 567.589844 890.050781 556.28125 C 907.515625 529.5625 939.996094 513.535156 975.480469 520.492188 C 1007.5 526.773438 1033.363281 552.605469 1039.644531 584.625 Z";
+// One side's three traces, pointing up from the chip; rotated for the others.
+const SIDE = [
+  { d: "M50 33 V14", end: [50, 10] },
+  { d: "M43 35 V26 L35 18", end: [32.5, 15.5] },
+  { d: "M57 35 V26 L65 18", end: [67.5, 15.5] },
+] as const;
 
 export function SeesMark({
   className,
-  shapeClassName,
+  tracesClassName,
   ballClassName,
 }: {
   className?: string;
+  /** Kept for older callers; the chip's ring is part of the body now. */
   shapeClassName?: string;
+  tracesClassName?: string;
   ballClassName?: string;
 }) {
+  const mask = useId();
   return (
-    <svg aria-hidden viewBox="445 300 610 610" className={cn("size-12", className)}>
-      <path d={SHAPE} fill="currentColor" className={shapeClassName} />
+    <svg aria-hidden viewBox="0 0 100 100" className={cn("size-12", className)} fill="none">
+      <defs>
+        <mask id={mask}>
+          <rect width="100" height="100" fill="white" />
+          <circle cx="50" cy="50" r="10" stroke="black" strokeWidth="3" />
+        </mask>
+      </defs>
+      <g className={tracesClassName} stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+        {[0, 90, 180, 270].map((angle) => (
+          <g key={angle} transform={`rotate(${angle} 50 50)`}>
+            {SIDE.map((t) => (
+              <g key={t.d}>
+                <path d={t.d} pathLength={1} className="sees-trace" />
+                <circle cx={t.end[0]} cy={t.end[1]} r="3.2" />
+              </g>
+            ))}
+          </g>
+        ))}
+      </g>
+      <circle cx="50" cy="50" r="18" fill="currentColor" mask={`url(#${mask})`} />
       <circle
-        cx="746.82"
-        cy="600.57"
-        r="62"
-        className={cn("fill-highlight", ballClassName)}
+        cx="50"
+        cy="50"
+        r="5.5"
+        className={cn("fill-current", ballClassName)}
         style={{ transformBox: "fill-box", transformOrigin: "center" }}
       />
     </svg>

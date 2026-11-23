@@ -20,7 +20,10 @@ function configured() {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return false;
-  webpush.setVapidDetails(process.env.NEXT_PUBLIC_SITE_URL ?? "https://games.seesunilag.com", pub, priv);
+  // The VAPID subject must be an https: or mailto: address.
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/^http:\/\//, "https://");
+  const subject = site ? (site.startsWith("https://") ? site : `https://${site}`) : "https://games.seesunilag.com";
+  webpush.setVapidDetails(subject, pub, priv);
   return true;
 }
 

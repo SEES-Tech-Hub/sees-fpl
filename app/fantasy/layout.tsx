@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { SeesMark } from "@/components/brand/sees-mark";
 import { Suspense } from "react";
 import { FantasyNav, FantasyNavFallback } from "@/components/fantasy/fantasy-nav";
 import { MotionProvider } from "@/components/fantasy/motion-provider";
@@ -15,9 +15,7 @@ export default function FantasyLayout({ children }: LayoutProps<"/fantasy">) {
         <div className="mx-auto w-full max-w-2xl px-4 lg:max-w-5xl">
           <div className="flex h-12 items-center justify-between gap-3">
             <Link href="/fantasy" className="flex items-center gap-2 font-heading text-lg font-semibold">
-              <span className="flex size-7 items-center justify-center rounded-md bg-pitch">
-                <Image src="/icons/icon.svg" alt="" width={24} height={24} />
-              </span>
+              <SeesMark className="size-7 text-brand dark:text-brand-light" />
               SEES Fantasy
             </Link>
             <Link href="/" className="flex h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:underline">

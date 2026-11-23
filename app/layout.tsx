@@ -16,10 +16,7 @@ const oswald = Oswald({ variable: "--font-oswald", subsets: ["latin"] });
 export const metadata: Metadata = {
   // Share cards need absolute URLs: the live domain in production, the
   // Vercel URL on previews, localhost in dev.
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ??
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
-  ),
+  metadataBase: siteUrl(),
   title: { default: "SEES Games Hub", template: "%s · SEES Games Hub" },
   description: "Live scores, results and fantasy football for SEES Games 2026.",
   applicationName: "SEES Games Hub",
@@ -51,4 +48,23 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </body>
     </html>
   );
+}
+
+/**
+ * The site's base URL for share cards. Accepts NEXT_PUBLIC_SITE_URL with or
+ * without https://, and never throws: an empty or broken value falls back to
+ * the Vercel deployment URL, then localhost.
+ */
+function siteUrl(): URL {
+  const candidates = [process.env.NEXT_PUBLIC_SITE_URL, process.env.VERCEL_URL, "http://localhost:3000"];
+  for (const raw of candidates) {
+    const value = raw?.trim();
+    if (!value) continue;
+    try {
+      return new URL(/^https?:\/\//.test(value) ? value : `https://${value}`);
+    } catch {
+      // Try the next one.
+    }
+  }
+  return new URL("http://localhost:3000");
 }

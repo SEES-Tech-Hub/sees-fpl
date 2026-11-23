@@ -1,6 +1,4 @@
-import { Suspense } from "react";
 import { SiteHeader } from "@/components/shell/AppShell";
-import { AnnouncementBanner } from "@/components/shell/announcement-banner";
 
 // Owner: Fortune. The public pages (home, sports, tables, matches)
 // share the site header. Fantasy, the console, admin and sign-in have their
@@ -11,9 +9,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   return (
     <>
       <SiteHeader />
-      <Suspense fallback={null}>
-        <AnnouncementBanner />
-      </Suspense>
       {children}
     </>
   );

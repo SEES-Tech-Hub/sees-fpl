@@ -17,6 +17,8 @@ import { cn, formatWAT } from "@/lib/utils";
 import { MatchStatus, ReconnectingPill, RollingScore, useClock, useGoalFlash } from "./live-bits";
 import { NotifyBell } from "./notify-bell";
 import { RaceView } from "./race-view";
+import { EmptyIllustration } from "@/components/brand/empty-art";
+import { EmptyState } from "@/components/brand/empty-state";
 
 type Tab = "timeline" | "lineups";
 
@@ -310,13 +312,8 @@ function Timeline({
   const shown = entries.filter((e) => e.type !== "shootout_kick" && e.type !== "point" && e.type !== "set_end").reverse();
 
   if (shown.length === 0 && kicks.length === 0) {
-    return (
-      <p className="rounded-xl bg-card px-4 py-10 text-center text-sm text-muted-foreground shadow-card">
-        {state.status === "scheduled"
-          ? `Kick-off ${kickoffAt ? `at ${formatWAT(kickoffAt, "time")}` : "time to be confirmed"}. Goals, cards and subs appear here as they happen.`
-          : "Nothing recorded yet."}
-      </p>
-    );
+    if (state.status === "scheduled") return <PreMatch kickoffAt={kickoffAt} home={home} away={away} />;
+    return <EmptyState art="whistle" title="Nothing recorded yet" description="Goals, cards and subs land here the moment the official records them." />;
   }
 
   return (
@@ -483,6 +480,47 @@ function Shootout({ kicks, home, away }: { kicks: TimelineEntry[]; home: TeamSum
   );
 }
 
+/** Before kickoff: what's coming, a countdown, and a nudge to the bell. */
+function PreMatch({ kickoffAt, home, away }: { kickoffAt: string | null; home: TeamSummary | null; away: TeamSummary | null }) {
+  const items = [
+    { icon: <BallIcon />, text: "Goals, with who set them up" },
+    { icon: <span className="h-4 w-3 rounded-[2px] bg-highlight" />, text: "Yellow and red cards" },
+    { icon: <ArrowUp className="size-4 text-success" />, text: "Every substitution" },
+    { icon: <Star className="size-4 fill-highlight text-highlight" />, text: "Player of the match" },
+  ];
+  return (
+    <section className="relative overflow-hidden rounded-2xl bg-card px-5 py-7 text-center shadow-card">
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-1.5"
+        style={{ background: `linear-gradient(90deg, ${teamColour(home?.year)} 0 50%, ${teamColour(away?.year)} 50% 100%)` }}
+      />
+      <EmptyIllustration art="whistle" className="mx-auto h-24" />
+      <p className="mt-2 font-heading text-2xl font-bold uppercase">
+        {kickoffAt ? `Kick-off ${formatWAT(kickoffAt, "time")}` : "Kick-off time to be confirmed"}
+      </p>
+      {kickoffAt && (
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          {formatWAT(kickoffAt, "date")} · in <Countdown targetAt={kickoffAt} showDeadlineLabel={false} className="text-sm text-foreground" />
+        </p>
+      )}
+      <ul className="mx-auto mt-5 grid max-w-sm gap-2 text-left text-sm">
+        {items.map((it, i) => (
+          <li
+            key={it.text}
+            className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-left-2 motion-safe:fill-mode-backwards"
+            style={{ animationDelay: `${150 + i * 90}ms` }}
+          >
+            <span className="flex w-5 justify-center">{it.icon}</span>
+            {it.text}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-5 text-xs text-muted-foreground">Tap the bell above for goal alerts on this phone.</p>
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Lineups
 // ---------------------------------------------------------------------------
@@ -490,9 +528,11 @@ function Shootout({ kicks, home, away }: { kicks: TimelineEntry[]; home: TeamSum
 function Lineups({ players, home, away }: { players: LineupPlayer[]; home: TeamSummary | null; away: TeamSummary | null }) {
   if (players.length === 0) {
     return (
-      <p className="rounded-xl bg-card px-4 py-10 text-center text-sm text-muted-foreground shadow-card">
-        Lineups show here once the officials set them, usually just before kickoff.
-      </p>
+      <EmptyState
+        art="board"
+        title="Team sheets not in yet"
+        description="The officials set both lineups before kickoff. Check back then to see who starts."
+      />
     );
   }
   return (

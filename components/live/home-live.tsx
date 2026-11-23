@@ -8,6 +8,7 @@ import { Countdown } from "@/components/ui/shared/CountDown";
 import { SportIcon } from "@/components/ui/shared/SportIcon";
 import type { FixtureCard } from "@/lib/live/fixture-card-types";
 import type { FixtureState } from "@/lib/live/live-state-types";
+import { EmptyState } from "@/components/brand/empty-state";
 import { useLiveFixtures } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
 import { FixtureRow, LiveCard } from "./fixture-card";
@@ -92,7 +93,7 @@ export function HomeLive({ cards, serverNow, championship }: { cards: FixtureCar
             </ul>
           </nav>
           <div key={day} className="flex flex-col gap-3 px-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 lg:px-0">
-            {bySport.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">No fixtures this day.</p>}
+            {bySport.length === 0 && <EmptyState art="calendar" title="Rest day" description="No fixtures on this day. Pick another date." compact />}
             {bySport.map((group) => (
               <div key={group[0].sport.slug} className="overflow-hidden rounded-xl bg-card shadow-card">
                 <p className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">

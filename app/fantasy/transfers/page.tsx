@@ -28,6 +28,7 @@ async function Transfers() {
       <>
         <PageHeader title="Transfers" />
         <EmptyState
+          art="calendar"
           title="Transfers are closed"
           description="No matchday is open for changes right now. Transfers open again after the next matchday is finalised."
           href="/fantasy/points"

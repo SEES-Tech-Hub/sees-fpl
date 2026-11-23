@@ -32,6 +32,7 @@ async function Leagues() {
       <section aria-label="Your leagues">
         {leagues.length === 0 ? (
           <EmptyState
+          art="stands"
             title="No leagues yet"
             description="You're not in a league yet. Create one and share the code with friends."
           />

@@ -35,13 +35,14 @@ async function Squad() {
         <PageHeader display title="Pick your squad" />
         {!md.next ? (
           <EmptyState
+            art="trophy"
             title="Squads are closed"
             description="There's no matchday left to pick a squad for."
             href="/fantasy/rankings"
             cta="See the rankings"
           />
         ) : (
-          <EmptyState title="No players yet" description="The organisers haven't loaded the squads yet. Check back soon." />
+          <EmptyState art="board" title="No players yet" description="The organisers haven't loaded the squads yet. Check back soon." />
         )}
       </>
     );

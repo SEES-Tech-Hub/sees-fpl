@@ -150,7 +150,7 @@ const dayKey = (iso: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 
 function FixturesByDate({ cards, stateOf }: { cards: FixtureCard[]; stateOf: (c: FixtureCard) => FixtureCard["state"] }) {
-  if (cards.length === 0) return <Empty text="No fixtures yet. The organisers add them before the event." />;
+  if (cards.length === 0) return <Empty art="calendar" title="No fixtures yet" text="The organisers add them before the event. Check back soon." />;
   const days = new Map<string, FixtureCard[]>();
   for (const c of cards) {
     const k = c.kickoffAt ? dayKey(c.kickoffAt) : "tbd";
@@ -175,7 +175,7 @@ function FixturesByDate({ cards, stateOf }: { cards: FixtureCard[]; stateOf: (c:
 }
 
 function EventTable({ title, rows, sets }: { title?: string; rows: (StandingRow | EventStandingRow)[]; sets: boolean }) {
-  if (rows.length === 0) return <Empty text="The table fills in with the first results." />;
+  if (rows.length === 0) return <Empty art="trophy" title="No table yet" text="It fills in with the first results." />;
   const started = rows.some((r) => r.played > 0);
   const forOf = (r: StandingRow | EventStandingRow) => ("goalsFor" in r ? r.goalsFor : sets ? r.setsFor : r.scoreFor);
   const againstOf = (r: StandingRow | EventStandingRow) => ("goalsAgainst" in r ? r.goalsAgainst : sets ? r.setsAgainst : r.scoreAgainst);
@@ -258,7 +258,7 @@ function Knockouts({ cards, stateOf }: { cards: FixtureCard[]; stateOf: (c: Fixt
 
 /** Ranked sports: each race with its podium. */
 function Races({ cards, races }: { cards: FixtureCard[]; races: { fixtureId: string; results: RaceResultRow[] }[] }) {
-  if (cards.length === 0) return <Empty text="No races yet. The organisers add them before the event." />;
+  if (cards.length === 0) return <Empty art="stands" title="No races yet" text="The organisers add them before the event. The stands are waiting." />;
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {cards.map((c) => {

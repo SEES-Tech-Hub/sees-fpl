@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { SeesMark } from "@/components/brand/sees-mark";
 import { usePathname } from "next/navigation";
 import { Megaphone, CloudOff, X, ChevronDown } from "lucide-react";
 import { signOut } from "@/app/login/actions";
@@ -58,7 +58,7 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/icons/icon.svg" alt="SEES Logo" width={24} height={24} />
+          <SeesMark className="size-7 text-brand dark:text-brand-light" />
           <span className="font-heading text-lg font-semibold tracking-tight text-foreground">
             SEES Games
           </span>

@@ -113,7 +113,8 @@ function SaveOverlay({ state }: { state: State }) {
               {state.phase === "working" ? (
                 <motion.div key="working" exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.18 }}>
                   <SeesMark
-                    className="size-20 text-brand-foreground motion-safe:animate-sees-sway"
+                    className="size-24 text-brand-foreground"
+                    tracesClassName="sees-traces-animate"
                     ballClassName="motion-safe:animate-sees-ball"
                   />
                 </motion.div>

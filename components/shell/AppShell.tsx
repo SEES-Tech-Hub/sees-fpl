@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { getActiveAnnouncement } from "@/lib/admin/queries/announcements";
 import { TopHeader } from "./TopHeader";
 import { BottomTabBar } from "./BottomTabBar";
 
@@ -29,8 +30,9 @@ async function loadViewer(): Promise<{ user: ShellUser | null; role: ShellRole |
 }
 
 async function SignedInHeader({ announcement }: { announcement?: { id: string; message: string } | null }) {
-  const { user, role } = await loadViewer();
-  return <TopHeader user={user} role={role} announcement={announcement} />;
+  // The admin's active announcement (Admin → Announcements), unless a page passes one.
+  const [{ user, role }, active] = await Promise.all([loadViewer(), announcement === undefined ? getActiveAnnouncement() : null]);
+  return <TopHeader user={user} role={role} announcement={announcement ?? active} />;
 }
 
 async function SignedInTabBar({ hasLiveMatch }: { hasLiveMatch?: boolean }) {

@@ -9,6 +9,8 @@ import { teamColour } from "@/lib/design/team-colour";
 import type { MedalTableRow, PlayerTotalsRow, StandingRow, SuspensionRow, TeamSummary, TopScorerRow } from "@/lib/live/types";
 import { useRefreshOnLiveChange } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
+import { EmptyState } from "@/components/brand/empty-state";
+import type { EmptyArt } from "@/components/brand/empty-art";
 import { LivePulse, ReconnectingPill } from "./live-bits";
 
 type Tab = "football" | "championship" | "stats";
@@ -83,7 +85,7 @@ function TeamCell({ team, live }: { team: TeamSummary; live?: boolean }) {
 const FORM_STYLE = { W: "bg-success text-primary-foreground", D: "bg-muted-foreground text-background", L: "bg-live text-primary-foreground" } as const;
 
 function FootballTable({ rows, form }: { rows: StandingRow[]; form: TablesData["form"] }) {
-  if (rows.length === 0) return <Empty text="The table fills in after the first match on 28 Nov." />;
+  if (rows.length === 0) return <Empty art="trophy" title="No table yet" text="It fills in after the first match on 28 Nov, and moves live while matches are on." />;
   // Before any match everyone is joint first: show plain order, no zones.
   const started = rows.some((r) => r.played > 0);
   return (
@@ -155,7 +157,7 @@ function FootballTable({ rows, form }: { rows: StandingRow[]; form: TablesData["
 }
 
 function MedalTable({ rows }: { rows: MedalTableRow[] }) {
-  if (rows.length === 0) return <Empty text="The medal table starts with the first results." />;
+  if (rows.length === 0) return <Empty art="trophy" title="No medals yet" text="The race for the championship starts with the first results." />;
   const byPoints = rows[0].rankBy === "points";
   return (
     <section className="overflow-x-auto rounded-xl bg-card shadow-card">
@@ -226,7 +228,7 @@ function Stats({ data }: { data: TablesData }) {
       <section className="rounded-xl bg-card shadow-card sm:col-span-2">
         <h2 className="border-b border-border px-3 py-2.5 font-heading text-lg font-bold">Suspensions</h2>
         {data.suspensions.length === 0 ? (
-          <p className="px-3 py-6 text-center text-sm text-muted-foreground">No one is suspended. A red card means a one-match ban.</p>
+          <EmptyState art="whistle" title="Nobody suspended" description="A red card means a one-match ban. Clean so far." compact className="rounded-none shadow-none" />
         ) : (
           <ul className="divide-y divide-border">
             {data.suspensions.map((s) => (
@@ -266,7 +268,7 @@ function Leaders({
     <section className="rounded-xl bg-card shadow-card">
       <h2 className="border-b border-border px-3 py-2.5 font-heading text-lg font-bold">{title}</h2>
       {rows.length === 0 ? (
-        <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nothing yet.</p>
+        <EmptyState art="ball" title="Nothing yet" description="Shows after the first match." compact className="rounded-none shadow-none" />
       ) : (
         <ol className="divide-y divide-border">
           {rows.map((r, i) => (
@@ -301,6 +303,6 @@ function Leaders({
   );
 }
 
-export function Empty({ text }: { text: string }) {
-  return <p className="rounded-xl bg-card px-4 py-10 text-center text-sm text-muted-foreground shadow-card">{text}</p>;
+export function Empty({ text, title = "Nothing here yet", art = "net", compact }: { text: string; title?: string; art?: EmptyArt; compact?: boolean }) {
+  return <EmptyState art={art} title={title} description={text} compact={compact} />;
 }

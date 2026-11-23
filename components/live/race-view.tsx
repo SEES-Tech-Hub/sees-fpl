@@ -8,6 +8,7 @@ import type { FixtureState } from "@/lib/live/live-state-types";
 import type { MatchPageData } from "@/lib/live/match-page";
 import type { RaceResultRow } from "@/lib/live/types";
 import { cn, formatWAT } from "@/lib/utils";
+import { EmptyState } from "@/components/brand/empty-state";
 import { Medal } from "./tables-view";
 
 // Ranked events (athletics, swimming): a podium that rises gold, silver,
@@ -88,7 +89,7 @@ export function RaceView({ data, state }: { data: MatchPageData; state: FixtureS
       <section className="mx-4 overflow-hidden rounded-xl bg-card shadow-card lg:mx-0">
         <h2 className="border-b border-border px-3 py-2.5 font-heading text-lg font-bold">{published ? "Results" : "Entrants"}</h2>
         {ordered.length === 0 ? (
-          <p className="px-3 py-8 text-center text-sm text-muted-foreground">Entrants show here once the officials set them.</p>
+          <EmptyState art="stands" title="No entrants yet" description="They show here once the officials set the lanes." compact className="rounded-none shadow-none" />
         ) : (
           <ol className="divide-y divide-border">
             {ordered.map((r, i) => (

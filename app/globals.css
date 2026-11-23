@@ -273,3 +273,26 @@
     cursor: pointer;
   }
 }
+
+/* SEES emblem loader (components/brand/sees-mark.tsx): the circuit traces
+   draw in and out, one side after another. Still for reduced motion. */
+@keyframes sees-trace {
+  0% { stroke-dashoffset: 1; }
+  45%, 55% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -1; }
+}
+.sees-traces-animate .sees-trace {
+  stroke-dasharray: 1;
+  animation: sees-trace 1.8s var(--ease-out) infinite;
+}
+.sees-traces-animate > g:nth-child(2) .sees-trace { animation-delay: 0.15s; }
+.sees-traces-animate > g:nth-child(3) .sees-trace { animation-delay: 0.3s; }
+.sees-traces-animate > g:nth-child(4) .sees-trace { animation-delay: 0.45s; }
+@media (prefers-reduced-motion: reduce) {
+  .sees-traces-animate .sees-trace { animation: none; stroke-dasharray: none; }
+}
+
+@keyframes sees-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
