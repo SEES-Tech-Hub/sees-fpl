@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { createAnnouncement, endAnnouncement } from "@/lib/admin/actions/announcements";
 import type { AdminAnnouncement } from "@/lib/admin/queries/announcements";
 import { cn } from "@/lib/utils";
-import { FieldMessage, fromWatInput, PageTitle, Row, selectClass, toWatInput, useAdminAction } from "../_kit/admin-kit";
+import { FieldMessage, fromWatInput, PageTitle, Row, Choice, toWatInput, useAdminAction } from "../_kit/admin-kit";
 import { formatDay, formatTime } from "../wat";
 
 const when = (iso: string) => `${formatDay(iso)}, ${formatTime(iso)}`;
@@ -41,10 +41,15 @@ export function AnnouncementsAdmin({ announcements, now }: { announcements: Admi
         </Row>
         <div className="grid gap-3 sm:grid-cols-3">
           <Row label="Style">
-            <select className={selectClass} value={tone} onChange={(e) => setTone(e.target.value as "info" | "warning")}>
-              <option value="info">Information</option>
-              <option value="warning">Warning</option>
-            </select>
+            <Choice
+              label="Style"
+              value={tone}
+              onChange={(v) => setTone(v as "info" | "warning")}
+              options={[
+                { value: "info", label: "Information" },
+                { value: "warning", label: "Warning", hint: "amber" },
+              ]}
+            />
           </Row>
           <Row label="Starts (WAT)">
             <Input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />

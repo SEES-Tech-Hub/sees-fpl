@@ -12,7 +12,7 @@ import type { AdminPlayer, PriceSettings } from "@/lib/admin/queries/players";
 import type { AdminTeam } from "@/lib/admin/queries/sports";
 import { PLAYER_POSITIONS, PLAYER_STATUSES } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
-import { FieldMessage, PageTitle, Row, selectClass, useAdminAction } from "../_kit/admin-kit";
+import { Choice, FieldMessage, PageTitle, Row, useAdminAction } from "../_kit/admin-kit";
 import { CsvImport } from "../_kit/csv-import";
 
 const money = (t: number) => `₦${(t / 10).toFixed(1)}m`;
@@ -79,26 +79,9 @@ export function PlayersAdmin({ players, teams, prices }: { players: AdminPlayer[
 
       <div className="grid gap-2 sm:grid-cols-4">
         <Input placeholder="Search names" value={q} onChange={(e) => setQ(e.target.value)} className="h-10" />
-        <select className={selectClass} value={team} onChange={(e) => setTeam(e.target.value)} aria-label="Team">
-          <option value="all">All years</option>
-          {teams.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-        <select className={selectClass} value={pos} onChange={(e) => setPos(e.target.value)} aria-label="Position">
-          <option value="all">All positions</option>
-          {PLAYER_POSITIONS.map((p) => (
-            <option key={p}>{p}</option>
-          ))}
-        </select>
-        <select className={selectClass} value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
-          <option value="all">Any status</option>
-          {PLAYER_STATUSES.map((s) => (
-            <option key={s}>{s}</option>
-          ))}
-        </select>
+        <Choice label="Team" value={team} onChange={setTeam} options={[{ value: "all", label: "All years" }, ...teams.map((t) => ({ value: t.id, label: t.name }))]} />
+        <Choice label="Position" value={pos} onChange={setPos} options={[{ value: "all", label: "All positions" }, ...PLAYER_POSITIONS.map((p) => ({ value: p, label: p }))]} />
+        <Choice label="Status" value={status} onChange={setStatus} options={[{ value: "all", label: "Any status" }, ...PLAYER_STATUSES.map((s) => ({ value: s, label: s }))]} />
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
@@ -218,11 +201,7 @@ function EditForm({ player, onClose, priceOptions, locked }: { player: AdminPlay
         </Row>
         <div className="grid grid-cols-2 gap-3">
           <Row label="Position">
-            <select className={selectClass} value={position} onChange={(e) => setPosition(e.target.value as AdminPlayer["position"])}>
-              {PLAYER_POSITIONS.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
+            <Choice label="Position" value={position} onChange={(v) => setPosition(v as AdminPlayer["position"])} options={PLAYER_POSITIONS.map((p) => ({ value: p, label: p }))} />
           </Row>
           <Row label="Shirt number">
             <Input inputMode="numeric" value={shirt} onChange={(e) => setShirt(e.target.value.replace(/\D/g, "").slice(0, 2))} />
@@ -230,20 +209,10 @@ function EditForm({ player, onClose, priceOptions, locked }: { player: AdminPlay
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Row label="Status" hint={status === "left" ? "Hidden from fantasy picks." : undefined}>
-            <select className={selectClass} value={status} onChange={(e) => setStatus(e.target.value as AdminPlayer["status"])}>
-              {PLAYER_STATUSES.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
+            <Choice label="Status" value={status} onChange={(v) => setStatus(v as AdminPlayer["status"])} options={PLAYER_STATUSES.map((s) => ({ value: s, label: s }))} />
           </Row>
           <Row label="Price" hint={locked ? "Locked since the matchday 1 deadline." : undefined}>
-            <select className={selectClass} value={price} disabled={locked} onChange={(e) => setPrice(Number(e.target.value))}>
-              {priceOptions.map((t) => (
-                <option key={t} value={t}>
-                  {money(t)}
-                </option>
-              ))}
-            </select>
+            <Choice label="Price" value={String(price)} disabled={locked} onChange={(v) => setPrice(Number(v))} options={priceOptions.map((t) => ({ value: String(t), label: money(t) }))} />
           </Row>
         </div>
       </div>
@@ -309,13 +278,7 @@ function AddPlayer({
         </DrawerHeader>
         <div className="flex flex-col gap-3 overflow-y-auto px-4">
           <Row label="Year team">
-            <select className={selectClass} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.classLabel})
-                </option>
-              ))}
-            </select>
+            <Choice label="Year team" value={teamId} onChange={setTeamId} options={teams.map((t) => ({ value: t.id, label: t.name, hint: t.classLabel }))} />
           </Row>
           <Row label="Full name">
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
@@ -326,20 +289,10 @@ function AddPlayer({
           </Row>
           <div className="grid grid-cols-2 gap-3">
             <Row label="Position">
-              <select className={selectClass} value={position} onChange={(e) => setPosition(e.target.value as AdminPlayer["position"])}>
-                {PLAYER_POSITIONS.map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
-              </select>
+              <Choice label="Position" value={position} onChange={(v) => setPosition(v as AdminPlayer["position"])} options={PLAYER_POSITIONS.map((p) => ({ value: p, label: p }))} />
             </Row>
             <Row label="Price">
-              <select className={selectClass} value={price} disabled={locked} onChange={(e) => setPrice(Number(e.target.value))}>
-                {priceOptions.map((t) => (
-                  <option key={t} value={t}>
-                    {money(t)}
-                  </option>
-                ))}
-              </select>
+              <Choice label="Price" value={String(price)} disabled={locked} onChange={(v) => setPrice(Number(v))} options={priceOptions.map((t) => ({ value: String(t), label: money(t) }))} />
             </Row>
           </div>
         </div>

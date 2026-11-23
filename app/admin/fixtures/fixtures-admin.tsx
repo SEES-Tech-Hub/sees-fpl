@@ -34,7 +34,7 @@ import type { AdminFixture, AdminMatchday } from "@/lib/admin/queries/fixtures";
 import type { AdminProfile } from "@/lib/admin/queries/officials";
 import type { AdminSport, AdminTeam } from "@/lib/admin/queries/sports";
 import { cn } from "@/lib/utils";
-import { fromWatInput, PageTitle, Row, selectClass, toWatInput, useAdminAction } from "../_kit/admin-kit";
+import { Choice, fromWatInput, PageTitle, Row, STAGES, toWatInput, useAdminAction } from "../_kit/admin-kit";
 import { CsvImport } from "../_kit/csv-import";
 import { formatDay, formatTime } from "../wat";
 
@@ -105,22 +105,18 @@ export function FixturesAdmin(props: Props) {
       />
 
       <div className="grid gap-2 sm:grid-cols-3">
-        <select className={selectClass} value={sport} onChange={(e) => setSport(e.target.value)} aria-label="Sport">
-          <option value="all">All sports</option>
-          {sports.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <select className={selectClass} value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
-          <option value="all">Any status</option>
-          {Object.keys(STATUS_TONE).map((s) => (
-            <option key={s} value={s}>
-              {s.replace("_", " ")}
-            </option>
-          ))}
-        </select>
+        <Choice
+          label="Sport"
+          value={sport}
+          onChange={setSport}
+          options={[{ value: "all", label: "All sports" }, ...sports.map((s) => ({ value: s.id, label: s.name }))]}
+        />
+        <Choice
+          label="Status"
+          value={status}
+          onChange={setStatus}
+          options={[{ value: "all", label: "Any status" }, ...Object.keys(STATUS_TONE).map((s) => ({ value: s, label: s.replace("_", " ") }))]}
+        />
       </div>
 
       {byDay.length === 0 && <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No fixtures match.</p>}
@@ -174,32 +170,45 @@ export function FixturesAdmin(props: Props) {
   );
 }
 
-function TeamSelect({ teams, value, onChange, label }: { teams: AdminTeam[]; value: string; onChange: (v: string) => void; label: string }) {
+/**
+ * Home and away pick from one pool: a team taken on one side is greyed out on
+ * the other, so a team can never be picked to play itself.
+ */
+function TeamPair({
+  teams,
+  home,
+  away,
+  onHome,
+  onAway,
+}: {
+  teams: AdminTeam[];
+  home: string;
+  away: string;
+  onHome: (v: string) => void;
+  onAway: (v: string) => void;
+}) {
+  const opts = (taken: string) =>
+    teams.map((t) => ({ value: t.id, label: t.name, disabled: t.id === taken, hint: t.id === taken ? "picked" : undefined }));
+  const half = (home === "") !== (away === "");
   return (
-    <Row label={label}>
-      <select className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">To be decided</option>
-        {teams.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name}
-          </option>
-        ))}
-      </select>
-    </Row>
+    <div className="flex flex-col gap-1.5">
+      <div className="grid grid-cols-2 gap-3">
+        <Row label="Home">
+          <Choice label="Home team" value={home} onChange={onHome} options={opts(away)} noneLabel="To be decided" />
+        </Row>
+        <Row label="Away">
+          <Choice label="Away team" value={away} onChange={onAway} options={opts(home)} noneLabel="To be decided" />
+        </Row>
+      </div>
+      {half && <p className="text-xs font-medium text-destructive">Pick both teams, or leave both as To be decided.</p>}
+    </div>
   );
 }
 
 function MatchdaySelect({ matchdays, value, onChange }: { matchdays: AdminMatchday[]; value: string; onChange: (v: string) => void }) {
   return (
-    <Row label="Fantasy matchday" hint="Football only.">
-      <select className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">None</option>
-        {matchdays.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.name}
-          </option>
-        ))}
-      </select>
+    <Row label="Fantasy matchday" hint="Football league matches only: their players score fantasy points.">
+      <Choice label="Fantasy matchday" value={value} onChange={onChange} noneLabel="None" options={matchdays.map((m) => ({ value: m.id, label: m.name }))} />
     </Row>
   );
 }
@@ -244,21 +253,12 @@ function CreateFixture({ sports, teams, matchdays, onClose }: Props & { onClose:
       </DrawerHeader>
       <div className="flex flex-col gap-3 overflow-y-auto px-4">
         <Row label="Event">
-          <select className={selectClass} value={eventId} onChange={(e) => setEventId(e.target.value)}>
-            {events.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.label}
-              </option>
-            ))}
-          </select>
+          <Choice label="Event" value={eventId} onChange={setEventId} options={events.map((e) => ({ value: e.id, label: e.label }))} />
         </Row>
-        <Row label="Stage" hint="league, group, semi_final, third_place, final, heat_1…">
-          <Input value={stage} onChange={(e) => setStage(e.target.value.toLowerCase().replace(/\s+/g, "_"))} />
+        <Row label="Stage">
+          <Choice label="Stage" value={stage} onChange={setStage} options={STAGES} />
         </Row>
-        <div className="grid grid-cols-2 gap-3">
-          <TeamSelect teams={teams} value={home} onChange={setHome} label="Home" />
-          <TeamSelect teams={teams} value={away} onChange={setAway} label="Away" />
-        </div>
+        <TeamPair teams={teams} home={home} away={away} onHome={setHome} onAway={setAway} />
         <Row label="Kickoff (WAT)">
           <Input type="datetime-local" value={kickoff} onChange={(e) => setKickoff(e.target.value)} />
         </Row>
@@ -271,7 +271,7 @@ function CreateFixture({ sports, teams, matchdays, onClose }: Props & { onClose:
         <Button variant="outline" className="flex-1" onClick={onClose}>
           Cancel
         </Button>
-        <Button className="flex-1" disabled={pending || !eventId} onClick={save}>
+        <Button className="flex-1" disabled={pending || !eventId || (home === "") !== (away === "")} onClick={save}>
           {pending ? "Adding…" : "Add fixture"}
         </Button>
       </DrawerFooter>
@@ -339,12 +339,14 @@ function EditFixture({ fixture: f, teams, matchdays, officials, onClose }: Props
           ) : (
             <>
               <Row label="Stage">
-                <Input value={stage} onChange={(e) => setStage(e.target.value.toLowerCase().replace(/\s+/g, "_"))} />
+                <Choice
+                  label="Stage"
+                  value={stage}
+                  onChange={setStage}
+                  options={STAGES.some((o) => o.value === stage) ? STAGES : [...STAGES, { value: stage, label: stage.replace(/_/g, " ") }]}
+                />
               </Row>
-              <div className="grid grid-cols-2 gap-3">
-                <TeamSelect teams={teams} value={home} onChange={setHome} label="Home" />
-                <TeamSelect teams={teams} value={away} onChange={setAway} label="Away" />
-              </div>
+              <TeamPair teams={teams} home={home} away={away} onHome={setHome} onAway={setAway} />
               <Row label="Venue">
                 <Input value={venue} onChange={(e) => setVenue(e.target.value)} />
               </Row>
@@ -359,14 +361,13 @@ function EditFixture({ fixture: f, teams, matchdays, officials, onClose }: Props
         <section className="flex flex-col gap-3">
           <h3 className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Console</h3>
           <Row label="Console holder" hint="The official who records this match. Only officials are listed.">
-            <select className={selectClass} value={holder} onChange={(e) => setHolder(e.target.value)}>
-              <option value="">Nobody</option>
-              {officials.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.displayName ?? o.email}
-                </option>
-              ))}
-            </select>
+            <Choice
+              label="Console holder"
+              value={holder}
+              onChange={setHolder}
+              noneLabel="Nobody"
+              options={officials.map((o) => ({ value: o.id, label: o.displayName ?? o.email ?? "Official", hint: o.role === "admin" ? "admin" : undefined }))}
+            />
           </Row>
           <div className="flex gap-2">
             <Button variant="secondary" className="flex-1" disabled={pending} onClick={saveHolder}>
@@ -429,10 +430,12 @@ function Walkover({ fixture: f, teams, onDone }: { fixture: AdminFixture; teams:
             The other team wasn&apos;t ready 15 minutes after kickoff. The match ends 3–0 to the team you pick. This can only be undone from the audit log.
           </DialogDescription>
         </DialogHeader>
-        <select className={selectClass} value={team} onChange={(e) => setTeam(e.target.value)}>
-          <option value={f.homeTeamId ?? ""}>{name(f.homeTeamId)}</option>
-          <option value={f.awayTeamId ?? ""}>{name(f.awayTeamId)}</option>
-        </select>
+        <Choice
+          label="Awarded to"
+          value={team}
+          onChange={setTeam}
+          options={[f.homeTeamId, f.awayTeamId].filter((id): id is string => Boolean(id)).map((id) => ({ value: id, label: name(id) }))}
+        />
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
