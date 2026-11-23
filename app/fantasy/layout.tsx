@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { FantasyNav, FantasyNavFallback } from "@/components/fantasy/fantasy-nav";
 import { MotionProvider } from "@/components/fantasy/motion-provider";
 import { OfflineBanner } from "@/components/fantasy/offline-banner";
+import { AnnouncementBanner } from "@/components/shell/announcement-banner";
 
 // Owner: Henry (fantasy frontend). The fantasy section's own header and tabs.
 // The site-wide shell and bottom tab bar are Fortune's (design system §10).
@@ -31,6 +32,9 @@ export default function FantasyLayout({ children }: LayoutProps<"/fantasy">) {
         </div>
       </header>
       <OfflineBanner />
+      <Suspense fallback={null}>
+        <AnnouncementBanner />
+      </Suspense>
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-4 py-4 pb-12 lg:max-w-5xl lg:px-6">
         <MotionProvider>{children}</MotionProvider>
       </main>
