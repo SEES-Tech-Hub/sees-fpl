@@ -1,28 +1,57 @@
 import { Suspense } from "react";
+import { getCurrentUser } from "@/lib/auth";
 import { TopHeader } from "./TopHeader";
 import { BottomTabBar } from "./BottomTabBar";
 
-interface AppShellProps {
-  children: React.ReactNode;
-  hasLiveMatch?: boolean;
-  role?: "user" | "official" | "admin";
-  user?: { name?: string | null; avatarUrl?: string | null } | null;
-  announcement?: { id: string; message: string } | null;
+// Owner: Fortune (design kit). The site-wide header and bottom tab bar.
+//
+// - AppShell (root layout): the page, then the bottom tab bar. The tab bar
+//   decides by route where it shows (components/shell/routes.ts).
+// - SiteHeader (app/(site)/layout.tsx): the top header, only on the public
+//   pages in the (site) route group, so its loading placeholder never shows
+//   on pages without a header (fantasy, console, admin, sign-in).
+//
+// Pages keep their own <main> and gutters. Who is signed in is read inside
+// <Suspense> (it needs the request's cookies), so every page's static shell
+// still prerenders with the fallbacks.
+
+type ShellUser = { name?: string | null; avatarUrl?: string | null };
+type ShellRole = "user" | "official" | "admin";
+
+async function loadViewer(): Promise<{ user: ShellUser | null; role: ShellRole | undefined }> {
+  const current = await getCurrentUser();
+  if (!current) return { user: null, role: undefined };
+  const { profile } = current;
+  return {
+    user: { name: profile.display_name ?? profile.email, avatarUrl: profile.avatar_url },
+    role: profile.role,
+  };
 }
 
-export function AppShell({ children, hasLiveMatch, role, user, announcement }: AppShellProps) {
+async function SignedInHeader({ announcement }: { announcement?: { id: string; message: string } | null }) {
+  const { user, role } = await loadViewer();
+  return <TopHeader user={user} role={role} announcement={announcement} />;
+}
+
+async function SignedInTabBar({ hasLiveMatch }: { hasLiveMatch?: boolean }) {
+  const { user, role } = await loadViewer();
+  return <BottomTabBar hasLiveMatch={hasLiveMatch} role={role} user={user} />;
+}
+
+export function SiteHeader({ announcement }: { announcement?: { id: string; message: string } | null }) {
+  return (
+    <Suspense fallback={<div className="h-14 w-full border-b border-border/60 bg-background" />}>
+      <SignedInHeader announcement={announcement} />
+    </Suspense>
+  );
+}
+
+export function AppShell({ children, hasLiveMatch }: { children: React.ReactNode; hasLiveMatch?: boolean }) {
   return (
     <>
-      <Suspense fallback={<div className="h-14 w-full border-b border-border/60 bg-background" />}>
-        <TopHeader user={user} announcement={announcement} role={role} />
-      </Suspense>
-
-      <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 pb-24 pt-4 md:px-6 lg:pb-10">
-        {children}
-      </main>
-
+      <div className="flex w-full flex-1 flex-col">{children}</div>
       <Suspense fallback={null}>
-        <BottomTabBar hasLiveMatch={hasLiveMatch} role={role} user={user} />
+        <SignedInTabBar hasLiveMatch={hasLiveMatch} />
       </Suspense>
     </>
   );

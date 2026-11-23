@@ -147,4 +147,3 @@ async function SignedOutHero() {
     </section>
   );
 }
-

@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Megaphone, CloudOff, X, ChevronDown } from "lucide-react";
+import { signOut } from "@/app/login/actions";
+import { showsHeader } from "./routes";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -48,13 +50,7 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (
-    pathname.startsWith("/console") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/login")
-  ) {
-    return null;
-  }
+  if (!showsHeader(pathname)) return null;
 
   const showAnnouncement = announcement && dismissedId !== announcement.id;
 
@@ -104,22 +100,6 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
                 >
                   Fantasy rules
                 </Link>
-                <Link
-                  href="/settings"
-                  onClick={() => setMoreOpen(false)}
-                  className="block rounded-lg px-3 py-2 hover:bg-muted"
-                >
-                  Settings &amp; push alerts
-                </Link>
-                {(role === "official" || role === "admin") && (
-                  <Link
-                    href="/console"
-                    onClick={() => setMoreOpen(false)}
-                    className="block rounded-lg px-3 py-2 text-primary hover:bg-muted"
-                  >
-                    Match console
-                  </Link>
-                )}
                 {role === "admin" && (
                   <Link
                     href="/admin"
@@ -130,7 +110,7 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
                   </Link>
                 )}
                 {user && (
-                  <form action="/auth/signout" method="post" className="mt-1 border-t border-border pt-1">
+                  <form action={signOut} className="mt-1 border-t border-border pt-1">
                     <button
                       type="submit"
                       className="w-full rounded-lg px-3 py-2 text-left text-destructive hover:bg-muted"
@@ -174,7 +154,7 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
             type="button"
             onClick={() => setDismissedId(announcement.id)}
             aria-label="Dismiss announcement"
-            className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-black/10"
+            className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-team-foreground/10"
           >
             <X className="h-3.5 w-3.5" />
           </button>

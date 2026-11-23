@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { House, Trophy, Shirt, ListOrdered, Menu, X } from "lucide-react";
+import { signOut } from "@/app/login/actions";
+import { showsTabBar } from "./routes";
 
 const TABS = [
   { href: "/", label: "Home", icon: House },
@@ -26,16 +28,12 @@ export function BottomTabBar({
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  if (
-    pathname.startsWith("/console") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/login")
-  ) {
-    return null;
-  }
+  if (!showsTabBar(pathname)) return null;
 
   return (
     <>
+      {/* Keeps the end of every page clear of the fixed bar. */}
+      <div aria-hidden className="h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 lg:hidden" />
       <nav
         aria-label="Bottom tabs"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
@@ -81,7 +79,7 @@ export function BottomTabBar({
 
       {moreOpen && (
         <div
-          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/50 lg:hidden"
+          className="fixed inset-0 z-50 flex flex-col justify-end bg-scrim lg:hidden"
           onClick={() => setMoreOpen(false)}
         >
           <div
@@ -108,22 +106,6 @@ export function BottomTabBar({
               >
                 Fantasy rules
               </Link>
-              <Link
-                href="/settings"
-                onClick={() => setMoreOpen(false)}
-                className="flex min-h-[44px] items-center rounded-lg px-3 hover:bg-muted"
-              >
-                Settings &amp; push alerts
-              </Link>
-              {(role === "official" || role === "admin") && (
-                <Link
-                  href="/console"
-                  onClick={() => setMoreOpen(false)}
-                  className="flex min-h-[44px] items-center rounded-lg px-3 text-primary hover:bg-muted"
-                >
-                  Match console
-                </Link>
-              )}
               {role === "admin" && (
                 <Link
                   href="/admin"
@@ -134,7 +116,7 @@ export function BottomTabBar({
                 </Link>
               )}
               {user && (
-                <form action="/auth/signout" method="post" className="mt-2 border-t border-border pt-2">
+                <form action={signOut} className="mt-2 border-t border-border pt-2">
                   <button
                     type="submit"
                     className="flex min-h-[44px] w-full items-center rounded-lg px-3 text-left text-destructive hover:bg-muted"
