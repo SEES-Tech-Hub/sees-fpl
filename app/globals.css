@@ -227,6 +227,7 @@
   --color-team-foreground: var(--team-foreground);
   --color-pitch: var(--pitch);
   --color-pitch-line: var(--pitch-line);
+  --color-scrim: var(--scrim);
   --shadow-card: var(--shadow-card);
   --shadow-raised: var(--shadow-raised);
   --shadow-glow: var(--shadow-glow);
