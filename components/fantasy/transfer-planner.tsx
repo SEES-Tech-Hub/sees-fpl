@@ -339,7 +339,7 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, serv
               </DrawerHeader>
               <PlayerPickerList
                 key={pickOut.id}
-                players={players.filter((p) => p.position === pickOut.position && !inSquad.has(p.id))}
+                players={players.filter((p) => p.position === pickOut.position && !inSquad.has(p.id) && p.status !== "left")}
                 position={pickOut.position}
                 hideBlocked
                 reasonFor={(p) => reasonFor(pickOut.id, p)}

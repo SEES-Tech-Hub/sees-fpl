@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { FantasyNav, FantasyNavFallback } from "@/components/fantasy/fantasy-nav";
 import { OfflineBanner } from "@/components/fantasy/offline-banner";
-import { StubBanner } from "@/components/fantasy/stub-banner";
 
 // Owner: Henry (fantasy frontend). The fantasy section's own header and tabs.
 // The site-wide shell and bottom tab bar are Fortune's (design system §10).
@@ -31,7 +30,6 @@ export default function FantasyLayout({ children }: LayoutProps<"/fantasy">) {
         </div>
       </header>
       <OfflineBanner />
-      <StubBanner />
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-4 py-4 pb-12 lg:max-w-5xl lg:px-6">{children}</main>
     </div>
   );

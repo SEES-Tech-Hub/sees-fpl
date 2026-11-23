@@ -1983,6 +1983,13 @@ export type Database = {
         Args: { p_league_id: string }
         Returns: boolean
       }
+      fantasy_player_selection: {
+        Args: never
+        Returns: {
+          player_id: string
+          selected_by_pct: number
+        }[]
+      }
       fantasy_prepare_matchday_snapshots: {
         Args: { p_matchday_id: string }
         Returns: undefined

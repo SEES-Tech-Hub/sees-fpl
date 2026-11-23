@@ -52,7 +52,12 @@ async function Squad() {
       ) : players.length === 0 ? (
         <EmptyState title="No players yet" description="The organisers haven't loaded the squads yet. Check back soon." />
       ) : (
-        <SquadBuilder players={players} rules={rules} draftKey={`sees-fantasy-draft:${user.id}`} />
+        <SquadBuilder
+          // Players who have left can't be picked (the database refuses them too).
+          players={players.filter((p) => p.status !== "left")}
+          rules={rules}
+          draftKey={`sees-fantasy-draft:${user.id}`}
+        />
       )}
     </>
   );
