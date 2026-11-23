@@ -100,6 +100,13 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
                 >
                   Fantasy rules
                 </Link>
+                <Link
+                  href="/privacy"
+                  onClick={() => setMoreOpen(false)}
+                  className="block rounded-lg px-3 py-2 hover:bg-muted"
+                >
+                  Privacy
+                </Link>
                 {role === "admin" && (
                   <Link
                     href="/admin"
