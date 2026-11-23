@@ -11,11 +11,26 @@ import { CircuitPattern } from "@/components/fantasy/patterns";
 // it shows a tick and fires confetti, then hands over (usually a navigation).
 // On failure it closes at once so the error shows on the page underneath.
 //
-// It stays up for at least MIN_MS so it never just flashes.
+// It stays up for at least MIN_MS so it never just flashes. Status lines are
+// picked at random from the pool the caller passes; each one shows for
+// LINE_VISIBLE_MS, then swipes up and out as the next swipes up in.
 
-const MIN_MS = 1400;
+const MIN_MS = 1600;
 const DONE_MS = 1700;
-const LINE_MS = 850;
+const LINE_VISIBLE_MS = 800;
+const LINE_OUT_S = 0.3;
+const LINE_IN_S = 0.35;
+const LINE_CYCLE_MS = LINE_VISIBLE_MS + (LINE_OUT_S + LINE_IN_S) * 1000;
+
+/** A random order of the pool, so every save reads a little differently. */
+function shuffled<T>(pool: T[]): T[] {
+  const a = [...pool];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 type Done = { title: string; subtitle?: string };
 type State = { phase: "idle" } | { phase: "working"; lines: string[] } | { phase: "done"; done: Done };
@@ -38,7 +53,8 @@ export function useSaveCelebration() {
   const [state, setState] = useState<State>({ phase: "idle" });
 
   /**
-   * Runs `task` behind the overlay. Resolves with its result. On success the
+   * Runs `task` behind the overlay. `lines` is a pool of status lines to
+   * pick from at random. Resolves with the task's result. On success the
    * overlay stays up through `onSuccess` (for example router.push) so the
    * next screen appears straight from the celebration.
    */
@@ -47,7 +63,7 @@ export function useSaveCelebration() {
       task: () => Promise<R>,
       options: { lines: string[]; done: Done; onSuccess?: () => void },
     ): Promise<R> => {
-      setState({ phase: "working", lines: options.lines });
+      setState({ phase: "working", lines: shuffled(options.lines) });
       const started = Date.now();
       let result: R;
       try {
@@ -124,19 +140,18 @@ function SaveOverlay({ state }: { state: State }) {
 function CyclingLines({ lines }: { lines: string[] }) {
   const [i, setI] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setI((n) => Math.min(n + 1, lines.length - 1)), LINE_MS);
+    const id = setInterval(() => setI((n) => (n + 1) % lines.length), LINE_CYCLE_MS);
     return () => clearInterval(id);
   }, [lines]);
   return (
-    <div className="h-14 w-full max-w-xs">
-      <AnimatePresence mode="wait">
+    <div className="h-14 w-full max-w-xs overflow-hidden">
+      <AnimatePresence mode="wait" initial={false}>
         <motion.p
           key={i}
           className="font-heading text-xl font-semibold"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.22 }}
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0, transition: { duration: LINE_IN_S, ease: [0.2, 0.8, 0.2, 1] } }}
+          exit={{ opacity: 0, y: -18, transition: { duration: LINE_OUT_S, ease: [0.4, 0, 1, 1] } }}
         >
           {lines[i]}
         </motion.p>

@@ -46,11 +46,20 @@ const YEARS = [
   { value: "none", label: "Not in a year team", sub: "Staff, alumni, guests" },
 ];
 
+// Picked from at random while a squad saves; usually only one or two show.
 const SAVING_LINES = [
   "Lacing up the boots…",
   "Checking the budget with the treasurer…",
   "Handing out the captain's armband…",
   "Saving your wonderful XI…",
+  "Pumping up the match ball…",
+  "Chalking the touchlines…",
+  "Printing the team sheet…",
+  "Ironing the kits…",
+  "Briefing the bench…",
+  "Checking VAR, just in case…",
+  "Warming up on the touchline…",
+  "Polishing the trophy cabinet…",
 ];
 
 // Errors about the team itself send the manager back to step 1.
