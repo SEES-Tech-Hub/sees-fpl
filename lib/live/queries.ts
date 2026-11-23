@@ -30,9 +30,10 @@ function queryFailed(what: string, error: { message: string }): never {
 const FIXTURE_COLUMNS = `
   id, stage, status, kickoff_at, venue, matchday_id, console_holder,
   home_score, away_score, home_shootout, away_shootout, winner_team_id,
-  current_period, period_started_at,
+  current_period, period_started_at, current_set, home_set_points, away_set_points,
   event:events!fixtures_event_id_fkey (
-    id, name, period_minutes, extra_period_minutes,
+    id, name, period_minutes, extra_period_minutes, period_count,
+    sets_to_win, set_points, final_set_points,
     sport:sports!events_sport_id_fkey ( slug, name, result_format )
   ),
   home:teams!fixtures_home_team_id_fkey ( id, name, short_name, year ),
@@ -69,11 +70,18 @@ export const getLiveFixture = cache(async (fixtureId: string): Promise<LiveFixtu
     winnerTeamId: data.winner_team_id,
     currentPeriod: data.current_period,
     periodStartedAt: data.period_started_at,
+    currentSet: data.current_set,
+    homeSetPoints: data.home_set_points,
+    awaySetPoints: data.away_set_points,
     event: {
       id: data.event.id,
       name: data.event.name,
       periodMinutes: data.event.period_minutes,
       extraPeriodMinutes: data.event.extra_period_minutes,
+      periodCount: data.event.period_count,
+      setsToWin: data.event.sets_to_win,
+      setPoints: data.event.set_points,
+      finalSetPoints: data.event.final_set_points,
     },
     sport: {
       slug: data.event.sport.slug,

@@ -15,6 +15,7 @@ export type CardColour = PublicEnums["card_colour"];
 export type LineupRole = PublicEnums["lineup_role"];
 export type PlayerPosition = PublicEnums["player_position"];
 export type ResultFormat = PublicEnums["result_format"];
+export type RaceOutcome = PublicEnums["race_outcome"];
 
 // -----------------------------------------------------------------------------
 // Console requests
@@ -64,7 +65,26 @@ export type RecordEventInput = RecordEventBase &
       }
     | { type: "shootout_kick"; teamId: string; takerId?: string | null; scored: boolean }
     | { type: "man_of_the_match"; playerId: string }
-    | { type: "full_time" }
+    | {
+        type: "full_time";
+        /**
+         * Head-to-head: the winner (needed in a knockout when the score is level).
+         * Sets: the admin ending a match early (a retirement). Ignored for timed matches.
+         */
+        winnerTeamId?: string | null;
+      }
+    | {
+        /** Sets and head-to-head: a point (or game) for a team. */
+        type: "point";
+        teamId: string;
+        playerId?: string | null;
+        /** 1 per tap. The admin can enter a set's total at once (up to 99). */
+        points?: number;
+      }
+    | {
+        /** Sets: close the current set. Refused unless the score is a finished set (25-20, 27-25 ...). */
+        type: "set_end";
+      }
     | {
         type: "walkover";
         /** The team awarded the match. Admin only. */
@@ -85,6 +105,35 @@ export type SetLineupInput = {
   teamId: string;
   starters: string[];
   bench: string[];
+};
+
+/** A race entrant: a year and, for individual races, the athlete's name. Leave both names out for a relay team. */
+export type RaceEntrant = {
+  teamId: string;
+  athleteName?: string | null;
+  /** Someone in the players list (rare; athletes are usually named). */
+  playerId?: string | null;
+};
+
+export type SetRaceEntriesInput = {
+  fixtureId: string;
+  entries: (RaceEntrant & { lane?: number | null })[];
+};
+
+export type RaceResultInput = RaceEntrant & {
+  outcome: RaceOutcome;
+  /** Finishers only: 1, 2, 3 ... (equal places share a number). */
+  position?: number | null;
+  timeMs?: number | null;
+  markMm?: number | null;
+  note?: string | null;
+};
+
+export type RecordRaceResultsInput = {
+  fixtureId: string;
+  results: RaceResultInput[];
+  /** True makes the results final and public (every entrant needs a result). */
+  publish?: boolean;
 };
 
 // -----------------------------------------------------------------------------
@@ -140,6 +189,17 @@ export const LIVE_ERROR_CODES = [
   "reason_required",
   "already_voided",
   "append_only",
+  "event_not_configured",
+  // Sets
+  "set_over",
+  "set_not_over",
+  // Races
+  "not_entered",
+  "results_entered",
+  "results_published",
+  "results_incomplete",
+  "invalid_places",
+  "heats_not_finished",
   // Standings and knockouts (admin)
   "league_not_finished",
   "standings_tied",
@@ -217,11 +277,21 @@ export type LiveFixture = {
   winnerTeamId: string | null;
   currentPeriod: MatchPeriod | null;
   periodStartedAt: string | null;
+  /** Sets: the set being played and its points (null when not in play). homeScore/awayScore are sets won. */
+  currentSet: number | null;
+  homeSetPoints: number | null;
+  awaySetPoints: number | null;
   event: {
     id: string;
     name: string;
     periodMinutes: number | null;
     extraPeriodMinutes: number | null;
+    /** Timed: 2 halves or 4 quarters. */
+    periodCount: number | null;
+    /** Sets: sets to win (2 = best of 3), points per set and in the deciding set. */
+    setsToWin: number | null;
+    setPoints: number | null;
+    finalSetPoints: number | null;
   };
   sport: { slug: string; name: string; resultFormat: ResultFormat };
 };
@@ -363,4 +433,79 @@ export type SuspensionRow = {
   bannedFixtureId: string | null;
   bannedFixtureKickoffAt: string | null;
   banServed: boolean;
+};
+
+// -----------------------------------------------------------------------------
+// Other formats and the championship (phase 3): read with lib/live/results.ts
+// -----------------------------------------------------------------------------
+
+/** One set of a sets match. */
+export type SetScore = {
+  setNumber: number;
+  homePoints: number;
+  awayPoints: number;
+  /** False for the set being played. */
+  complete: boolean;
+  winnerTeamId: string | null;
+};
+
+/** One row of a group table (every sport except football). */
+export type EventStandingRow = {
+  position: number;
+  positionShared: boolean;
+  team: TeamSummary;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  /** Goals or points (timed, head-to-head); rally points (sets). */
+  scoreFor: number;
+  scoreAgainst: number;
+  scoreDifference: number;
+  /** Sets matches only (0 otherwise). */
+  setsFor: number;
+  setsAgainst: number;
+  points: number;
+  live: boolean;
+};
+
+/** One entrant in a race, in finishing order. Results are null until published (for the public). */
+export type RaceResultRow = {
+  entryId: number;
+  fixtureId: string;
+  stage: string;
+  team: TeamSummary;
+  athleteName: string | null;
+  lane: number | null;
+  outcome: RaceOutcome | null;
+  position: number | null;
+  timeMs: number | null;
+  markMm: number | null;
+  note: string | null;
+  medal: Medal | null;
+};
+
+export type Medal = "gold" | "silver" | "bronze";
+
+/** A medal won in an event. athleteName is set for individual races. */
+export type MedalRow = {
+  eventId: string;
+  fixtureId: string;
+  medal: Medal;
+  place: number;
+  teamId: string;
+  athleteName: string | null;
+};
+
+/** One year in the overall championship. */
+export type MedalTableRow = {
+  position: number;
+  team: TeamSummary;
+  gold: number;
+  silver: number;
+  bronze: number;
+  total: number;
+  points: number;
+  /** How the table is ranked (an admin setting). */
+  rankBy: "medals" | "points";
 };

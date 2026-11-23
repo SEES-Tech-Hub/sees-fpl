@@ -152,6 +152,44 @@ export type Database = {
           },
         ]
       }
+      championship_settings: {
+        Row: {
+          bronze_points: number
+          gold_points: number
+          id: boolean
+          rank_by: string
+          silver_points: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          bronze_points?: number
+          gold_points?: number
+          id?: boolean
+          rank_by?: string
+          silver_points?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          bronze_points?: number
+          gold_points?: number
+          id?: boolean
+          rank_by?: string
+          silver_points?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "championship_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chips: {
         Row: {
           chip_type: Database["public"]["Enums"]["fantasy_chip_type"]
@@ -194,33 +232,60 @@ export type Database = {
       events: {
         Row: {
           created_at: string
+          draw_points: number | null
           extra_period_minutes: number | null
+          final_set_points: number | null
           id: string
+          loss_points: number | null
           name: string
           period_count: number | null
           period_minutes: number | null
+          qualifiers_per_heat: number | null
+          set_points: number | null
+          set_points_cap: number | null
+          set_win_by: number | null
+          sets_to_win: number | null
           slug: string
           sport_id: string
+          win_points: number | null
         }
         Insert: {
           created_at?: string
+          draw_points?: number | null
           extra_period_minutes?: number | null
+          final_set_points?: number | null
           id?: string
+          loss_points?: number | null
           name: string
           period_count?: number | null
           period_minutes?: number | null
+          qualifiers_per_heat?: number | null
+          set_points?: number | null
+          set_points_cap?: number | null
+          set_win_by?: number | null
+          sets_to_win?: number | null
           slug: string
           sport_id: string
+          win_points?: number | null
         }
         Update: {
           created_at?: string
+          draw_points?: number | null
           extra_period_minutes?: number | null
+          final_set_points?: number | null
           id?: string
+          loss_points?: number | null
           name?: string
           period_count?: number | null
           period_minutes?: number | null
+          qualifiers_per_heat?: number | null
+          set_points?: number | null
+          set_points_cap?: number | null
+          set_win_by?: number | null
+          sets_to_win?: number | null
           slug?: string
           sport_id?: string
+          win_points?: number | null
         }
         Relationships: [
           {
@@ -382,13 +447,16 @@ export type Database = {
       fixtures: {
         Row: {
           away_score: number | null
+          away_set_points: number | null
           away_shootout: number | null
           away_team_id: string | null
           console_holder: string | null
           created_at: string
           current_period: Database["public"]["Enums"]["match_period"] | null
+          current_set: number | null
           event_id: string
           home_score: number | null
+          home_set_points: number | null
           home_shootout: number | null
           home_team_id: string | null
           id: string
@@ -404,13 +472,16 @@ export type Database = {
         }
         Insert: {
           away_score?: number | null
+          away_set_points?: number | null
           away_shootout?: number | null
           away_team_id?: string | null
           console_holder?: string | null
           created_at?: string
           current_period?: Database["public"]["Enums"]["match_period"] | null
+          current_set?: number | null
           event_id: string
           home_score?: number | null
+          home_set_points?: number | null
           home_shootout?: number | null
           home_team_id?: string | null
           id?: string
@@ -426,13 +497,16 @@ export type Database = {
         }
         Update: {
           away_score?: number | null
+          away_set_points?: number | null
           away_shootout?: number | null
           away_team_id?: string | null
           console_holder?: string | null
           created_at?: string
           current_period?: Database["public"]["Enums"]["match_period"] | null
+          current_set?: number | null
           event_id?: string
           home_score?: number | null
+          home_set_points?: number | null
           home_shootout?: number | null
           home_team_id?: string | null
           id?: string
@@ -1033,6 +1107,83 @@ export type Database = {
         }
         Relationships: []
       }
+      race_entries: {
+        Row: {
+          athlete_name: string | null
+          fixture_id: string
+          id: number
+          lane: number | null
+          mark_mm: number | null
+          note: string | null
+          outcome: Database["public"]["Enums"]["race_outcome"] | null
+          player_id: string | null
+          position: number | null
+          set_by: string | null
+          team_id: string
+          time_ms: number | null
+          updated_at: string
+        }
+        Insert: {
+          athlete_name?: string | null
+          fixture_id: string
+          id?: number
+          lane?: number | null
+          mark_mm?: number | null
+          note?: string | null
+          outcome?: Database["public"]["Enums"]["race_outcome"] | null
+          player_id?: string | null
+          position?: number | null
+          set_by?: string | null
+          team_id: string
+          time_ms?: number | null
+          updated_at?: string
+        }
+        Update: {
+          athlete_name?: string | null
+          fixture_id?: string
+          id?: number
+          lane?: number | null
+          mark_mm?: number | null
+          note?: string | null
+          outcome?: Database["public"]["Enums"]["race_outcome"] | null
+          player_id?: string | null
+          position?: number | null
+          set_by?: string | null
+          team_id?: string
+          time_ms?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "race_entries_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_entries_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_entries_set_by_fkey"
+            columns: ["set_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_entries_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sports: {
         Row: {
           id: string
@@ -1181,6 +1332,52 @@ export type Database = {
       }
     }
     Views: {
+      event_medals: {
+        Row: {
+          athlete_name: string | null
+          event_id: string | null
+          fixture_id: string | null
+          medal: string | null
+          place: number | null
+          team_id: string | null
+        }
+        Relationships: []
+      }
+      event_standings: {
+        Row: {
+          drawn: number | null
+          event_id: string | null
+          h2h_points: number | null
+          live: boolean | null
+          lost: number | null
+          played: number | null
+          points: number | null
+          position: number | null
+          position_shared: boolean | null
+          score_against: number | null
+          score_difference: number | null
+          score_for: number | null
+          sets_against: number | null
+          sets_for: number | null
+          team_id: string | null
+          team_name: string | null
+          team_short_name: string | null
+          team_year: number | null
+          won: number | null
+        }
+        Relationships: []
+      }
+      fixture_set_scores: {
+        Row: {
+          away_points: number | null
+          complete: boolean | null
+          fixture_id: string | null
+          home_points: number | null
+          set_number: number | null
+          winner_team_id: string | null
+        }
+        Relationships: []
+      }
       football_player_totals: {
         Row: {
           appearances: number | null
@@ -1351,6 +1548,22 @@ export type Database = {
           },
         ]
       }
+      medal_table: {
+        Row: {
+          bronze: number | null
+          gold: number | null
+          points: number | null
+          position: number | null
+          rank_by: string | null
+          silver: number | null
+          team_id: string | null
+          team_name: string | null
+          team_short_name: string | null
+          team_year: number | null
+          total: number | null
+        }
+        Relationships: []
+      }
       player_match_stats: {
         Row: {
           appeared: boolean | null
@@ -1420,6 +1633,29 @@ export type Database = {
           display_name?: string | null
           id?: string | null
           year_group?: number | null
+        }
+        Relationships: []
+      }
+      race_results: {
+        Row: {
+          athlete_name: string | null
+          event_id: string | null
+          fixture_id: string | null
+          id: number | null
+          lane: number | null
+          mark_mm: number | null
+          medal: string | null
+          note: string | null
+          outcome: Database["public"]["Enums"]["race_outcome"] | null
+          player_id: string | null
+          position: number | null
+          race_status: Database["public"]["Enums"]["fixture_status"] | null
+          stage: string | null
+          team_id: string | null
+          team_name: string | null
+          team_short_name: string | null
+          team_year: number | null
+          time_ms: number | null
         }
         Relationships: []
       }
@@ -1510,6 +1746,40 @@ export type Database = {
         Returns: Json
       }
       create_league: { Args: { p_name: string }; Returns: Json }
+      advance_knockouts: {
+        Args: { p_event_id: string }
+        Returns: {
+          away_score: number | null
+          away_set_points: number | null
+          away_shootout: number | null
+          away_team_id: string | null
+          console_holder: string | null
+          created_at: string
+          current_period: Database["public"]["Enums"]["match_period"] | null
+          current_set: number | null
+          event_id: string
+          home_score: number | null
+          home_set_points: number | null
+          home_shootout: number | null
+          home_team_id: string | null
+          id: string
+          kickoff_at: string | null
+          matchday_id: string | null
+          period_started_at: string | null
+          result_note: string | null
+          stage: string
+          status: Database["public"]["Enums"]["fixture_status"]
+          updated_at: string
+          venue: string | null
+          winner_team_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "fixtures"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_manager: {
         Args: { p_team_name: string; p_year_group?: number }
         Returns: {
@@ -1591,13 +1861,16 @@ export type Database = {
         Args: { p_event_id: string }
         Returns: {
           away_score: number | null
+          away_set_points: number | null
           away_shootout: number | null
           away_team_id: string | null
           console_holder: string | null
           created_at: string
           current_period: Database["public"]["Enums"]["match_period"] | null
+          current_set: number | null
           event_id: string
           home_score: number | null
+          home_set_points: number | null
           home_shootout: number | null
           home_team_id: string | null
           id: string
@@ -1618,6 +1891,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      fill_race_final: { Args: { p_event_id: string }; Returns: number }
       fixture_player_state: {
         Args: { p_fixture_id: string }
         Returns: {
@@ -1697,6 +1971,24 @@ export type Database = {
         }
         Returns: number
       }
+      live_period_offset: {
+        Args: {
+          p_extra_period_minutes: number
+          p_period: Database["public"]["Enums"]["match_period"]
+          p_period_minutes: number
+        }
+        Returns: number
+      }
+      live_set_is_won: {
+        Args: {
+          p_away: number
+          p_cap: number
+          p_home: number
+          p_target: number
+          p_win_by: number
+        }
+        Returns: boolean
+      }
       make_transfers: {
         Args: {
           p_in_ids: string[]
@@ -1762,6 +2054,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_race_results: {
+        Args: { p_fixture_id: string; p_publish?: boolean; p_results: Json }
+        Returns: number
+      }
       refresh_fixture_state: {
         Args: { p_fixture_id: string }
         Returns: undefined
@@ -1802,6 +2098,29 @@ export type Database = {
         Args: { p_picks?: Json; p_player_ids: string[] }
         Returns: Json
       }
+      set_championship_rule: {
+        Args: {
+          p_bronze_points?: number
+          p_gold_points?: number
+          p_rank_by: string
+          p_silver_points?: number
+        }
+        Returns: {
+          bronze_points: number
+          gold_points: number
+          id: boolean
+          rank_by: string
+          silver_points: number
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "championship_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_lineup: {
         Args: {
           p_bench?: string[]
@@ -1809,6 +2128,10 @@ export type Database = {
           p_starters: string[]
           p_team_id: string
         }
+        Returns: number
+      }
+      set_race_entries: {
+        Args: { p_entries: Json; p_fixture_id: string }
         Returns: number
       }
       take_fixture: {
@@ -1897,15 +2220,23 @@ export type Database = {
         | "man_of_the_match"
         | "full_time"
         | "walkover"
+        | "point"
+        | "set_end"
       match_period:
         | "first_half"
         | "second_half"
         | "extra_first"
         | "extra_second"
         | "penalties"
+        | "first_quarter"
+        | "second_quarter"
+        | "third_quarter"
+        | "fourth_quarter"
+        | "overtime"
       matchday_status: "upcoming" | "open" | "locked" | "finalised"
       player_position: "GK" | "DEF" | "MID" | "FWD"
       player_status: "available" | "injured" | "suspended" | "left"
+      race_outcome: "finished" | "dnf" | "dns" | "dq"
       result_format: "timed" | "sets" | "head_to_head" | "ranked"
     }
     CompositeTypes: {
@@ -2058,6 +2389,8 @@ export const Constants = {
         "man_of_the_match",
         "full_time",
         "walkover",
+        "point",
+        "set_end",
       ],
       match_period: [
         "first_half",
@@ -2065,10 +2398,16 @@ export const Constants = {
         "extra_first",
         "extra_second",
         "penalties",
+        "first_quarter",
+        "second_quarter",
+        "third_quarter",
+        "fourth_quarter",
+        "overtime",
       ],
       matchday_status: ["upcoming", "open", "locked", "finalised"],
       player_position: ["GK", "DEF", "MID", "FWD"],
       player_status: ["available", "injured", "suspended", "left"],
+      race_outcome: ["finished", "dnf", "dns", "dq"],
       result_format: ["timed", "sets", "head_to_head", "ranked"],
     },
   },
