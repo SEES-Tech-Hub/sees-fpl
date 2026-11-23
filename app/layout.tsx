@@ -6,6 +6,7 @@ import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppShell } from "@/components/shell/AppShell";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -31,9 +32,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={cn("h-full antialiased", inter.variable, oswald.variable)}>
       <body className="flex min-h-full flex-col font-sans">
         <EarlyInstallCapture />
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>
+          <AppShell>{children}</AppShell>
+        </TooltipProvider>
         <Toaster />
         <ServiceWorkerRegister />
+
         {/* InstallPrompt reads the pathname, which suspends on dynamic routes. */}
         <Suspense fallback={null}>
           <InstallPrompt />
