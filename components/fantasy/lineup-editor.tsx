@@ -4,7 +4,7 @@ import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeftRight, Lock } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { toast } from "sonner";
 import { saveLineupAction } from "@/app/fantasy/actions";
 import { DeadlineCard } from "@/components/fantasy/deadline-card";
@@ -178,18 +178,21 @@ export function LineupEditor(props: Props) {
 
   const chip = (p: Player) => {
     const isTarget = swapFrom !== null && p.id !== swapFrom && swapped(swapFrom, p.id) !== null;
+    // layoutId lets a swapped pair glide into each other's places,
+    // including between the pitch and the bench.
     return (
-      <PlayerChip
-        key={p.id}
-        player={p}
-        tag={sub(p)}
-        captain={p.id === captain}
-        vice={p.id === vice}
-        selected={p.id === swapFrom}
-        target={isTarget}
-        dimmed={swapFrom !== null && p.id !== swapFrom && !isTarget}
-        onClick={locked ? undefined : () => tap(p.id)}
-      />
+      <motion.div key={p.id} layoutId={`lineup-${p.id}`} layout transition={SPRING}>
+        <PlayerChip
+          player={p}
+          tag={sub(p)}
+          captain={p.id === captain}
+          vice={p.id === vice}
+          selected={p.id === swapFrom}
+          target={isTarget}
+          dimmed={swapFrom !== null && p.id !== swapFrom && !isTarget}
+          onClick={locked ? undefined : () => tap(p.id)}
+        />
+      </motion.div>
     );
   };
 
@@ -222,6 +225,7 @@ export function LineupEditor(props: Props) {
         <p className="text-sm text-muted-foreground">Tap a player to make them captain or to substitute them.</p>
       )}
 
+      <LayoutGroup id="lineup">
       <Pitch caption={formationLabel(xi)}>
         {PITCH_ORDER.map((pos) => {
           const row = xi.filter((p) => p.position === pos);
@@ -235,8 +239,9 @@ export function LineupEditor(props: Props) {
 
       <BenchTray
         note="Auto-subs come on in this order. A goalkeeper only replaces a goalkeeper."
-        items={bench.map((p, i) => ({ key: p.id, label: i === 0 ? "GK" : undefined, node: chip(p) }))}
+        items={bench.map((p, i) => ({ key: `bench-${i}`, label: i === 0 ? "GK" : undefined, node: chip(p) }))}
       />
+      </LayoutGroup>
 
       {error && <InlineError title="Lineup not saved" message={error} />}
       {!locked && (formationProblem || captainProblem) && (
