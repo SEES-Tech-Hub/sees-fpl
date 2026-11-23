@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { Choice, fromWatInput, PageTitle, Row, STAGES, toWatInput, useAdminAction } from "../_kit/admin-kit";
 import { CsvImport } from "../_kit/csv-import";
 import { formatDay, formatTime } from "../wat";
+import { MatchEvents } from "./match-events";
 
 type Props = {
   fixtures: AdminFixture[];
@@ -378,6 +379,16 @@ function EditFixture({ fixture: f, teams, matchdays, officials, onClose }: Props
             </Button>
           </div>
         </section>
+
+        {started && (
+          <section className="flex flex-col gap-2">
+            <h3 className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Match events</h3>
+            <p className="text-xs text-muted-foreground">
+              Void a goal that was ruled out or a card given to the wrong player. To add the right one, record it from the console.
+            </p>
+            <MatchEvents fixtureId={f.id} />
+          </section>
+        )}
 
         <section className="flex flex-col gap-2">
           <h3 className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Status</h3>
