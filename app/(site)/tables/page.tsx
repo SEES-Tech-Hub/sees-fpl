@@ -1,11 +1,24 @@
-import { Placeholder } from "@/components/placeholder";
+import { Suspense } from "react";
+import { BrandLoader } from "@/components/brand/brand-loader";
+import { TablesView } from "@/components/live/tables-view";
+import { getTablesPage } from "@/lib/live/public-pages";
 
-export default function Tables() {
+// Owner: Fortune (built by Tayo). The football table (live while matches
+// are on), the medal table and the football stats.
+
+export const metadata = { title: "Tables" };
+
+export default function TablesPage() {
   return (
-    <Placeholder
-      title="Tables & Standings"
-      owner="Fortune (UI), Bolu (server)"
-      notes="Three views: Football (StandingsTable with Final / 3rd-place / Out zone markers + Top Scorers/Assists LeaderLists), Overall (MedalTable across Years 1–5), and Other sports (quick links to each sport's table or knockout bracket)."
-    />
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 py-4 pb-12 lg:max-w-4xl lg:px-6">
+      <Suspense fallback={<BrandLoader />}>
+        <Tables />
+      </Suspense>
+    </main>
   );
+}
+
+async function Tables() {
+  const data = await getTablesPage();
+  return <TablesView data={data} />;
 }

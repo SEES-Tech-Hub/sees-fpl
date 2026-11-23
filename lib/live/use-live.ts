@@ -136,3 +136,26 @@ export function useLiveFixture(fixtureId: string, initial: FixtureState, initial
   const status = usePoll(`/api/live/${fixtureId}`, onData);
   return { state, status };
 }
+
+/**
+ * For pages built from many fixtures (tables, sport pages): refresh the
+ * server data whenever any fixture's score or status changes. Refreshes are
+ * spread over 3 s so viewers don't all arrive at once.
+ */
+export function useRefreshOnLiveChange() {
+  const router = useRouter();
+  const seen = useRef<Map<string, string> | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return usePoll<{ fixtures: FixtureState[] }>("/api/live", (data) => {
+    const next = new Map(data.fixtures.map((f) => [f.id, f.updatedAt]));
+    const before = seen.current;
+    seen.current = next;
+    if (!before) return;
+    const changed = data.fixtures.some((f) => before.get(f.id) !== f.updatedAt);
+    if (changed) {
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => router.refresh(), Math.random() * 3000);
+    }
+  });
+}

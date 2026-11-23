@@ -2,7 +2,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { getFixtureVersion } from "./live-state";
 import { getFixtureLineups, getLiveFixture, getMatchTimeline } from "./queries";
-import { getSetScores } from "./results";
+import { getRaceResults, getSetScores } from "./results";
 import { liveTags } from "./tags";
 
 // Everything the match page shows, in one cached read: 4 s per server
@@ -17,14 +17,15 @@ export async function getMatchPage(fixtureId: string) {
 
   const fixture = await getLiveFixture(fixtureId);
   if (!fixture) return null;
-  const sets = fixture.sport.resultFormat === "sets";
-  const [timeline, lineups, setScores, live] = await Promise.all([
+  const format = fixture.sport.resultFormat;
+  const [timeline, lineups, setScores, race, live] = await Promise.all([
     getMatchTimeline(fixtureId),
-    getFixtureLineups(fixtureId),
-    sets ? getSetScores(fixtureId) : Promise.resolve([]),
+    format === "timed" ? getFixtureLineups(fixtureId) : Promise.resolve([]),
+    format === "sets" ? getSetScores(fixtureId) : Promise.resolve([]),
+    format === "ranked" ? getRaceResults(fixtureId) : Promise.resolve([]),
     getFixtureVersion(fixtureId),
   ]);
-  return { fixture, timeline, lineups, setScores, state: live!.state, version: live!.version };
+  return { fixture, timeline, lineups, setScores, race, state: live!.state, version: live!.version };
 }
 
 export type MatchPageData = NonNullable<Awaited<ReturnType<typeof getMatchPage>>>;

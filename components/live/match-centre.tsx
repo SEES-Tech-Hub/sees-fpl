@@ -15,6 +15,7 @@ import type { LineupPlayer, TeamSummary, TimelineEntry } from "@/lib/live/types"
 import { useLiveFixture } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
 import { MatchStatus, ReconnectingPill, RollingScore, useClock, useGoalFlash } from "./live-bits";
+import { RaceView } from "./race-view";
 
 type Tab = "timeline" | "lineups";
 
@@ -30,7 +31,19 @@ const minuteLabel = (e: TimelineEntry) =>
 export function MatchCentre({ data }: { data: MatchPageData }) {
   const { fixture, timeline, lineups, setScores } = data;
   const { state, status } = useLiveFixture(fixture.id, data.state, data.version);
-  const [tab, setTab] = useLocalStorageState<Tab>("sees-live:match-tab", "timeline");
+  const [savedTab, setTab] = useLocalStorageState<Tab>("sees-live:match-tab", "timeline");
+  // Only timed sports (football, handball, basketball) have lineups.
+  const timed = fixture.sport.resultFormat === "timed";
+  const tab: Tab = timed ? savedTab : "timeline";
+
+  if (fixture.sport.resultFormat === "ranked") {
+    return (
+      <MotionProvider>
+        <ReconnectingPill show={status === "reconnecting"} />
+        <RaceView data={data} state={state} />
+      </MotionProvider>
+    );
+  }
 
   return (
     <MotionProvider>
@@ -40,16 +53,18 @@ export function MatchCentre({ data }: { data: MatchPageData }) {
       {fixture.sport.resultFormat === "sets" && setScores.length > 0 && <SetBoard data={data} />}
 
       <div className="flex flex-col gap-4 px-4 lg:px-0">
-        <SlidingTabs
-          label="Match"
-          value={tab}
-          onValueChange={setTab}
-          className="w-full max-w-xs"
-          items={[
-            { value: "timeline", label: "Timeline" },
-            { value: "lineups", label: "Lineups" },
-          ]}
-        />
+        {timed && (
+          <SlidingTabs
+            label="Match"
+            value={tab}
+            onValueChange={setTab}
+            className="w-full max-w-xs"
+            items={[
+              { value: "timeline", label: "Timeline" },
+              { value: "lineups", label: "Lineups" },
+            ]}
+          />
+        )}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={tab}
