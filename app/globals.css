@@ -296,3 +296,9 @@
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
+
+/* Light only for now (see the dark-mode note at the top): native controls,
+   scrollbars and form fields stay light too. */
+:root {
+  color-scheme: only light;
+}
