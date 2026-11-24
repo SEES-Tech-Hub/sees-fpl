@@ -64,3 +64,4 @@
 - [2026-11-23] Privacy notice at /privacy (for Google sign-in branding), linked from the More menu and the sign-in page (Tayo).
 - [2026-11-24] Light theme only: color-scheme "only light" (viewport and CSS) so phone browsers cannot force a dark version (Tayo).
 - [2026-11-24] Favicon, Apple and PWA icons now the SEES emblem (generated from lib/design/sees-emblem.ts); service worker cache bumped to v2; empty states inside cards no longer draw a second card (Tayo).
+- [2026-11-24] SEO: unique titles and descriptions (match pages include score and scorers), canonical URLs, og:url and site name, large Twitter cards, noindex on signed-in pages, sitemap.xml and robots.txt, JSON-LD (SportsEvent per match; WebSite and SEES organisation on home), share images for sports, tables and fantasy, and a Share button on match pages (Tayo).

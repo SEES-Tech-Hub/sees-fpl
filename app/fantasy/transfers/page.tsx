@@ -3,8 +3,9 @@ import { EmptyState, LoadingPitch, PageHeader } from "@/components/fantasy/state
 import { TransferPlanner } from "@/components/fantasy/transfer-planner";
 import { getFantasyRules, getMatchdayState, getPlayers, getTransferState } from "@/lib/fantasy/api";
 import { requireSquad } from "@/lib/fantasy/guards";
+import { privatePage } from "@/lib/seo";
 
-export const metadata = { title: "Transfers" };
+export const metadata = privatePage("Transfers");
 
 export default function TransfersPage() {
   return (

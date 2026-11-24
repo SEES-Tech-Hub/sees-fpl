@@ -3,10 +3,15 @@ import { BrandLoader } from "@/components/brand/brand-loader";
 import { SportsGrid } from "@/components/live/sports-views";
 import { getFixtureCards } from "@/lib/live/fixture-cards";
 import { getSports } from "@/lib/live/public-pages";
+import { pageMeta } from "@/lib/seo";
 
 // Owner: Fortune (built by Tayo). All 12 sports, with a live badge.
 
-export const metadata = { title: "Sports" };
+export const metadata = pageMeta({
+  title: "Sports",
+  description: "All 12 sports at SEES Games 2026: football, basketball, volleyball, athletics, swimming, board games and more. Fixtures, results and tables.",
+  path: "/sports",
+});
 
 export default function SportsPage() {
   return (

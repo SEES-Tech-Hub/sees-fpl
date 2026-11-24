@@ -9,8 +9,9 @@ import { requireManager } from "@/lib/fantasy/guards";
 import { formatWAT } from "@/lib/fantasy/time";
 import type { ManagerMatchdayPoints } from "@/lib/fantasy/types";
 import { cn } from "@/lib/utils";
+import { privatePage } from "@/lib/seo";
 
-export const metadata = { title: "Points" };
+export const metadata = privatePage("Points");
 
 export default function PointsPage({ searchParams }: PageProps<"/fantasy/points">) {
   return (

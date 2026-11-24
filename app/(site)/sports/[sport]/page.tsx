@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { BrandLoader } from "@/components/brand/brand-loader";
 import { SportView } from "@/components/live/sports-views";
 import { getSportPage, getSports } from "@/lib/live/public-pages";
+import { pageMeta } from "@/lib/seo";
 
 // Owner: Fortune (built by Tayo). One sport: fixtures by date, then its
 // table and knockouts, or its races and podiums.
@@ -11,7 +12,12 @@ import { getSportPage, getSports } from "@/lib/live/public-pages";
 export async function generateMetadata({ params }: PageProps<"/sports/[sport]">): Promise<Metadata> {
   const { sport } = await params;
   const found = (await getSports()).find((s) => s.slug === sport);
-  return { title: found?.name ?? "Sport" };
+  if (!found) return { title: "Sport" };
+  return pageMeta({
+    title: found.name,
+    description: `${found.name} at SEES Games 2026: fixtures, live scores, results and ${found.resultFormat === "ranked" ? "podiums" : "the table"} for the five SEES year teams.`,
+    path: `/sports/${found.slug}`,
+  });
 }
 
 export default function SportPage({ params }: PageProps<"/sports/[sport]">) {

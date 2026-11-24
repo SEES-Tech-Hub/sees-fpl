@@ -4,8 +4,9 @@ import { DeadlineIn } from "@/components/fantasy/deadline-card";
 import { SquadBuilder } from "@/components/fantasy/squad-builder";
 import { EmptyState, LoadingPitch, PageHeader } from "@/components/fantasy/states";
 import { getFantasyRules, getMatchdayState, getMyManager, getMyTeam, getPlayers, requireFantasyUser } from "@/lib/fantasy/api";
+import { privatePage } from "@/lib/seo";
 
-export const metadata = { title: "Pick your squad" };
+export const metadata = privatePage("Pick your squad");
 
 export default function SquadPage() {
   return (

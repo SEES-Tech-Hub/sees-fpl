@@ -5,8 +5,9 @@ import { EmptyState, LoadingPage, PageHeader } from "@/components/fantasy/states
 import { Badge } from "@/components/ui/badge";
 import { getLeagueStandings } from "@/lib/fantasy/api";
 import { requireManager } from "@/lib/fantasy/guards";
+import { privatePage } from "@/lib/seo";
 
-export const metadata = { title: "League" };
+export const metadata = privatePage("League");
 
 export default function LeaguePage({ params }: PageProps<"/fantasy/leagues/[id]">) {
   return (

@@ -16,6 +16,7 @@ import { useLiveFixture } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
 import { MatchStatus, ReconnectingPill, RollingScore, useClock, useFullTimeConfetti, useGoalFlash } from "./live-bits";
 import { NotifyBell } from "./notify-bell";
+import { ShareButton } from "./share-button";
 import { RaceView } from "./race-view";
 import { EmptyIllustration } from "@/components/brand/empty-art";
 import { EmptyState } from "@/components/brand/empty-state";
@@ -143,7 +144,14 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
 
       <div className="relative mx-auto flex max-w-xl flex-col items-center gap-4">
         <div className="flex w-full items-center justify-between gap-2">
-          <span className="size-10" aria-hidden />
+          <ShareButton
+            title={`${fixture.home?.name ?? "TBD"} v ${fixture.away?.name ?? "TBD"}`}
+            text={
+              notStarted
+                ? `${fixture.home?.name ?? "TBD"} v ${fixture.away?.name ?? "TBD"} · ${fixture.sport.name} at SEES Games. Follow it live:`
+                : `${fixture.home?.shortName ?? "?"} ${state.homeScore ?? 0}–${state.awayScore ?? 0} ${fixture.away?.shortName ?? "?"} · ${fixture.sport.name} at SEES Games:`
+            }
+          />
           <p className="flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase">
             <SportIcon sport={fixture.sport.slug.replace(/-/g, "_")} size={14} />
             {fixture.sport.name} · {stageLabel(fixture.stage)}

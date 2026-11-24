@@ -3,8 +3,9 @@ import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { safeNextPath } from "@/lib/safe-next";
 import { signInWithGoogle } from "./actions";
+import { privatePage } from "@/lib/seo";
 
-export const metadata = { title: "Sign in" };
+export const metadata = privatePage("Sign in");
 
 // Owner: Tayo (sign-in and roles).
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
