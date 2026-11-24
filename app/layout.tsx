@@ -26,6 +26,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#013f31",
+  // Light theme only, and stop phone browsers (Chrome's auto-dark, Samsung
+  // Internet) from forcing their own dark version onto the pages.
+  colorScheme: "only light",
   width: "device-width",
   initialScale: 1,
 };
