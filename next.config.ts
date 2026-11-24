@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Self-hosted fonts: cache for a year (rename a file to change it).
+        source: "/fonts/:file*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
         source: "/sw.js",
         headers: [
           { key: "Content-Type", value: "application/javascript; charset=utf-8" },

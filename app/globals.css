@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Inter, Oswald and Playfair Display, served from public/fonts. */
+@import "./fonts.css";
 
 /* Dark mode is OFF for launch. Dark styles apply only under a `dark` class on
    <html>, which nothing sets, so everyone gets the light theme; the dark
@@ -115,6 +117,13 @@
   --sidebar-accent-foreground: #edf8f2;
   --sidebar-border: #405c4e;
   --sidebar-ring: #95fde2;
+}
+
+/* Font stacks: the self-hosted face first, then close system fallbacks. */
+:root {
+  --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-oswald: "Oswald", "Arial Narrow", ui-sans-serif, sans-serif;
+  --font-playfair: "Playfair Display", Georgia, "Times New Roman", serif;
 }
 
 @theme inline {
