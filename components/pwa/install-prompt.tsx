@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { Download, Share, SquarePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,8 @@ export function InstallPrompt() {
   const pathname = usePathname();
   const [mode, setMode] = useState<Mode | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  // Installed, or the browser's install event was used up: hide for good.
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
     if (isInstalled() || recentlyDismissed()) return;
@@ -68,7 +71,7 @@ export function InstallPrompt() {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => setMode({ kind: "native", event: installEvent }), SHOW_AFTER_MS);
     };
-    const onInstalled = () => setMode(null);
+    const onInstalled = () => setDone(true);
 
     // The event may have fired before hydration; EarlyInstallCapture kept it.
     const early = (window as unknown as Record<string, Event | undefined>)[EARLY_INSTALL_EVENT_KEY];
@@ -83,7 +86,8 @@ export function InstallPrompt() {
     };
   }, []);
 
-  if (!mode || dismissed || !showsOn(pathname)) return null;
+  // `mode` stays set after closing, so the card keeps its content while it animates out.
+  const open = Boolean(mode) && !dismissed && !done && showsOn(pathname);
 
   function notNow() {
     try {
@@ -101,15 +105,25 @@ export function InstallPrompt() {
       const { outcome } = await mode.event.userChoice;
       // The event can only be used once, so hide the card either way.
       if (outcome === "dismissed") notNow();
-      else setMode(null);
+      else setDone(true);
     } catch {
       // The browser had already used this event; there is nothing to install now.
-      setMode(null);
+      setDone(true);
     }
   }
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <AnimatePresence>
+      {open && mode && (
+    <motion.div
+      key="install"
+      initial={{ y: "110%", opacity: 0, scale: 0.96 }}
+      animate={{ y: 0, opacity: 1, scale: 1 }}
+      exit={{ y: "110%", opacity: 0, scale: 0.96, transition: { duration: 0.22, ease: [0.4, 0, 1, 1] } }}
+      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+      // Sits above the floating dock on phones; at the bottom from lg up.
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 flex justify-center p-3 lg:bottom-0 lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+    >
       <Card
         role="region"
         aria-label="Install SEES Games Hub"
@@ -177,7 +191,9 @@ export function InstallPrompt() {
           )}
         </CardFooter>
       </Card>
-    </div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

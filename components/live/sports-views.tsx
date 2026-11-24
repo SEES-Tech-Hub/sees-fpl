@@ -13,7 +13,7 @@ import type { SportSummary } from "@/lib/live/public-pages";
 import type { EventStandingRow, RaceResultRow, ResultFormat, StandingRow } from "@/lib/live/types";
 import { useLiveFixtures } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
-import { FixtureRow } from "./fixture-card";
+import { FixtureRow, gameName } from "./fixture-card";
 import { LivePulse, ReconnectingPill } from "./live-bits";
 import { Empty, Medal } from "./tables-view";
 
@@ -62,6 +62,9 @@ export function SportsGrid({ sports, cards }: { sports: SportSummary[]; cards: F
                 </span>
                 <span>
                   <span className="block font-heading text-lg leading-tight font-bold">{s.name}</span>
+                  {s.events.length > 1 && (
+                    <span className="mt-0.5 block truncate text-xs font-medium text-brand">{s.events.map((e) => e.name.replace(/ \((men|women)\)$/i, "")).filter((n, i, a) => a.indexOf(n) === i).join(" · ")}</span>
+                  )}
                   <span className="block text-xs text-muted-foreground">
                     {next?.kickoffAt ? `Next: ${formatWAT(next.kickoffAt, "date")}` : mine.length ? `${mine.length} fixtures` : FORMAT_LABEL[s.resultFormat]}
                   </span>
@@ -97,6 +100,14 @@ export function SportView({
   const [tab, setTab] = useLocalStorageState<Tab>(`sees-live:sport-tab:${sport.slug}`, "fixtures");
   const current: Tab = ranked && tab === "table" ? "results" : !ranked && tab === "results" ? "table" : tab;
 
+  // Sports with several games (Board Games: Chess, Scrabble…) get a game filter.
+  const multi = sport.events.length > 1;
+  const [gameChoice, setGame] = useLocalStorageState<string>(`sees-live:sport-game:${sport.slug}`, "all");
+  const game = multi && sport.events.some((e) => e.id === gameChoice) ? gameChoice : "all";
+  const shownCards = game === "all" ? cards : cards.filter((c) => c.event.id === game);
+  const shownTables = game === "all" ? tables : tables.filter((t) => t.event.id === game);
+  const labelOf = multi && game === "all" ? (c: FixtureCard) => gameName(c) : undefined;
+
   return (
     <MotionProvider>
       <ReconnectingPill show={status === "reconnecting"} />
@@ -120,25 +131,26 @@ export function SportView({
             ranked ? { value: "results", label: "Results" } : { value: "table", label: "Table" },
           ]}
         />
+        {multi && <GameFilter games={sport.events} value={game} onChange={setGame} />}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={current}
+            key={`${current}:${game}`}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6, transition: { duration: 0.12 } }}
             transition={{ duration: 0.2 }}
             className="flex flex-col gap-4"
           >
-            {current === "fixtures" && <FixturesByDate cards={cards} stateOf={(c) => states.get(c.id) ?? c.state} />}
+            {current === "fixtures" && <FixturesByDate cards={shownCards} labelOf={labelOf} stateOf={(c) => states.get(c.id) ?? c.state} />}
             {current === "table" && (
               <>
-                {tables.map((t) => (
-                  <EventTable key={t.event.id} title={tables.length > 1 ? t.event.name : undefined} rows={t.rows} sets={sport.resultFormat === "sets"} />
+                {shownTables.map((t) => (
+                  <EventTable key={t.event.id} title={multi ? t.event.name : undefined} rows={t.rows} sets={sport.resultFormat === "sets"} />
                 ))}
-                <Knockouts cards={cards} stateOf={(c) => states.get(c.id) ?? c.state} />
+                <Knockouts cards={shownCards} labelOf={labelOf} stateOf={(c) => states.get(c.id) ?? c.state} />
               </>
             )}
-            {current === "results" && <Races cards={cards} races={races} />}
+            {current === "results" && <Races cards={shownCards} races={races} />}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -149,7 +161,43 @@ export function SportView({
 const dayKey = (iso: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 
-function FixturesByDate({ cards, stateOf }: { cards: FixtureCard[]; stateOf: (c: FixtureCard) => FixtureCard["state"] }) {
+/** Chips for each game in a sport, with the highlight sliding between them. */
+function GameFilter({ games, value, onChange }: { games: SportSummary["events"]; value: string; onChange: (id: string) => void }) {
+  const items = [{ id: "all", name: "All games" }, ...games];
+  return (
+    <div role="radiogroup" aria-label="Game" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:flex-wrap lg:px-0">
+      {items.map((g) => {
+        const on = g.id === value;
+        return (
+          <button
+            key={g.id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(g.id)}
+            className={cn(
+              "relative h-9 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors",
+              on ? "text-brand-light" : "bg-card text-muted-foreground shadow-card hover:text-foreground",
+            )}
+          >
+            {on && <motion.span layoutId="game-filter" className="absolute inset-0 rounded-full bg-pitch" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}
+            <span className="relative">{g.name}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function FixturesByDate({
+  cards,
+  stateOf,
+  labelOf,
+}: {
+  cards: FixtureCard[];
+  stateOf: (c: FixtureCard) => FixtureCard["state"];
+  labelOf?: (c: FixtureCard) => string;
+}) {
   if (cards.length === 0) return <Empty art="calendar" title="No fixtures yet" text="The organisers add them before the event. Check back soon." />;
   const days = new Map<string, FixtureCard[]>();
   for (const c of cards) {
@@ -165,7 +213,7 @@ function FixturesByDate({ cards, stateOf }: { cards: FixtureCard[]; stateOf: (c:
           </p>
           <ul className="divide-y divide-border">
             {list.map((c) => (
-              <FixtureRow key={c.id} card={c} state={stateOf(c)} />
+              <FixtureRow key={c.id} card={c} state={stateOf(c)} label={labelOf?.(c)} />
             ))}
           </ul>
         </section>
@@ -231,7 +279,15 @@ const stageName = (s: string) => {
 };
 
 /** Knockout rounds, in order: the bracket as a list per round. */
-function Knockouts({ cards, stateOf }: { cards: FixtureCard[]; stateOf: (c: FixtureCard) => FixtureCard["state"] }) {
+function Knockouts({
+  cards,
+  stateOf,
+  labelOf,
+}: {
+  cards: FixtureCard[];
+  stateOf: (c: FixtureCard) => FixtureCard["state"];
+  labelOf?: (c: FixtureCard) => string;
+}) {
   const ko = cards.filter((c) => c.stage !== "league" && c.stage !== "group");
   if (ko.length === 0) return null;
   const rounds = new Map<string, FixtureCard[]>();
@@ -246,7 +302,7 @@ function Knockouts({ cards, stateOf }: { cards: FixtureCard[]; stateOf: (c: Fixt
             <p className="border-b border-border px-3 py-2 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">{stageName(stage)}</p>
             <ul className="divide-y divide-border">
               {list.map((c) => (
-                <FixtureRow key={c.id} card={c} state={stateOf(c)} />
+                <FixtureRow key={c.id} card={c} state={stateOf(c)} label={labelOf?.(c)} />
               ))}
             </ul>
           </div>

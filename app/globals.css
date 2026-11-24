@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Inter, Oswald and Playfair Display, served from public/fonts. */
+@import "./fonts.css";
 
 /* Dark mode is OFF for launch. Dark styles apply only under a `dark` class on
    <html>, which nothing sets, so everyone gets the light theme; the dark
@@ -117,9 +119,18 @@
   --sidebar-ring: #95fde2;
 }
 
+/* Font stacks: the self-hosted face first, then close system fallbacks. */
+:root {
+  --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-oswald: "Oswald", "Arial Narrow", ui-sans-serif, sans-serif;
+  --font-playfair: "Playfair Display", Georgia, "Times New Roman", serif;
+}
+
 @theme inline {
   --font-sans: var(--font-inter);
   --font-heading: var(--font-oswald);
+  /* Playfair Display, for a few special moments only (font-serif). */
+  --font-serif: var(--font-playfair);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -267,6 +278,11 @@
   }
   html {
     @apply font-sans;
+  }
+  /* Selected text in the SEES mint, not the browser's blue. */
+  ::selection {
+    background-color: var(--brand-light);
+    color: var(--brand);
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

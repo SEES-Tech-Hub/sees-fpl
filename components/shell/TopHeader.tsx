@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { SeesMark } from "@/components/brand/sees-mark";
 import { usePathname } from "next/navigation";
-import { Megaphone, CloudOff, X, ChevronDown } from "lucide-react";
+import { Megaphone, CloudOff, X, ChevronDown, BookOpen, Shield, Gauge, LogOut } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { signOut } from "@/app/login/actions";
 import { showsHeader } from "./routes";
 
@@ -25,8 +32,6 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
   const pathname = usePathname();
   const [dismissedId, setDismissedId] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     (() => setIsOffline(!navigator.onLine))();
@@ -38,16 +43,6 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
       window.removeEventListener("offline", goOffline);
       window.removeEventListener("online", goOnline);
     };
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   if (!showsHeader(pathname)) return null;
@@ -80,55 +75,43 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
             );
           })}
 
-          <div ref={moreRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setMoreOpen((prev) => !prev)}
-              aria-expanded={moreOpen}
-              className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <span>More</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
-            </button>
-
-            {moreOpen && (
-              <div className="absolute right-0 mt-2 w-52 rounded-xl border border-border bg-card p-1.5 text-sm font-medium shadow-raised">
-                <Link
-                  href="/fantasy/rules"
-                  onClick={() => setMoreOpen(false)}
-                  className="block rounded-lg px-3 py-2 hover:bg-muted"
-                >
-                  Fantasy rules
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="group inline-flex items-center gap-1 rounded-md text-sm font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:text-foreground">
+              More
+              <ChevronDown className="size-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={10} className="w-56 rounded-xl p-1.5">
+              <DropdownMenuItem asChild className="h-10 rounded-lg">
+                <Link href="/fantasy/rules">
+                  <BookOpen /> Fantasy rules
                 </Link>
-                <Link
-                  href="/privacy"
-                  onClick={() => setMoreOpen(false)}
-                  className="block rounded-lg px-3 py-2 hover:bg-muted"
-                >
-                  Privacy
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="h-10 rounded-lg">
+                <Link href="/privacy">
+                  <Shield /> Privacy
                 </Link>
-                {role === "admin" && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setMoreOpen(false)}
-                    className="block rounded-lg px-3 py-2 text-primary hover:bg-muted"
-                  >
-                    Admin portal
+              </DropdownMenuItem>
+              {role === "admin" && (
+                <DropdownMenuItem asChild className="h-10 rounded-lg text-primary">
+                  <Link href="/admin">
+                    <Gauge /> Admin portal
                   </Link>
-                )}
-                {user && (
-                  <form action={signOut} className="mt-1 border-t border-border pt-1">
-                    <button
-                      type="submit"
-                      className="w-full rounded-lg px-3 py-2 text-left text-destructive hover:bg-muted"
-                    >
-                      Sign out
-                    </button>
+                </DropdownMenuItem>
+              )}
+              {user && (
+                <>
+                  <DropdownMenuSeparator />
+                  <form action={signOut}>
+                    <DropdownMenuItem asChild variant="destructive" className="h-10 w-full rounded-lg">
+                      <button type="submit">
+                        <LogOut /> Sign out
+                      </button>
+                    </DropdownMenuItem>
                   </form>
-                )}
-              </div>
-            )}
-          </div>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
         <div className="flex items-center gap-2">

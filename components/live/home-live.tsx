@@ -11,7 +11,7 @@ import type { FixtureState } from "@/lib/live/live-state-types";
 import { EmptyState } from "@/components/brand/empty-state";
 import { useLiveFixtures } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
-import { FixtureRow, LiveCard } from "./fixture-card";
+import { FixtureRow, LiveCard, gameName } from "./fixture-card";
 import { LivePulse, ReconnectingPill, teamColour } from "./live-bits";
 
 // The home page's live parts: Live now, the next match, fixtures by date and
@@ -103,7 +103,12 @@ export function HomeLive({ cards, serverNow, championship }: { cards: FixtureCar
                 </p>
                 <ul className="divide-y divide-border">
                   {group.map((c) => (
-                    <FixtureRow key={c.id} card={c} state={stateOf(c)} />
+                    <FixtureRow
+                      key={c.id}
+                      card={c}
+                      state={stateOf(c)}
+                      label={new Set(group.map((g) => g.event.id)).size > 1 ? gameName(c) : undefined}
+                    />
                   ))}
                 </ul>
               </div>
@@ -119,7 +124,7 @@ export function HomeLive({ cards, serverNow, championship }: { cards: FixtureCar
           </h2>
           <ul className="divide-y divide-border overflow-hidden rounded-xl bg-card shadow-card">
             {results.map((c) => (
-              <FixtureRow key={c.id} card={c} state={stateOf(c)} />
+              <FixtureRow key={c.id} card={c} state={stateOf(c)} label={gameName(c)} />
             ))}
           </ul>
         </section>
@@ -178,7 +183,7 @@ function NextUp({ card }: { card: FixtureCard }) {
             href="/fantasy"
             className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-light px-5 text-sm font-semibold text-brand transition-transform active:scale-95"
           >
-            <Shirt className="size-4" /> Pick your fantasy XI
+            <Shirt className="size-4" /> Play SEES Fantasy
           </Link>
         </div>
       </div>
