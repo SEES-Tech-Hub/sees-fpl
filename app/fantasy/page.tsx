@@ -64,7 +64,7 @@ async function Home() {
             matchdayNumber={md.next.number}
             deadlineAt={md.next.deadlineAt}
             serverNow={md.serverNow}
-            action={md.current ? { href: "/fantasy/transfers", label: "Make transfers" } : { href: "/fantasy/team", label: "Pick your team" }}
+            action={md.current ? { href: "/fantasy/transfers", label: "Make transfers" } : { href: "/fantasy/team", label: "Manage your team" }}
           />
         ) : (
           <p className="rounded-xl bg-muted px-4 py-3 text-sm">The season is over. Thanks for playing.</p>

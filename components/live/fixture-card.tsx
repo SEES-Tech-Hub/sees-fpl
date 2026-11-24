@@ -24,6 +24,22 @@ function TeamDisc({ team, size = "md" }: { team: TeamSummary | null; size?: "md"
   );
 }
 
+const stageLabel = (stage: string) => {
+  const t = stage.replace(/[_-]+/g, " ").trim();
+  return t ? t[0].toUpperCase() + t.slice(1) : t;
+};
+
+/** The game's name when a sport has several (Chess, Scrabble…), else the sport's. */
+export const gameName = (card: Pick<FixtureCard, "sport" | "event">) =>
+  card.sport.slug === "football" || card.event.name === card.sport.name ? card.sport.name : card.event.name;
+
+/** The line above a big card: the sport or game, then the matchday or round. */
+export function cardKicker(card: FixtureCard) {
+  const when =
+    (card.stage === "group" || card.stage === "league") && card.matchdayNumber ? `Matchday ${card.matchdayNumber}` : stageLabel(card.stage);
+  return when ? `${gameName(card)} · ${when}` : gameName(card);
+}
+
 const hasScore = (s: FixtureState) => s.status !== "scheduled" && s.status !== "postponed" && s.status !== "cancelled";
 
 /** The big card for "Live now": team colours, a rolling score and a goal flash. */
@@ -55,7 +71,7 @@ export function LiveCard({ card, state }: { card: FixtureCard; state: FixtureSta
       <div className="relative flex items-center justify-between text-xs font-semibold tracking-[0.06em] text-brand-foreground/80 uppercase">
         <span className="flex items-center gap-1.5">
           <SportIcon sport={sportSlug(card.sport.slug)} size={14} />
-          {card.sport.name} · {card.stage === "group" || card.stage === "league" ? `Matchday ${card.matchdayNumber ?? ""}`.trim() : card.stage}
+          {cardKicker(card)}
         </span>
         <MatchStatus clock={clock} kickoffAt={card.kickoffAt} className="bg-background/90" />
       </div>
@@ -90,8 +106,11 @@ export function LiveCard({ card, state }: { card: FixtureCard; state: FixtureSta
   );
 }
 
-/** One line in a fixture list: status, both teams and the score. */
-export function FixtureRow({ card, state }: { card: FixtureCard; state: FixtureState }) {
+/**
+ * One line in a fixture list: status, both teams and the score. `label`
+ * names the game above the teams when a list mixes several (Chess, Ludo…).
+ */
+export function FixtureRow({ card, state, label }: { card: FixtureCard; state: FixtureState; label?: string }) {
   const clock = useClock({ state, periodMinutes: card.event.periodMinutes, extraPeriodMinutes: card.event.extraPeriodMinutes });
   const flash = useGoalFlash(state.homeScore, state.awayScore);
   const showScore = hasScore(state);
@@ -106,6 +125,9 @@ export function FixtureRow({ card, state }: { card: FixtureCard; state: FixtureS
           flash && "bg-highlight/20",
         )}
       >
+        {label && (
+          <span className="col-span-4 -mb-1 truncate text-[0.6875rem] font-semibold tracking-[0.06em] text-brand uppercase">{label}</span>
+        )}
         <MatchStatus clock={clock} kickoffAt={card.kickoffAt} className="justify-self-start" />
         <span className={cn("flex min-w-0 items-center justify-end gap-2 text-right text-[0.9375rem]", won(card.home) && "font-bold")}>
           <span className="truncate">{card.home?.name ?? "TBD"}</span>

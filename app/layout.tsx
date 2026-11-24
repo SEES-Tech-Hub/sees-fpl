@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Inter, Oswald } from "next/font/google";
+import { Inter, Oswald, Playfair_Display } from "next/font/google";
 import { EarlyInstallCapture } from "@/components/pwa/early-install-capture";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
@@ -13,6 +13,8 @@ import { SITE_DESCRIPTION } from "@/lib/seo";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const oswald = Oswald({ variable: "--font-oswald", subsets: ["latin"] });
+// The serif for special moments (font-serif). Not preloaded: few pages use it.
+const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"], style: ["normal", "italic"], preload: false });
 
 export const metadata: Metadata = {
   // Share cards need absolute URLs: the live domain in production, the
@@ -40,7 +42,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={cn("h-full antialiased", inter.variable, oswald.variable)}>
+    <html lang="en" className={cn("h-full antialiased", inter.variable, oswald.variable, playfair.variable)}>
       <body className="flex min-h-full flex-col font-sans">
         <EarlyInstallCapture />
         <TooltipProvider>
