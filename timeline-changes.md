@@ -63,3 +63,4 @@
 - [2026-11-23] Push notifications: migration 20261123153737_push_subscriptions.sql (subscriptions with topics fixture, team or all; follow and unfollow for anyone, sending only for officials), a Notify me bell on match pages, service worker push and click handlers, and alerts for kick-off, goals (after 12 s, if not undone), half-time and full time sent from the console with after(). Share cards for matches and the site (Tayo).
 - [2026-11-23] Privacy notice at /privacy (for Google sign-in branding), linked from the More menu and the sign-in page (Tayo).
 - [2026-11-24] Light theme only: color-scheme "only light" (viewport and CSS) so phone browsers cannot force a dark version (Tayo).
+- [2026-11-24] Favicon, Apple and PWA icons now the SEES emblem (generated from lib/design/sees-emblem.ts); service worker cache bumped to v2; empty states inside cards no longer draw a second card (Tayo).

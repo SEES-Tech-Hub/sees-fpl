@@ -228,7 +228,7 @@ function Stats({ data }: { data: TablesData }) {
       <section className="rounded-xl bg-card shadow-card sm:col-span-2">
         <h2 className="border-b border-border px-3 py-2.5 font-heading text-lg font-bold">Suspensions</h2>
         {data.suspensions.length === 0 ? (
-          <EmptyState art="whistle" title="Nobody suspended" description="A red card means a one-match ban. Clean so far." compact className="rounded-none shadow-none" />
+          <EmptyState art="whistle" title="Nobody suspended" description="A red card means a one-match ban. Clean so far." compact bare />
         ) : (
           <ul className="divide-y divide-border">
             {data.suspensions.map((s) => (
@@ -268,7 +268,7 @@ function Leaders({
     <section className="rounded-xl bg-card shadow-card">
       <h2 className="border-b border-border px-3 py-2.5 font-heading text-lg font-bold">{title}</h2>
       {rows.length === 0 ? (
-        <EmptyState art="ball" title="Nothing yet" description="Shows after the first match." compact className="rounded-none shadow-none" />
+        <EmptyState art="ball" title="Nothing yet" description="Shows after the first match." compact bare />
       ) : (
         <ol className="divide-y divide-border">
           {rows.map((r, i) => (

@@ -89,7 +89,7 @@ export function RaceView({ data, state }: { data: MatchPageData; state: FixtureS
       <section className="mx-4 overflow-hidden rounded-xl bg-card shadow-card lg:mx-0">
         <h2 className="border-b border-border px-3 py-2.5 font-heading text-lg font-bold">{published ? "Results" : "Entrants"}</h2>
         {ordered.length === 0 ? (
-          <EmptyState art="stands" title="No entrants yet" description="They show here once the officials set the lanes." compact className="rounded-none shadow-none" />
+          <EmptyState art="stands" title="No entrants yet" description="They show here once the officials set the lanes." compact bare />
         ) : (
           <ol className="divide-y divide-border">
             {ordered.map((r, i) => (
