@@ -5,6 +5,8 @@ import { ChampionshipStrip } from "@/components/live/championship-strip";
 import { HomeLive } from "@/components/live/home-live";
 import { getFixtureCards } from "@/lib/live/fixture-cards";
 import { getMedalTable } from "@/lib/live/results";
+import { JsonLd } from "@/components/seo/json-ld";
+import { siteBase, SITE_DESCRIPTION } from "@/lib/seo";
 
 // Owner: Fortune (built by Tayo). Home: Live now (or the next match), the
 // race for the championship, fixtures by date and the latest results.
@@ -13,6 +15,21 @@ import { getMedalTable } from "@/lib/live/results";
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 py-4 pb-12 lg:max-w-4xl lg:px-6">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@graph": [
+            { "@type": "WebSite", name: "SEES Games Hub", url: siteBase(), description: SITE_DESCRIPTION },
+            {
+              "@type": "SportsOrganization",
+              name: "Society of Electrical & Electronics and Computer Engineering Students (SEES)",
+              alternateName: "SEES UNILAG",
+              url: "https://seesunilag.com",
+              logo: `${siteBase()}/icons/icon-512.png`,
+            },
+          ],
+        }}
+      />
       <Suspense fallback={<BrandLoader />}>
         <HomeContent />
       </Suspense>

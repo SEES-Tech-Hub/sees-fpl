@@ -5,8 +5,9 @@ import { getFantasyRules, getMatchdayState, getPlayers } from "@/lib/fantasy/api
 import { formatMoney } from "@/lib/fantasy/format";
 import { requireSquad } from "@/lib/fantasy/guards";
 import type { Matchday } from "@/lib/fantasy/types";
+import { privatePage } from "@/lib/seo";
 
-export const metadata = { title: "My team" };
+export const metadata = privatePage("My team");
 
 export default function TeamPage() {
   return (

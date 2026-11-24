@@ -9,8 +9,13 @@ import { getMyManager, getOptionalFantasyUser, getRankings } from "@/lib/fantasy
 import { ordinal } from "@/lib/fantasy/format";
 import type { RankingScope } from "@/lib/fantasy/types";
 import { cn } from "@/lib/utils";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata = { title: "Rankings" };
+export const metadata = pageMeta({
+  title: "SEES Fantasy rankings",
+  description: "The SEES Fantasy leaderboard: overall rankings and rankings by year for SEES Games 2026.",
+  path: "/fantasy/rankings",
+});
 
 // Public, as in the PRD's role table: anyone can view fantasy rankings.
 export default function RankingsPage({ searchParams }: PageProps<"/fantasy/rankings">) {

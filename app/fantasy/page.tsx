@@ -16,8 +16,13 @@ import {
   getRankings,
 } from "@/lib/fantasy/api";
 import { formatMoney, ordinal } from "@/lib/fantasy/format";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata = { title: "Fantasy" };
+export const metadata = pageMeta({
+  title: "SEES Fantasy",
+  description: "Free fantasy football for SEES Games 2026. Pick 15 players from the five SEES year teams within ₦100m, captain your XI, make transfers and climb the rankings.",
+  path: "/fantasy",
+});
 
 // Design system §12.5. Signed out: a hero. No team: onboarding. With a team:
 // deadline, latest points, overall rank and quick links.

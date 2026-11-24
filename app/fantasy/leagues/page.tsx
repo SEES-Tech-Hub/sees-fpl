@@ -8,8 +8,9 @@ import { Separator } from "@/components/ui/separator";
 import { getFantasyRules, getMyLeagues } from "@/lib/fantasy/api";
 import { ordinal } from "@/lib/fantasy/format";
 import { requireManager } from "@/lib/fantasy/guards";
+import { privatePage } from "@/lib/seo";
 
-export const metadata = { title: "Leagues" };
+export const metadata = privatePage("Leagues");
 
 export default function LeaguesPage() {
   return (

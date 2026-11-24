@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/components/shell/AppShell";
 import { cn } from "@/lib/utils";
 import "./globals.css";
+import { SITE_DESCRIPTION } from "@/lib/seo";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const oswald = Oswald({ variable: "--font-oswald", subsets: ["latin"] });
@@ -17,8 +18,12 @@ export const metadata: Metadata = {
   // Share cards need absolute URLs: the live domain in production, the
   // Vercel URL on previews, localhost in dev.
   metadataBase: siteUrl(),
-  title: { default: "SEES Games Hub", template: "%s · SEES Games Hub" },
-  description: "Live scores, results and fantasy football for SEES Games 2026.",
+  title: { default: "SEES Games 2026: live scores, tables and SEES Fantasy", template: "%s · SEES Games Hub" },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: { type: "website", siteName: "SEES Games Hub", locale: "en_NG", url: "/", description: SITE_DESCRIPTION },
+  twitter: { card: "summary_large_image" },
+  keywords: ["SEES Games", "SEES UNILAG", "University of Lagos", "live scores", "fantasy football", "SEES Fantasy", "inter-year games"],
   applicationName: "SEES Games Hub",
   appleWebApp: { capable: true, title: "SEES Games", statusBarStyle: "default" },
   // Favicon and Apple icon: app/icon.tsx and app/apple-icon.tsx (the SEES emblem).

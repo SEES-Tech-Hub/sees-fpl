@@ -5,8 +5,13 @@ import { formatMoney, formatSigned } from "@/lib/fantasy/format";
 import { formatWAT } from "@/lib/fantasy/time";
 import { POSITIONS, type FantasyRules, type Position, type ScoringKey } from "@/lib/fantasy/types";
 import { allowedFormations } from "@/lib/fantasy/validate";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata = { title: "Fantasy rules" };
+export const metadata = pageMeta({
+  title: "SEES Fantasy rules",
+  description: "How SEES Fantasy works: squad and budget, formations, captains, transfers, the Wildcard, deadlines and how every point is scored.",
+  path: "/fantasy/rules",
+});
 
 // Public. Every number comes from the rules config (getFantasyRules) or the
 // matchdays table, so this page changes when the organisers change a rule.
