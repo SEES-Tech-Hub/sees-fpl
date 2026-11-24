@@ -21,6 +21,7 @@ export function isDeadlinePassed(
 export function validateSquad(
   players: FantasyPlayer[],
   rules: FantasyRules,
+  existingPlayerIds?: ReadonlySet<string>,
 ): ValidationResult {
   if (players.length !== rules.squad_size) {
     return {
@@ -51,7 +52,8 @@ export function validateSquad(
   const teamCounts = new Map<string, number>();
 
   for (const player of players) {
-    if (player.status === "left") {
+    const isIncoming = !existingPlayerIds || !existingPlayerIds.has(player.id);
+    if (isIncoming && player.status === "left") {
       return {
         valid: false,
         reason: `${player.display_name} has left their squad and cannot be selected.`,

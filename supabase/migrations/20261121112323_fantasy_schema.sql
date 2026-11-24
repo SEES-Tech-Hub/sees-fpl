@@ -510,6 +510,13 @@ begin
     perform public.fantasy_fail('PLAYER_UNKNOWN', 'One or more selected players do not exist.');
   end if;
 
+  if exists (
+    select 1 from public.players
+    where id = any(p_player_ids) and status = 'left'
+  ) then
+    perform public.fantasy_fail('PLAYER_UNAVAILABLE', 'One or more selected players have left the competition.');
+  end if;
+
   if v_gk_cnt <> v_rules.gk_quota
      or v_def_cnt <> v_rules.def_quota
      or v_mid_cnt <> v_rules.mid_quota
@@ -889,6 +896,10 @@ begin
 
     if v_out_p.id is null or v_in_p.id is null then
       perform public.fantasy_fail('PLAYER_UNKNOWN', 'Selected player does not exist.');
+    end if;
+
+    if v_in_p.status = 'left' then
+      perform public.fantasy_fail('PLAYER_UNAVAILABLE', format('%s has left the competition and cannot be transferred in.', v_in_p.display_name));
     end if;
 
     if v_out_p.position <> v_in_p.position then

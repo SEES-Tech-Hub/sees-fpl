@@ -398,6 +398,8 @@ describe("Fantasy validation and scoring (E1-E20)", () => {
       players: squad,
       statsRows,
       rules: defaultRules,
+        freeTransfersAvailable: 1,
+        wildcardActive: false,
       transferCost: 4,
     });
 
@@ -413,6 +415,8 @@ describe("Fantasy validation and scoring (E1-E20)", () => {
       players: squad,
       statsRows: [makeStats("p8", { minutesPlayed: 20, redCards: 1 })],
       rules: defaultRules,
+        freeTransfersAvailable: 1,
+        wildcardActive: false,
       transferCost: 0,
     });
     expect(redCardCaptainScore.captain_used).toBe("captain");
@@ -489,6 +493,8 @@ describe("Fantasy validation and scoring (E1-E20)", () => {
         freeTransfersAvailable: 1,
         wildcardActive: false,
         rules: defaultRules,
+        freeTransfersAvailable: 1,
+        wildcardActive: false,
       }),
     ).toEqual({
       pointsCost: 8,
@@ -503,6 +509,8 @@ describe("Fantasy validation and scoring (E1-E20)", () => {
         freeTransfersAvailable: 2,
         wildcardActive: false,
         rules: defaultRules,
+        freeTransfersAvailable: 1,
+        wildcardActive: false,
       }).pointsCost,
     ).toBe(0);
 
@@ -510,7 +518,7 @@ describe("Fantasy validation and scoring (E1-E20)", () => {
     expect(nextMatchdayFreeTransfers(2, defaultRules)).toBe(2);
   });
 it("E6c, E7, E8c, E8d: covers second-yellow red, own goal, shootout ignore, and outfield pen save", () => {
-    // E6c (Version A: yellow -1 + red -3 = -4)
+    // E6c (Q2: second yellow charges red only [-3], plus 2 appearance = -1)
     expect(
       calculatePlayerPoints(
         "FWD",
@@ -518,11 +526,12 @@ it("E6c, E7, E8c, E8d: covers second-yellow red, own goal, shootout ignore, and 
           minutesPlayed: 40,
           yellowCards: 1,
           redCards: 1,
+          redFromSecondYellow: true,
           goalsConcededOnPitch: 1,
         }),
         defaultRules,
       ).points,
-    ).toBe(-2);
+    ).toBe(-1);
 
     // E7 (Version A: own goal counts as conceded)
     expect(
@@ -592,6 +601,8 @@ it("E6c, E7, E8c, E8d: covers second-yellow red, own goal, shootout ignore, and 
       players: squad,
       statsRows: [makeStats("p1", { minutesPlayed: 50, goalsConcededOnPitch: 1 })],
       rules: defaultRules,
+        freeTransfersAvailable: 1,
+        wildcardActive: false,
       transferCost: 0,
     });
     expect(neitherScore.captain_used).toBe("none");
@@ -603,6 +614,8 @@ it("E6c, E7, E8c, E8d: covers second-yellow red, own goal, shootout ignore, and 
       players: squad,
       statsRows: [makeStats("p8", { minutesPlayed: 1, goalsConcededOnPitch: 1 })],
       rules: defaultRules,
+        freeTransfersAvailable: 1,
+        wildcardActive: false,
       transferCost: 0,
     });
     expect(oneMinCap.captain_used).toBe("captain");
@@ -632,6 +645,8 @@ it("E6c, E7, E8c, E8d: covers second-yellow red, own goal, shootout ignore, and 
       players: squad,
       statsRows: multiSubStats,
       rules: defaultRules,
+        freeTransfersAvailable: 1,
+        wildcardActive: false,
       transferCost: 0,
     });
     expect(multiSubRes.auto_subs).toEqual([
@@ -711,6 +726,8 @@ it("E6c, E7, E8c, E8d: covers second-yellow red, own goal, shootout ignore, and 
       players: squad,
       statsRows: e17Stats,
       rules: defaultRules,
+        freeTransfersAvailable: 1,
+        wildcardActive: false,
       transferCost: 4,
     });
     expect(e17Result.gross_points).toBe(52);
@@ -749,5 +766,56 @@ it("E6c, E7, E8c, E8d: covers second-yellow red, own goal, shootout ignore, and 
         defaultRules,
       ).points,
     ).toBe(6);
+  });
+
+  it("blocks incoming left players while allowing existing left players to stay or be sold", () => {
+    const baseSquad = makeSquad();
+    const squadWithLeft = baseSquad.map((p) => (p.id === "p15" ? { ...p, status: "left" as const } : p));
+
+    expect(validateSquad(squadWithLeft, defaultRules).valid).toBe(false);
+
+    const leftIncoming = { ...baseSquad[13], id: "p99", status: "left" as const };
+    const squadWithLeftIncoming = baseSquad.map((p) => (p.id === baseSquad[13].id ? leftIncoming : p));
+    expect(
+      validateSquad(
+        squadWithLeftIncoming,
+        defaultRules,
+        new Set(baseSquad.map((p) => p.id)),
+      ).valid,
+    ).toBe(false);
+
+    const activeIncoming = { ...baseSquad[13], id: "p98", status: "available" as const };
+    const squadWithActiveSwap = squadWithLeft.map((p) => (p.id === baseSquad[13].id ? activeIncoming : p));
+    expect(
+      validateSquad(
+        squadWithActiveSwap,
+        defaultRules,
+        new Set(squadWithLeft.map((p) => p.id)),
+      ).valid,
+    ).toBe(true);
+
+    const replacementFwd = { ...squadWithLeft[14], id: "p97", status: "available" as const };
+    const squadSellingLeft = squadWithLeft.map((p) => (p.id === squadWithLeft[14].id ? replacementFwd : p));
+    expect(
+      validateSquad(
+        squadSellingLeft,
+        defaultRules,
+        new Set(squadWithLeft.map((p) => p.id)),
+      ).valid,
+    ).toBe(true);
+
+    expect(
+      calculateTransferCost({
+        matchday: { number: 2 } as never,
+        transfersCount: 1,
+        freeTransfersAvailable: 1,
+        wildcardActive: false,
+        rules: defaultRules,
+      }),
+    ).toEqual({
+      pointsCost: 0,
+      freeTransfersUsed: 1,
+      freeTransfersRemaining: 0,
+    });
   });
 });

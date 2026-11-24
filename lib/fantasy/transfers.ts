@@ -128,7 +128,8 @@ export function validateTransfersAndResultingSquad(params: {
   }
 
   const newSquad = Array.from(squadMap.values());
-  const check: ValidationResult = validateSquad(newSquad, rules);
+  const existingIds = new Set(currentSquad.map((p) => p.id));
+  const check: ValidationResult = validateSquad(newSquad, rules, existingIds);
   if (check.valid === false) {
     return { valid: false, reason: check.reason };
   }

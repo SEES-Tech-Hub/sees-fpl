@@ -144,7 +144,7 @@ export function calculatePlayerPoints(
     });
   }
 
-  if (stats.yellowCards > 0 && rules.pts_yellow_card !== 0) {
+  if (stats.yellowCards > 0 && !stats.redFromSecondYellow && rules.pts_yellow_card !== 0) {
     items.push({
       key: "yellow_card",
       label: stats.yellowCards === 1 ? "Yellow card" : "Yellow cards",
@@ -191,8 +191,13 @@ export function aggregatePlayerStats(
   for (const row of rows) {
     if (row.walkover) continue;
     const existing = byPlayer.get(row.playerId);
+    const rowYellows = row.redFromSecondYellow ? 0 : row.yellowCards;
     if (!existing) {
-      byPlayer.set(row.playerId, { ...row });
+      byPlayer.set(row.playerId, {
+        ...row,
+        yellowCards: rowYellows,
+        redFromSecondYellow: false,
+      });
     } else {
       existing.appeared = Boolean(existing.appeared || row.appeared);
       existing.minutesPlayed += row.minutesPlayed;
@@ -200,7 +205,7 @@ export function aggregatePlayerStats(
       existing.assists += row.assists;
       existing.ownGoals += row.ownGoals;
       existing.goalsConcededOnPitch += row.goalsConcededOnPitch;
-      existing.yellowCards += row.yellowCards;
+      existing.yellowCards += rowYellows;
       existing.redCards += row.redCards;
       existing.penaltiesMissed += row.penaltiesMissed;
       existing.penaltiesSaved += row.penaltiesSaved;
