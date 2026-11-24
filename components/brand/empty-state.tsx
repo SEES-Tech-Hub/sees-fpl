@@ -16,6 +16,7 @@ export function EmptyState({
   cta,
   action,
   compact,
+  bare,
   className,
 }: {
   art?: EmptyArt;
@@ -25,12 +26,15 @@ export function EmptyState({
   cta?: string;
   action?: ReactNode;
   compact?: boolean;
+  /** No card of its own: for use inside another card. */
+  bare?: boolean;
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-2 rounded-2xl bg-card text-center shadow-card motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2",
+        "flex flex-col items-center gap-2 text-center motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2",
+        !bare && "rounded-2xl bg-card shadow-card",
         compact ? "px-4 py-6" : "px-6 py-10",
         className,
       )}

@@ -16,7 +16,7 @@
 // When you change what this file caches, bump SHELL_VERSION so phones drop the
 // old cache. Push handlers are at the bottom of this file.
 
-const SHELL_VERSION = "v1";
+const SHELL_VERSION = "v2";
 const SHELL_CACHE = `sees-shell-${SHELL_VERSION}`;
 const STATIC_CACHE = "sees-static";
 const STATIC_CACHE_LIMIT = 120;

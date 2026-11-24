@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   description: "Live scores, results and fantasy football for SEES Games 2026.",
   applicationName: "SEES Games Hub",
   appleWebApp: { capable: true, title: "SEES Games", statusBarStyle: "default" },
-  icons: { apple: "/icons/apple-touch-icon.png" },
+  // Favicon and Apple icon: app/icon.tsx and app/apple-icon.tsx (the SEES emblem).
 };
 
 export const viewport: Viewport = {
