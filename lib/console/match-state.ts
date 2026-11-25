@@ -340,7 +340,17 @@ const start = (period: MatchPeriod, label: string): PeriodButton => ({
 const END = (label: string): PeriodButton => ({ key: "end", label, command: { type: "period_end" } });
 const FULL_TIME: PeriodButton = { key: "full_time", label: "Full time", command: { type: "full_time" } };
 
-export function availableControls(state: MatchState): Controls {
+/** How the event's match is split: football and handball halves, basketball quarters. */
+export type PeriodRules = {
+  /** 2 halves (default) or 4 quarters. */
+  periodCount?: number | null;
+  /** False when a level knockout goes straight to penalties (handball's 7-metre throws). */
+  hasExtraTime?: boolean;
+};
+
+export function availableControls(state: MatchState, rules: PeriodRules = {}): Controls {
+  if (rules.periodCount === 4) return quarterControls(state);
+  const hasExtraTime = rules.hasExtraTime ?? true;
   const none: Controls = {
     phase: "closed",
     periodButtons: [],
@@ -402,7 +412,9 @@ export function availableControls(state: MatchState): Controls {
           return {
             ...brk,
             periodButtons: knockoutLevel
-              ? [start("extra_first", "Extra time"), start("penalties", "Penalties")]
+              ? hasExtraTime
+                ? [start("extra_first", "Extra time"), start("penalties", "Penalties")]
+                : [start("penalties", "Penalties")]
               : [FULL_TIME],
           };
         case "extra_first":
@@ -412,6 +424,62 @@ export function availableControls(state: MatchState): Controls {
         default:
           return brk;
       }
+    }
+  }
+}
+
+/**
+ * Basketball: four quarters, then overtime (as many as it takes) when a
+ * knockout is level. A level group game ends after the fourth quarter.
+ */
+function quarterControls(state: MatchState): Controls {
+  const none: Controls = {
+    phase: "closed",
+    periodButtons: [],
+    canGoal: false,
+    canPenaltyMiss: false,
+    canCard: false,
+    canSub: false,
+    canShootout: false,
+    canMotm: false,
+  };
+  const knockoutLevel = state.isKnockout && state.homeScore === state.awayScore;
+  const period = state.currentPeriod;
+  const NEXT: Partial<Record<MatchPeriod, [MatchPeriod, string]>> = {
+    first_quarter: ["second_quarter", "Second quarter"],
+    second_quarter: ["third_quarter", "Third quarter"],
+    third_quarter: ["fourth_quarter", "Fourth quarter"],
+  };
+  const QUARTER_END: Partial<Record<MatchPeriod, string>> = {
+    first_quarter: "End of Q1",
+    second_quarter: "Half time",
+    third_quarter: "End of Q3",
+  };
+
+  switch (state.status) {
+    case "postponed":
+    case "cancelled":
+    case "walkover":
+      return none;
+    case "scheduled":
+      return { ...none, phase: "not_started", periodButtons: [start("first_quarter", "Tip-off")] };
+    case "full_time":
+      return { ...none, phase: "finished", canMotm: state.motmPlayerId === null };
+    case "live": {
+      const inPlay = { ...none, phase: "in_play" as const, canGoal: true, canCard: true, canSub: true };
+      if (period && QUARTER_END[period]) return { ...inPlay, periodButtons: [END(QUARTER_END[period]!)] };
+      if (period === "fourth_quarter") return { ...inPlay, periodButtons: [knockoutLevel ? END("End of Q4") : FULL_TIME] };
+      if (period === "overtime") return { ...inPlay, periodButtons: [knockoutLevel ? END("End of overtime") : FULL_TIME] };
+      return inPlay;
+    }
+    case "half_time": {
+      const brk = { ...none, phase: "break" as const, canCard: true, canSub: true };
+      const next = period ? NEXT[period] : undefined;
+      if (next) return { ...brk, periodButtons: [start(next[0], next[1])] };
+      if (period === "fourth_quarter" || period === "overtime") {
+        return { ...brk, periodButtons: knockoutLevel ? [start("overtime", "Overtime")] : [FULL_TIME] };
+      }
+      return brk;
     }
   }
 }

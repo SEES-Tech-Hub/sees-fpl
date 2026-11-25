@@ -33,7 +33,7 @@ const FIXTURE_COLUMNS = `
   current_period, period_started_at, current_set, home_set_points, away_set_points,
   home_entrant, away_entrant, tie, leg, winner_side,
   event:events!fixtures_event_id_fkey (
-    id, name, period_minutes, extra_period_minutes, period_count, boards,
+    id, slug, name, period_minutes, extra_period_minutes, period_count, boards,
     sets_to_win, set_points, final_set_points, set_win_by, set_points_cap,
     sport:sports!events_sport_id_fkey ( slug, name, result_format )
   ),
@@ -83,6 +83,7 @@ export const getLiveFixture = cache(async (fixtureId: string): Promise<LiveFixtu
     winnerSide: toSide(data.winner_side),
     event: {
       id: data.event.id,
+      slug: data.event.slug,
       name: data.event.name,
       periodMinutes: data.event.period_minutes,
       extraPeriodMinutes: data.event.extra_period_minutes,

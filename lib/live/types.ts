@@ -304,6 +304,8 @@ export type LiveFixture = {
   winnerSide: Side | null;
   event: {
     id: string;
+    /** "football-men", "basketball", "board-games-scrabble"… */
+    slug: string;
     name: string;
     periodMinutes: number | null;
     extraPeriodMinutes: number | null;

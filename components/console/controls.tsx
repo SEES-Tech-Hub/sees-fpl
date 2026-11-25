@@ -42,6 +42,8 @@ export function ConsoleControls({
   saveLineup,
   startersFor,
   motmName,
+  teamOnly = false,
+  pointValues = [1],
 }: {
   state: MatchState;
   controls: Controls;
@@ -52,6 +54,10 @@ export function ConsoleControls({
   saveLineup: (input: Omit<SetLineupInput, "fixtureId">) => void;
   startersFor: (teamId: string) => string[] | null;
   motmName: string | null;
+  /** No player lists (sports other than men's football): goals by team, no cards, subs or MOTM. */
+  teamOnly?: boolean;
+  /** Team-only scoring: the values to offer (basketball 1, 2, 3). */
+  pointValues?: number[];
 }) {
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
   const [confirmKickoff, setConfirmKickoff] = useState(false);
@@ -86,7 +92,35 @@ export function ConsoleControls({
 
   return (
     <section aria-label="Match controls" className="flex flex-col gap-3">
-      {controls.phase === "not_started" && (
+      {teamOnly && controls.canGoal && (
+        <div className="flex flex-col gap-3" aria-label="Score">
+          {[home, away].map((team) => (
+            <div key={team.id} className={cn("grid gap-2", pointValues.length > 1 ? "grid-cols-[4rem_repeat(3,1fr)] items-center" : "")}>
+              {pointValues.length > 1 && <span className="font-heading text-lg font-semibold">{team.shortName}</span>}
+              {pointValues.map((v) => (
+                <Button
+                  key={v}
+                  className={cn(BIG, pointValues.length > 1 ? "h-16 text-xl" : "h-20")}
+                  onClick={() =>
+                    record({ type: "goal", teamId: team.id, points: v as 1 | 2 | 3 }, pointValues.length > 1 ? `+${v} ${team.shortName}` : `Goal ${team.shortName}`)
+                  }
+                >
+                  {pointValues.length > 1 ? (
+                    `+${v}`
+                  ) : (
+                    <>
+                      <Goal aria-hidden className="size-5" />
+                      Goal {team.shortName}
+                    </>
+                  )}
+                </Button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!teamOnly && controls.phase === "not_started" && (
         <div className="flex flex-col gap-2">
           <h2 className="text-sm font-medium text-muted-foreground">Lineup check</h2>
           <div className="grid grid-cols-2 gap-3">
@@ -121,7 +155,7 @@ export function ConsoleControls({
         </div>
       )}
 
-      {(controls.canGoal || controls.canCard || controls.canSub || controls.canPenaltyMiss) && (
+      {!teamOnly && (controls.canGoal || controls.canCard || controls.canSub || controls.canPenaltyMiss) && (
         <div className="grid grid-cols-2 gap-3">
           {controls.canGoal &&
             [home, away].map((team) => (
@@ -179,7 +213,12 @@ export function ConsoleControls({
         <div className="flex flex-col gap-2">{controls.periodButtons.map(periodButton)}</div>
       )}
 
+      {controls.phase === "finished" && teamOnly && (
+        <p className="rounded-lg bg-secondary p-4 text-center text-secondary-foreground">Full time. The result is in.</p>
+      )}
+
       {controls.phase === "finished" &&
+        !teamOnly &&
         (controls.canMotm ? (
           <Button className={cn(BIG, "w-full")} onClick={() => setSheet({ kind: "motm" })}>
             <Crown aria-hidden className="size-5" />
