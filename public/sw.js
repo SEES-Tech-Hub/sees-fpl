@@ -16,7 +16,7 @@
 // When you change what this file caches, bump SHELL_VERSION so phones drop the
 // old cache. Push handlers are at the bottom of this file.
 
-const SHELL_VERSION = "v2";
+const SHELL_VERSION = "v3";
 const SHELL_CACHE = `sees-shell-${SHELL_VERSION}`;
 const STATIC_CACHE = "sees-static";
 const STATIC_CACHE_LIMIT = 120;
@@ -151,19 +151,41 @@ self.addEventListener("push", (event) => {
   }
   const title = data.title || "SEES Games";
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: data.body || "",
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      tag: data.tag || undefined,
-      renotify: Boolean(data.tag),
-      data: { url: data.url || "/" },
-    }),
+    (async () => {
+      await self.registration.showNotification(title, {
+        body: data.body || "",
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        tag: data.tag || undefined,
+        renotify: Boolean(data.tag),
+        data: { url: data.url || "/" },
+      });
+      await updateBadge();
+    })(),
   );
+});
+
+// The number on the app icon: how many notifications are waiting. Installed
+// apps only (Chrome and Edge on computers, iPhone home-screen apps; Android
+// shows its own dot). The app clears it when it opens.
+async function updateBadge() {
+  if (!("setAppBadge" in self.navigator)) return;
+  try {
+    const waiting = await self.registration.getNotifications();
+    if (waiting.length > 0) await self.navigator.setAppBadge(waiting.length);
+    else await self.navigator.clearAppBadge();
+  } catch {
+    // Badges are a nice-to-have; never let them break a notification.
+  }
+}
+
+self.addEventListener("notificationclose", (event) => {
+  event.waitUntil(updateBadge());
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  event.waitUntil(updateBadge());
   const url = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
   event.waitUntil(
     (async () => {

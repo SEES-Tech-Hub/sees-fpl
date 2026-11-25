@@ -72,13 +72,29 @@ export async function getTablesPage() {
     }
   }
 
+  // Every other sport's group tables (basketball, volleyball, handball, board
+  // games, table tennis mixed doubles), for the tables page's Sports tab.
+  const sports = await getSports();
+  const sportTables = (
+    await Promise.all(
+      sports
+        .filter((s) => s.slug !== "football" && s.resultFormat !== "ranked")
+        .map(async (s) => ({
+          sport: { slug: s.slug, name: s.name, resultFormat: s.resultFormat },
+          tables: (await Promise.all(s.events.map(async (e) => ({ event: e, rows: await getEventStandings(e.id) })))).filter(
+            (t) => t.rows.length > 0,
+          ),
+        })),
+    )
+  ).filter((s) => s.tables.length > 0);
+
   const cleanSheets = [...totals].filter((p) => p.cleanSheets > 0).sort((a, b) => b.cleanSheets - a.cleanSheets).slice(0, 10);
   const discipline = [...totals]
     .filter((p) => p.yellowCards + p.redCards > 0)
     .sort((a, b) => b.redCards - a.redCards || b.yellowCards - a.yellowCards)
     .slice(0, 10);
 
-  return { standings, medals, scorers, assisters, cleanSheets, discipline, suspensions, form };
+  return { standings, medals, scorers, assisters, cleanSheets, discipline, suspensions, form, sportTables };
 }
 
 /** One sport: its events, fixtures, and each event's table and race results. */

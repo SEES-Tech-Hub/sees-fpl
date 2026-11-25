@@ -24,5 +24,17 @@ export function ServiceWorkerRegister() {
     return () => window.removeEventListener("load", register);
   }, []);
 
+  // Opening the app counts as reading the notifications: clear the icon badge.
+  useEffect(() => {
+    const clear = () => {
+      if (document.visibilityState !== "visible") return;
+      const nav = navigator as Navigator & { clearAppBadge?: () => Promise<void> };
+      nav.clearAppBadge?.().catch(() => {});
+    };
+    clear();
+    document.addEventListener("visibilitychange", clear);
+    return () => document.removeEventListener("visibilitychange", clear);
+  }, []);
+
   return null;
 }

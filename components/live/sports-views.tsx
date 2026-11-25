@@ -229,7 +229,7 @@ function FixturesByDate({
   );
 }
 
-function EventTable({
+export function EventTable({
   title,
   rows,
   sets,

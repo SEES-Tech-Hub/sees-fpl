@@ -1890,6 +1890,15 @@ export type Database = {
     }
     Functions: {
       activate_wildcard: { Args: never; Returns: Json }
+      admin_analytics: { Args: { p_days?: number }; Returns: Json }
+      track_heartbeat: {
+        Args: { p_device?: string; p_path: string; p_session: string; p_standalone?: boolean }
+        Returns: undefined
+      }
+      track_page_view: {
+        Args: { p_device?: string; p_path: string; p_referrer?: string; p_session: string; p_standalone?: boolean }
+        Returns: undefined
+      }
       admin_audit_page: {
         Args: {
           p_actor?: string

@@ -1,5 +1,7 @@
 "use server";
 
+import { after } from "next/server";
+import { notifyAnnouncement } from "@/lib/push/send";
 import type { Announcement } from "../queries/announcements";
 import { fail, ok, type ActionResult } from "../result";
 import { expire } from "../revalidate";
@@ -35,7 +37,13 @@ export async function createAnnouncement(input: unknown): Promise<ActionResult<A
     if (error || !data) return databaseFailure("announcements.create", error);
 
     expire(["announcements"]);
-    return ok(toAnnouncement(data));
+    const announcement = toAnnouncement(data);
+    // Live now: push it to everyone with notifications on (after the admin has their answer).
+    const now = Date.now();
+    if (Date.parse(announcement.startsAt) <= now + 60_000 && Date.parse(announcement.endsAt) > now) {
+      after(() => notifyAnnouncement(announcement).catch((e) => console.error("[push] announcement failed:", e)));
+    }
+    return ok(announcement);
   });
 }
 

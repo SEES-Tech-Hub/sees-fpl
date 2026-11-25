@@ -46,9 +46,16 @@ export default function PrivacyPage() {
           Your team name, year group (if you give one), squad, lineups, captain choices, transfers, chips, the mini-leagues you create or join, and
           the points and rankings worked out from them.
         </Item>
-        <Item name="Goal alerts (only if you turn them on)">
+        <Item name="Match alerts (only if you turn them on)">
           If you tap the bell for notifications, your browser gives us a push address for this device and the matches or teams you chose. It
           identifies the device to the browser&apos;s push service, not to us.
+        </Item>
+        <Item name="How the app is used">
+          To see how many people use the app, we count page views. Each browser gets a random visit number, kept on your device, and we save the
+          page, the time, whether it&apos;s a phone or a computer, whether you installed the app, and the site that linked you here (like
+          WhatsApp). While the app is open it says it&apos;s still there once a minute, so we can show how many people are online. If you&apos;re
+          signed in, the visit is linked to your account. No cookies, no IP addresses and no outside analytics companies. Page views are deleted
+          after 120 days.
         </Item>
         <Item name="Officials and organisers">
           If you&apos;re an official or admin, the events you record (goals, cards, substitutions) and changes you make are saved with your account

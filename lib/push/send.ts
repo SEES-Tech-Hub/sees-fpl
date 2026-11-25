@@ -2,9 +2,11 @@ import "server-only";
 import webpush from "web-push";
 import { getLiveFixture, getMatchTimeline } from "@/lib/live/queries";
 import type { MatchEvent } from "@/lib/live/types";
+import { matchMessage } from "./messages";
 import { createClient } from "@/lib/supabase/server";
 
-// Web Push for match moments: kick-off, goals, half-time and full time.
+// Web Push for match moments (lib/push/messages.ts says which, and what they say)
+// and for announcements.
 //
 // Sent from the console's recordMatchEvent with next/server's after(), so
 // the official's tap isn't slowed down. It reads the subscribers through
@@ -52,52 +54,38 @@ export async function sendPush(topics: string[], payload: PushPayload): Promise<
   if (gone.length) await supabase.rpc("push_forget", { p_endpoints: gone });
 }
 
+/** Events an official can undo: wait out the window and check it still stands. */
+const UNDOABLE = new Set(["goal", "card", "penalty_miss", "man_of_the_match", "set_end"]);
+
 /** Decides whether a just-recorded event is worth a notification, and sends it. */
 export async function notifyMatchEvent(event: MatchEvent): Promise<void> {
-  const interesting =
-    event.type === "goal" ||
-    event.type === "full_time" ||
-    (event.type === "period_start" && (event.period === "first_half" || event.period === "first_quarter")) ||
-    (event.type === "period_end" && (event.period === "first_half" || event.period === "second_quarter"));
-  if (!interesting) return;
-
-  // Officials can undo a mis-tap for 30 s; wait a little and check a goal still stands.
-  if (event.type === "goal") {
+  if (UNDOABLE.has(event.type)) {
     await new Promise((r) => setTimeout(r, GOAL_DELAY_MS));
     const timeline = await getMatchTimeline(event.fixtureId);
     if (!timeline.some((e) => e.clientEventId === event.clientEventId)) return;
   }
 
-  const fixture = await getLiveFixture(event.fixtureId);
+  const [fixture, timeline] = await Promise.all([getLiveFixture(event.fixtureId), getMatchTimeline(event.fixtureId)]);
   if (!fixture?.home || !fixture.away) return;
-  const score = `${fixture.home.shortName} ${fixture.homeScore ?? 0}–${fixture.awayScore ?? 0} ${fixture.away.shortName}`;
-  const vs = `${fixture.home.name} v ${fixture.away.name}`;
-  const sport = fixture.sport.name;
+  const entry = timeline.find((e) => e.clientEventId === event.clientEventId) ?? null;
+  const message = matchMessage(event, fixture, entry);
+  if (!message) return;
 
-  let title = "";
-  let body = "";
-  if (event.type === "goal") {
-    const timeline = await getMatchTimeline(event.fixtureId);
-    const goal = timeline.find((e) => e.clientEventId === event.clientEventId);
-    const scorer = goal?.playerName ?? "Goal";
-    const minute = goal?.minute !== null && goal?.minute !== undefined ? ` ${goal.minute}'` : "";
-    title = `GOAL! ${score}`;
-    body = `${scorer}${goal?.isOwnGoal ? " (own goal)" : goal?.isPenalty ? " (pen)" : ""}${minute} · ${sport}`;
-  } else if (event.type === "period_start") {
-    title = `Kick-off: ${vs}`;
-    body = `${sport} is under way. Follow it live.`;
-  } else if (event.type === "period_end") {
-    title = `Half-time: ${score}`;
-    body = sport;
-  } else {
-    title = `Full time: ${score}`;
-    body = `${sport} · ${vs}`;
-  }
-
-  await sendPush(["all", `fixture:${fixture.id}`, `team:${fixture.home.id}`, `team:${fixture.away.id}`], {
-    title,
-    body,
+  const followers = [`fixture:${fixture.id}`, `team:${fixture.home.id}`, `team:${fixture.away.id}`];
+  await sendPush(message.audience === "major" ? ["all", ...followers] : followers, {
+    title: message.title,
+    body: message.body,
     url: `/matches/${fixture.id}`,
-    tag: `fx-${fixture.id}-${event.type}`,
+    tag: `fx-${fixture.id}-${event.type}-${event.id}`,
+  });
+}
+
+/** An announcement that's live now goes to everyone who turned notifications on. */
+export async function notifyAnnouncement(a: { id: string; message: string; tone: "info" | "warning" }): Promise<void> {
+  await sendPush(["all"], {
+    title: a.tone === "warning" ? "Heads up from SEES Games" : "SEES Games",
+    body: a.message,
+    url: "/",
+    tag: `ann-${a.id}`,
   });
 }
