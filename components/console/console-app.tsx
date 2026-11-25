@@ -137,14 +137,21 @@ export function ConsoleApp({
       deriveMatchState({
         homeTeamId: home.id,
         awayTeamId: away.id,
-        isKnockout: fixture.stage !== "league",
+        isKnockout: fixture.stage !== "league" && fixture.stage !== "group",
         serverStatus: fixture.status,
         lineups: lineupEntries,
         events,
       }),
     [home.id, away.id, fixture.stage, fixture.status, lineupEntries, events],
   );
-  const controls = availableControls(state);
+  const controls = availableControls(state, {
+    periodCount: fixture.event.periodCount,
+    hasExtraTime: fixture.event.extraPeriodMinutes !== null,
+  });
+  // Only men's football has player lists (the fantasy squads). Everything else
+  // is scored by team: basketball in 1s, 2s and 3s, the rest one goal a tap.
+  const teamOnly = fixture.event.slug !== "football-men";
+  const pointValues = fixture.sport.slug === "basketball" ? [1, 2, 3] : [1];
 
   const clockFixture = useMemo<ClockFixture>(
     () => ({
@@ -264,6 +271,8 @@ export function ConsoleApp({
           saveLineup={saveLineup}
           startersFor={startersFor}
           motmName={names.player(state.motmPlayerId)}
+          teamOnly={teamOnly}
+          pointValues={pointValues}
         />
       )}
 

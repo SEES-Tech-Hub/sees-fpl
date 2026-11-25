@@ -215,3 +215,38 @@ describe("eligiblePlayers", () => {
     expect(eligiblePlayers(state, HOME, squad, "appeared")).toEqual(["a1", "a2"]);
   });
 });
+
+describe("availableControls: basketball quarters and handball", () => {
+  const q = (period: "first_quarter" | "second_quarter" | "third_quarter" | "fourth_quarter" | "overtime") =>
+    ev({ type: "period_start", period });
+  const end = () => ev({ type: "period_end" });
+  const hoop = (teamId: string, points: 1 | 2 | 3) => ev({ type: "goal", teamId, points });
+  const bb = (events: ConsoleEvent[], extra: Partial<MatchInput> = {}) =>
+    availableControls(match(events, extra), { periodCount: 4 }).periodButtons.map((b) => b.label);
+
+  it("tips off, then runs through four quarters", () => {
+    expect(bb([])).toEqual(["Tip-off"]);
+    expect(bb([q("first_quarter")])).toEqual(["End of Q1"]);
+    expect(bb([q("first_quarter"), end()])).toEqual(["Second quarter"]);
+    expect(bb([q("first_quarter"), end(), q("second_quarter")])).toEqual(["Half time"]);
+  });
+
+  it("ends a group game after Q4 even when level", () => {
+    expect(bb([q("first_quarter"), end(), q("second_quarter"), end(), q("third_quarter"), end(), q("fourth_quarter")])).toEqual(["Full time"]);
+  });
+
+  it("goes to overtime in a level knockout, and counts 2s and 3s", () => {
+    const four = [q("first_quarter"), end(), q("second_quarter"), end(), q("third_quarter"), end(), q("fourth_quarter")];
+    expect(bb(four, { isKnockout: true })).toEqual(["End of Q4"]);
+    expect(bb([...four, end()], { isKnockout: true })).toEqual(["Overtime"]);
+    const state = match([...four, end(), q("overtime"), hoop(HOME, 3), hoop(AWAY, 2)], { isKnockout: true });
+    expect([state.homeScore, state.awayScore]).toEqual([3, 2]);
+    expect(availableControls(state, { periodCount: 4 }).periodButtons.map((b) => b.label)).toEqual(["Full time"]);
+  });
+
+  it("handball goes straight to penalties when a knockout is level", () => {
+    const events = [kickOff(), halfTime(), secondHalf(), end()];
+    const controls = availableControls(match(events, { isKnockout: true }), { periodCount: 2, hasExtraTime: false });
+    expect(controls.periodButtons.map((b) => b.label)).toEqual(["Penalties"]);
+  });
+});

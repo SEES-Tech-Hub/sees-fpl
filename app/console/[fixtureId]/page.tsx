@@ -81,7 +81,9 @@ async function ConsoleLoader({ params }: { params: PageProps<"/console/[fixtureI
   const [timeline, lineups, squads] = await Promise.all([
     getMatchTimeline(fixtureId),
     getFixtureLineups(fixtureId),
-    getSquads([fixture.home.id, fixture.away.id]),
+    // The player list is the men's football (fantasy) squad. Other timed sports
+    // (basketball, handball, women's football) score by team only.
+    fixture.event.slug === "football-men" ? getSquads([fixture.home.id, fixture.away.id]) : Promise.resolve([]),
   ]);
 
   return <ConsoleApp fixture={fixture} timeline={timeline} lineups={lineups} squads={squads} viewer={viewer} />;
