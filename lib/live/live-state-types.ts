@@ -10,6 +10,8 @@ export type FixtureState = {
   homeShootout: number | null;
   awayShootout: number | null;
   winnerTeamId: string | null;
+  /** home or away: who won (needed when both players are from the same year). */
+  winnerSide: "home" | "away" | null;
   currentPeriod: MatchPeriod | null;
   periodStartedAt: string | null;
   currentSet: number | null;

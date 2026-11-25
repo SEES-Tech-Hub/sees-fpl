@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { SeesMark } from "@/components/brand/sees-mark";
 import { usePathname } from "next/navigation";
-import { Megaphone, CloudOff, X, ChevronDown, BookOpen, Shield, Gauge, LogOut } from "lucide-react";
+import { Megaphone, CloudOff, X, ChevronDown, BookOpen, Shield, Gauge, LogOut, Radio } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -91,6 +91,13 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
                   <Shield /> Privacy
                 </Link>
               </DropdownMenuItem>
+              {(role === "official" || role === "admin") && (
+                <DropdownMenuItem asChild className="h-10 rounded-lg text-primary">
+                  <Link href="/console">
+                    <Radio /> Match console
+                  </Link>
+                </DropdownMenuItem>
+              )}
               {role === "admin" && (
                 <DropdownMenuItem asChild className="h-10 rounded-lg text-primary">
                   <Link href="/admin">

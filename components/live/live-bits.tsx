@@ -86,7 +86,7 @@ export function LivePulse({ className }: { className?: string }) {
 }
 
 /** A score digit that rolls up into place when it changes (not on first load). */
-export function RollingScore({ value, className }: { value: number | null; className?: string }) {
+export function RollingScore({ value, text, className }: { value: number | null; text?: string; className?: string }) {
   const [first] = useState(value);
   const changed = value !== first;
   return (
@@ -95,7 +95,7 @@ export function RollingScore({ value, className }: { value: number | null; class
         key={value ?? "none"}
         className={cn(changed && "motion-safe:animate-in motion-safe:slide-in-from-bottom-[60%] motion-safe:fade-in motion-safe:duration-500")}
       >
-        {value ?? "–"}
+        {text ?? value ?? "–"}
       </span>
     </span>
   );

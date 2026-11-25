@@ -31,9 +31,10 @@ const FIXTURE_COLUMNS = `
   id, stage, status, kickoff_at, venue, matchday_id, console_holder,
   home_score, away_score, home_shootout, away_shootout, winner_team_id,
   current_period, period_started_at, current_set, home_set_points, away_set_points,
+  home_entrant, away_entrant, tie, leg, winner_side,
   event:events!fixtures_event_id_fkey (
-    id, name, period_minutes, extra_period_minutes, period_count,
-    sets_to_win, set_points, final_set_points,
+    id, name, period_minutes, extra_period_minutes, period_count, boards,
+    sets_to_win, set_points, final_set_points, set_win_by, set_points_cap,
     sport:sports!events_sport_id_fkey ( slug, name, result_format )
   ),
   home:teams!fixtures_home_team_id_fkey ( id, name, short_name, year ),
@@ -41,6 +42,8 @@ const FIXTURE_COLUMNS = `
 ` as const;
 
 /** A fixture with its teams, score and clock. Null when it doesn't exist. */
+const toSide = (v: string | null): "home" | "away" | null => (v === "home" || v === "away" ? v : null);
+
 export const getLiveFixture = cache(async (fixtureId: string): Promise<LiveFixture | null> => {
   if (!isUuid(fixtureId)) return null;
 
@@ -73,15 +76,23 @@ export const getLiveFixture = cache(async (fixtureId: string): Promise<LiveFixtu
     currentSet: data.current_set,
     homeSetPoints: data.home_set_points,
     awaySetPoints: data.away_set_points,
+    homeEntrant: data.home_entrant,
+    awayEntrant: data.away_entrant,
+    tie: data.tie,
+    leg: data.leg,
+    winnerSide: toSide(data.winner_side),
     event: {
       id: data.event.id,
       name: data.event.name,
       periodMinutes: data.event.period_minutes,
       extraPeriodMinutes: data.event.extra_period_minutes,
       periodCount: data.event.period_count,
+      boards: data.event.boards,
       setsToWin: data.event.sets_to_win,
       setPoints: data.event.set_points,
       finalSetPoints: data.event.final_set_points,
+      setWinBy: data.event.set_win_by,
+      setPointsCap: data.event.set_points_cap,
     },
     sport: {
       slug: data.event.sport.slug,
@@ -89,6 +100,81 @@ export const getLiveFixture = cache(async (fixtureId: string): Promise<LiveFixtu
       resultFormat: data.event.sport.result_format,
     },
   };
+});
+
+/** A head-to-head event as the console needs it: who (side), which board, how many points. */
+export type HeadToHeadEvent = {
+  clientEventId: string;
+  type: TimelineEntry["type"];
+  teamId: string | null;
+  side: "home" | "away" | null;
+  board: number | null;
+  points: number | null;
+  occurredAt: string;
+};
+
+/** Active events of a head-to-head fixture, oldest first (match_timeline has no side or board). */
+export const getHeadToHeadEvents = cache(async (fixtureId: string): Promise<HeadToHeadEvent[]> => {
+  if (!isUuid(fixtureId)) return [];
+  const { data, error } = await createPublicClient()
+    .from("match_events")
+    .select("client_event_id, type, team_id, side, board, points, occurred_at")
+    .eq("fixture_id", fixtureId)
+    .is("voided_at", null)
+    .order("occurred_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) queryFailed("the match events", error);
+  return (data ?? []).map((e) => ({
+    clientEventId: e.client_event_id,
+    type: e.type,
+    teamId: e.team_id,
+    side: toSide(e.side),
+    board: e.board,
+    points: e.points,
+    occurredAt: e.occurred_at,
+  }));
+});
+
+/** The first leg of a two-leg tie, for the aggregate score on the second leg. */
+export const getFirstLeg = cache(async (fixture: Pick<LiveFixture, "id" | "tie" | "leg" | "event">) => {
+  if (fixture.leg !== 2 || !fixture.tie) return null;
+  const { data, error } = await createPublicClient()
+    .from("fixtures")
+    .select("id, status, home_score, away_score, home_team_id, home_entrant")
+    .eq("event_id", fixture.event.id)
+    .eq("tie", fixture.tie)
+    .eq("leg", 1)
+    .neq("id", fixture.id)
+    .limit(1)
+    .maybeSingle();
+  if (error) queryFailed("the first leg", error);
+  if (!data) return null;
+  return {
+    id: data.id,
+    status: data.status,
+    homeScore: data.home_score,
+    awayScore: data.away_score,
+    homeTeamId: data.home_team_id,
+    homeEntrant: data.home_entrant,
+  };
+});
+
+/** The five year teams, Year 1 first (race entrants pick from these). */
+export const getTeams = cache(async (): Promise<TeamSummary[]> => {
+  const { data, error } = await createPublicClient().from("teams").select("id, name, short_name, year").order("year");
+  if (error) queryFailed("the teams", error);
+  return (data ?? []).map((t) => ({ id: t.id, name: t.name, shortName: t.short_name, year: t.year }));
+});
+
+/** Does this event run heats before its final (athletics sprints)? */
+export const eventHasHeats = cache(async (eventId: string): Promise<boolean> => {
+  const { count, error } = await createPublicClient()
+    .from("fixtures")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .like("stage", "heat_%");
+  if (error) queryFailed("the heats", error);
+  return (count ?? 0) > 0;
 });
 
 /** The fixture's events in order, with match minutes and names. */

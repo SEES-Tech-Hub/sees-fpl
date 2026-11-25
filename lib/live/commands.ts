@@ -58,6 +58,10 @@ function optionalUuid(value: unknown): value is string | null | undefined {
   return value === undefined || value === null || isUuid(value);
 }
 
+function optionalSide(value: unknown): value is "home" | "away" | null | undefined {
+  return value === undefined || value === null || value === "home" || value === "away";
+}
+
 function optionalBoolean(value: unknown): value is boolean | undefined {
   return value === undefined || typeof value === "boolean";
 }
@@ -93,19 +97,38 @@ export function parseRecordEventInput(input: unknown): Parsed<RecordEventInput> 
       return { ok: true, data: { ...base, type } };
 
     case "full_time": {
-      const { winnerTeamId } = input;
+      const { winnerTeamId, winnerSide } = input;
       if (!optionalUuid(winnerTeamId)) return invalid("winnerTeamId must be a UUID.");
-      return { ok: true, data: { ...base, type, ...(winnerTeamId ? { winnerTeamId } : {}) } };
+      if (!optionalSide(winnerSide)) return invalid("winnerSide must be home or away.");
+      return {
+        ok: true,
+        data: { ...base, type, ...(winnerTeamId ? { winnerTeamId } : {}), ...(winnerSide ? { winnerSide } : {}) },
+      };
     }
 
     case "point": {
-      const { teamId, playerId, points } = input;
+      const { teamId, playerId, points, side, board } = input;
       if (!isUuid(teamId)) return invalid("A point needs teamId.");
       if (!optionalUuid(playerId)) return invalid("playerId must be a UUID.");
       if (points !== undefined && !(typeof points === "number" && Number.isInteger(points) && points >= 1 && points <= 99)) {
         return invalid("points must be a whole number from 1 to 99.");
       }
-      return { ok: true, data: { ...base, type, teamId, playerId, ...(points !== undefined ? { points } : {}) } };
+      if (!optionalSide(side)) return invalid("side must be home or away.");
+      if (board != null && !(typeof board === "number" && Number.isInteger(board) && board >= 1 && board <= 4)) {
+        return invalid("board must be 1 to 4.");
+      }
+      return {
+        ok: true,
+        data: {
+          ...base,
+          type,
+          teamId,
+          playerId,
+          ...(points !== undefined ? { points } : {}),
+          ...(side ? { side } : {}),
+          ...(board != null ? { board } : {}),
+        },
+      };
     }
 
     case "goal": {
@@ -204,6 +227,8 @@ export type RecordEventRpcArgs = {
   p_is_own_goal?: boolean;
   p_scored?: boolean;
   p_points?: number;
+  p_side?: "home" | "away";
+  p_board?: number;
 };
 
 export function toRecordEventArgs(input: RecordEventInput): RecordEventRpcArgs {
@@ -259,9 +284,12 @@ export function toRecordEventArgs(input: RecordEventInput): RecordEventRpcArgs {
       args.p_team_id = input.teamId;
       if (input.playerId) args.p_player_id = input.playerId;
       if (input.points) args.p_points = input.points;
+      if (input.side) args.p_side = input.side;
+      if (input.board) args.p_board = input.board;
       break;
     case "full_time":
       if (input.winnerTeamId) args.p_team_id = input.winnerTeamId;
+      if (input.winnerSide) args.p_side = input.winnerSide;
       break;
     case "period_end":
     case "set_end":
@@ -426,6 +454,8 @@ export type MatchEventRow = {
   is_own_goal: boolean;
   scored: boolean | null;
   points: number | null;
+  side?: string | null;
+  board?: number | null;
   occurred_at: string;
   recorded_at: string;
   voided_at: string | null;
@@ -447,6 +477,8 @@ export function toMatchEvent(row: MatchEventRow): MatchEvent {
     isOwnGoal: row.is_own_goal,
     scored: row.scored,
     points: row.points,
+    side: row.side === "home" || row.side === "away" ? row.side : null,
+    board: row.board ?? null,
     occurredAt: row.occurred_at,
     recordedAt: row.recorded_at,
     voidedAt: row.voided_at,

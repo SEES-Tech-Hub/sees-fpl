@@ -12,6 +12,7 @@ import {
   ListOrdered,
   LogIn,
   LogOut,
+  Radio,
   Shield,
   Shirt,
   Trophy,
@@ -177,6 +178,9 @@ function MoreSheet({
   const links: SheetLink[] = [
     { href: "/fantasy/rules", label: "Fantasy rules", sub: "Squads, transfers and points", icon: BookOpen },
     { href: "/privacy", label: "Privacy", sub: "What we keep and why", icon: Shield },
+    ...(role === "official" || role === "admin"
+      ? [{ href: "/console", label: "Match console", sub: "Score your matches", icon: Radio, tone: "brand" as const }]
+      : []),
     ...(role === "admin" ? [{ href: "/admin", label: "Admin portal", sub: "Fixtures, players and results", icon: Gauge, tone: "brand" as const }] : []),
   ];
   const close = () => onOpenChange(false);

@@ -213,3 +213,26 @@ export async function releaseFixture(
     return failure(toLiveErrorFromThrown(thrown));
   }
 }
+
+/**
+ * Races (admin): fill an event's final with the heats' qualifiers (the top
+ * finishers of every published heat). Returns how many entrants it added.
+ */
+export async function fillRaceFinal(eventId: string, fixtureId: string): Promise<ActionResult<{ entrantCount: number }>> {
+  const event = parseFixtureId(eventId);
+  if (!event.ok) return event;
+  const fixture = parseFixtureId(fixtureId);
+  if (!fixture.ok) return fixture;
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("fill_race_final", { p_event_id: event.data });
+    if (error || data === null) return failure(toLiveError(error));
+
+    expireFixture(fixture.data);
+    updateTag(liveTags.standings);
+    return { ok: true, data: { entrantCount: data } };
+  } catch (thrown) {
+    return failure(toLiveErrorFromThrown(thrown));
+  }
+}

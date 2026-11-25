@@ -137,11 +137,20 @@ export const createFixtureInput = z
     kickoffAt: isoDateTime.nullable().optional(),
     venue: optionalText(100),
     matchdayId: id.nullable().optional(),
+    homeEntrant: optionalText(60),
+    awayEntrant: optionalText(60),
   })
-  .refine((v) => !v.homeTeamId || !v.awayTeamId || v.homeTeamId !== v.awayTeamId, {
-    message: "A team can't play itself",
-    path: ["awayTeamId"],
-  });
+  .refine(
+    (v) =>
+      !v.homeTeamId ||
+      !v.awayTeamId ||
+      v.homeTeamId !== v.awayTeamId ||
+      (!!v.homeEntrant && !!v.awayEntrant && v.homeEntrant !== v.awayEntrant),
+    {
+      message: "A year can only meet itself between two named players",
+      path: ["awayTeamId"],
+    },
+  );
 
 export const updateFixtureInput = z
   .object({
@@ -151,11 +160,20 @@ export const updateFixtureInput = z
     awayTeamId: id.nullable().optional(),
     venue: optionalText(100),
     matchdayId: id.nullable().optional(),
+    homeEntrant: optionalText(60),
+    awayEntrant: optionalText(60),
   })
-  .refine((v) => !v.homeTeamId || !v.awayTeamId || v.homeTeamId !== v.awayTeamId, {
-    message: "A team can't play itself",
-    path: ["awayTeamId"],
-  });
+  .refine(
+    (v) =>
+      !v.homeTeamId ||
+      !v.awayTeamId ||
+      v.homeTeamId !== v.awayTeamId ||
+      (!!v.homeEntrant && !!v.awayEntrant && v.homeEntrant !== v.awayEntrant),
+    {
+      message: "A year can only meet itself between two named players",
+      path: ["awayTeamId"],
+    },
+  );
 
 export const rescheduleFixtureInput = z.object({ fixtureId: id, kickoffAt: isoDateTime.nullable() });
 

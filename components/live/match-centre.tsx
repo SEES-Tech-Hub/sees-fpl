@@ -12,6 +12,7 @@ import { teamColour } from "@/lib/design/team-colour";
 import type { FixtureState } from "@/lib/live/live-state-types";
 import type { MatchPageData } from "@/lib/live/match-page";
 import type { LineupPlayer, TeamSummary, TimelineEntry } from "@/lib/live/types";
+import { aggregateScore, formatScore, sideName, sideYear, tieLabel } from "@/lib/live/display";
 import { useLiveFixture } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
 import { MatchStatus, ReconnectingPill, RollingScore, useClock, useFullTimeConfetti, useGoalFlash } from "./live-bits";
@@ -55,6 +56,7 @@ export function MatchCentre({ data }: { data: MatchPageData }) {
       <MatchHeader data={data} state={state} />
 
       {fixture.sport.resultFormat === "sets" && setScores.length > 0 && <SetBoard data={data} />}
+      {fixture.event.boards && data.boardEvents.length > 0 && <BoardResults data={data} />}
 
       <div className="flex flex-col gap-4 px-4 lg:px-0">
         {timed && (
@@ -78,7 +80,14 @@ export function MatchCentre({ data }: { data: MatchPageData }) {
             transition={{ duration: 0.2 }}
           >
             {tab === "timeline" ? (
-              <Timeline entries={timeline} home={fixture.home} away={fixture.away} state={state} kickoffAt={fixture.kickoffAt} />
+              <Timeline
+                entries={timeline}
+                home={fixture.home}
+                away={fixture.away}
+                state={state}
+                kickoffAt={fixture.kickoffAt}
+                kind={fixture.event.boards ? "boards" : fixture.sport.resultFormat}
+              />
             ) : (
               <Lineups players={lineups} home={fixture.home} away={fixture.away} />
             )}
@@ -117,6 +126,12 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
     return [...byName].map(([name, mins]) => `${name} ${mins.join(", ")}`);
   };
   const flashTeam = flash === "home" ? fixture.home : flash === "away" ? fixture.away : null;
+  const boards = fixture.event.boards;
+  const what = fixture.sport.slug === "football" || fixture.event.name === fixture.sport.name ? fixture.sport.name : fixture.event.name;
+  const aggregate = aggregateScore(
+    { homeScore: state.homeScore, awayScore: state.awayScore, home: fixture.home, homeEntrant: fixture.homeEntrant },
+    data.firstLeg,
+  );
 
   return (
     <section
@@ -145,16 +160,16 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
       <div className="relative mx-auto flex max-w-xl flex-col items-center gap-4">
         <div className="flex w-full items-center justify-between gap-2">
           <ShareButton
-            title={`${fixture.home?.name ?? "TBD"} v ${fixture.away?.name ?? "TBD"}`}
+            title={`${sideName(fixture, "home")} v ${sideName(fixture, "away")}`}
             text={
               notStarted
-                ? `${fixture.home?.name ?? "TBD"} v ${fixture.away?.name ?? "TBD"} · ${fixture.sport.name} at SEES Games. Follow it live:`
-                : `${fixture.home?.shortName ?? "?"} ${state.homeScore ?? 0}–${state.awayScore ?? 0} ${fixture.away?.shortName ?? "?"} · ${fixture.sport.name} at SEES Games:`
+                ? `${sideName(fixture, "home")} v ${sideName(fixture, "away")} · ${what} at SEES Games. Follow it live:`
+                : `${sideName(fixture, "home")} ${formatScore(state.homeScore ?? 0, boards)}–${formatScore(state.awayScore ?? 0, boards)} ${sideName(fixture, "away")} · ${what} at SEES Games:`
             }
           />
           <p className="flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase">
             <SportIcon sport={fixture.sport.slug.replace(/-/g, "_")} size={14} />
-            {fixture.sport.name} · {stageLabel(fixture.stage)}
+            {[what, stageLabel(fixture.stage), tieLabel(fixture)].filter(Boolean).join(" · ")}
           </p>
           {state.status === "full_time" || state.status === "walkover" || state.status === "cancelled" ? (
             <span className="size-10" aria-hidden />
@@ -164,16 +179,21 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
         </div>
 
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-start gap-2">
-          <HeaderTeam team={fixture.home} lines={scorers(fixture.home)} align="end" />
+          <HeaderTeam team={fixture.home} name={sideName(fixture, "home")} sub={sideYear(fixture, "home")} lines={scorers(fixture.home)} align="end" />
           <div className="flex flex-col items-center gap-2 pt-2">
             {notStarted ? (
               <span className="font-heading text-3xl font-bold opacity-80">v</span>
             ) : (
               <div className="flex items-baseline gap-2 font-heading text-score font-bold">
-                <RollingScore value={state.homeScore} />
+                <RollingScore value={state.homeScore} text={formatScore(state.homeScore, boards)} />
                 <span className="text-3xl opacity-50">–</span>
-                <RollingScore value={state.awayScore} />
+                <RollingScore value={state.awayScore} text={formatScore(state.awayScore, boards)} />
               </div>
+            )}
+            {aggregate && (
+              <span className="text-xs font-semibold text-brand-foreground/80 tabular-nums">
+                Aggregate {aggregate.home}–{aggregate.away}
+              </span>
             )}
             {(state.homeShootout !== null || state.awayShootout !== null) && (
               <span className="text-xs font-semibold text-brand-foreground/80">
@@ -182,7 +202,7 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
             )}
             {!notStarted && <MatchStatus clock={clock} kickoffAt={fixture.kickoffAt} className="bg-background/90" />}
           </div>
-          <HeaderTeam team={fixture.away} lines={scorers(fixture.away)} align="start" />
+          <HeaderTeam team={fixture.away} name={sideName(fixture, "away")} sub={sideYear(fixture, "away")} lines={scorers(fixture.away)} align="start" />
         </div>
 
         <AnimatePresence>
@@ -196,7 +216,7 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
               className="rounded-full px-4 py-1 font-heading text-xl font-bold tracking-wide text-team-foreground uppercase shadow-raised"
               style={{ background: teamColour(flashTeam.year) }}
             >
-              Goal {flashTeam.shortName}!
+              {fixture.sport.resultFormat === "timed" ? "Goal" : "Point"} {flash ? sideName(fixture, flash) : flashTeam.shortName}!
             </motion.p>
           )}
         </AnimatePresence>
@@ -216,7 +236,19 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
   );
 }
 
-function HeaderTeam({ team, lines, align }: { team: TeamSummary | null; lines: string[]; align: "start" | "end" }) {
+function HeaderTeam({
+  team,
+  name,
+  sub,
+  lines,
+  align,
+}: {
+  team: TeamSummary | null;
+  name: string;
+  sub: string | null;
+  lines: string[];
+  align: "start" | "end";
+}) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <span
@@ -225,7 +257,10 @@ function HeaderTeam({ team, lines, align }: { team: TeamSummary | null; lines: s
       >
         {team?.shortName ?? "?"}
       </span>
-      <span className="text-sm font-semibold sm:text-base">{team?.name ?? "TBD"}</span>
+      <span className="text-sm leading-tight font-semibold sm:text-base">
+        {name}
+        {sub && <span className="block text-xs font-medium text-brand-foreground/75">{sub}</span>}
+      </span>
       <ul className={cn("flex flex-col gap-0.5 text-xs text-brand-foreground/85", align === "end" ? "sm:items-end" : "sm:items-start")}>
         <AnimatePresence initial={false}>
           {lines.map((l) => (
@@ -239,13 +274,49 @@ function HeaderTeam({ team, lines, align }: { team: TeamSummary | null; lines: s
   );
 }
 
+/** Board games: each board's result. */
+function BoardResults({ data }: { data: MatchPageData }) {
+  const { fixture, boardEvents } = data;
+  const boards = fixture.event.boards ?? 0;
+  const results = Array.from({ length: boards }, (_, i) => {
+    const b = i + 1;
+    let home = 0;
+    let away = 0;
+    for (const e of boardEvents) {
+      if (e.type !== "point" || e.board !== b) continue;
+      const isHome = e.side ? e.side === "home" : e.teamId === fixture.home?.id;
+      if (isHome) home += e.points ?? 0;
+      else away += e.points ?? 0;
+    }
+    return { b, home, away, done: home + away >= 2 };
+  });
+  return (
+    <section aria-label="Boards" className="mx-4 -mt-2 mb-4 grid gap-2 sm:grid-cols-2 lg:mx-0 lg:mt-4">
+      {results.map((r) => (
+        <div key={r.b} className="flex items-center justify-between rounded-xl bg-card px-3 py-2.5 shadow-card">
+          <span className="font-heading text-base font-bold">Board {r.b}</span>
+          <span className="text-sm font-semibold">
+            {!r.done ? (
+              <span className="text-muted-foreground">In play</span>
+            ) : r.home === r.away ? (
+              "Draw"
+            ) : (
+              `${sideName(fixture, r.home > r.away ? "home" : "away")} won`
+            )}
+          </span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 /** Sets sports: set-by-set scores like a tennis scoreboard. */
 function SetBoard({ data }: { data: MatchPageData }) {
   const { fixture, setScores } = data;
   const row = (team: TeamSummary | null, side: "home" | "away") => (
     <tr className="border-b border-border last:border-b-0">
       <th scope="row" className="py-2 pr-3 text-left text-sm font-semibold">
-        {team?.name ?? "TBD"}
+        {team ? sideName(fixture, side) : "TBD"}
       </th>
       {setScores.map((s) => {
         const pts = side === "home" ? s.homePoints : s.awayPoints;
@@ -310,18 +381,21 @@ function Timeline({
   away,
   state,
   kickoffAt,
+  kind = "timed",
 }: {
   entries: TimelineEntry[];
   home: TeamSummary | null;
   away: TeamSummary | null;
   state: FixtureState;
   kickoffAt: string | null;
+  /** What's coming differs by sport: football's goals and cards, a board game's boards. */
+  kind?: "timed" | "sets" | "head_to_head" | "ranked" | "boards";
 }) {
   const kicks = entries.filter((e) => e.type === "shootout_kick");
   const shown = entries.filter((e) => e.type !== "shootout_kick" && e.type !== "point" && e.type !== "set_end").reverse();
 
   if (shown.length === 0 && kicks.length === 0) {
-    if (state.status === "scheduled") return <PreMatch kickoffAt={kickoffAt} home={home} away={away} />;
+    if (state.status === "scheduled") return <PreMatch kickoffAt={kickoffAt} home={home} away={away} kind={kind} />;
     return <EmptyState art="whistle" title="Nothing recorded yet" description="Goals, cards and subs land here the moment the official records them." />;
   }
 
@@ -490,13 +564,43 @@ function Shootout({ kicks, home, away }: { kicks: TimelineEntry[]; home: TeamSum
 }
 
 /** Before kickoff: what's coming, a countdown, and a nudge to the bell. */
-function PreMatch({ kickoffAt, home, away }: { kickoffAt: string | null; home: TeamSummary | null; away: TeamSummary | null }) {
-  const items = [
-    { icon: <BallIcon />, text: "Goals, with who set them up" },
-    { icon: <span className="h-4 w-3 rounded-[2px] bg-highlight" />, text: "Yellow and red cards" },
-    { icon: <ArrowUp className="size-4 text-success" />, text: "Every substitution" },
-    { icon: <Star className="size-4 fill-highlight text-highlight" />, text: "Player of the match" },
-  ];
+function PreMatch({
+  kickoffAt,
+  home,
+  away,
+  kind = "timed",
+}: {
+  kickoffAt: string | null;
+  home: TeamSummary | null;
+  away: TeamSummary | null;
+  kind?: "timed" | "sets" | "head_to_head" | "ranked" | "boards";
+}) {
+  const dot = <span className="size-2.5 rounded-full bg-brand" />;
+  const star = <Star className="size-4 fill-highlight text-highlight" />;
+  const items =
+    kind === "boards"
+      ? [
+          { icon: dot, text: "Each board's result as it finishes" },
+          { icon: dot, text: "The score in board points (a win is 1, a draw ½)" },
+          { icon: star, text: "The game's table, by board points" },
+        ]
+      : kind === "sets"
+        ? [
+            { icon: dot, text: "Every point, live" },
+            { icon: dot, text: "Set by set scores" },
+            { icon: star, text: "The winner as soon as it's decided" },
+          ]
+        : kind === "head_to_head"
+          ? [
+              { icon: dot, text: "The score, live" },
+              { icon: star, text: "The winner, and who goes through" },
+            ]
+          : [
+              { icon: <BallIcon />, text: "Goals, with who set them up" },
+              { icon: <span className="h-4 w-3 rounded-[2px] bg-highlight" />, text: "Yellow and red cards" },
+              { icon: <ArrowUp className="size-4 text-success" />, text: "Every substitution" },
+              { icon: star, text: "Player of the match" },
+            ];
   return (
     <section className="relative overflow-hidden rounded-2xl bg-card px-5 py-7 text-center shadow-card">
       <span

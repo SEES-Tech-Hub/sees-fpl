@@ -37,6 +37,9 @@ export type ConsoleEvent = {
   isOwnGoal: boolean;
   scored: boolean | null;
   points: number | null;
+  /** Head-to-head: home or away (two players from one year), and the board for board games. */
+  side?: "home" | "away" | null;
+  board?: number | null;
   occurredAt: string;
   /** Not confirmed by the server yet. */
   pending: boolean;
@@ -161,8 +164,18 @@ export function fromRecordInput(input: RecordEventInput, pending: boolean): Cons
       event.teamId = input.teamId;
       event.points = input.points ?? 3;
       break;
-    case "period_end":
+    case "point":
+      event.teamId = input.teamId;
+      event.points = input.points ?? 1;
+      event.side = input.side ?? null;
+      event.board = input.board ?? null;
+      break;
     case "full_time":
+      event.teamId = input.winnerTeamId ?? null;
+      event.side = input.winnerSide ?? null;
+      break;
+    case "period_end":
+    case "set_end":
       break;
   }
   return event;

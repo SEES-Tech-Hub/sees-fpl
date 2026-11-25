@@ -21,7 +21,7 @@ export type { FixtureState } from "./live-state-types";
 const LIFE = { stale: 4, revalidate: 4, expire: 60 } as const;
 
 const STATE_COLUMNS =
-  "id, status, kickoff_at, home_score, away_score, home_shootout, away_shootout, winner_team_id, current_period, period_started_at, current_set, home_set_points, away_set_points, updated_at" as const;
+  "id, status, kickoff_at, home_score, away_score, home_shootout, away_shootout, winner_team_id, winner_side, current_period, period_started_at, current_set, home_set_points, away_set_points, updated_at" as const;
 
 type StateRow = {
   id: string;
@@ -32,6 +32,7 @@ type StateRow = {
   home_shootout: number | null;
   away_shootout: number | null;
   winner_team_id: string | null;
+  winner_side: string | null;
   current_period: FixtureState["currentPeriod"];
   period_started_at: string | null;
   current_set: number | null;
@@ -50,6 +51,7 @@ function toState(r: StateRow): FixtureState {
     homeShootout: r.home_shootout,
     awayShootout: r.away_shootout,
     winnerTeamId: r.winner_team_id,
+    winnerSide: r.winner_side === "home" || r.winner_side === "away" ? r.winner_side : null,
     currentPeriod: r.current_period,
     periodStartedAt: r.period_started_at,
     currentSet: r.current_set,

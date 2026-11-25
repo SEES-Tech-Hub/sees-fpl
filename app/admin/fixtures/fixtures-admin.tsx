@@ -30,6 +30,7 @@ import {
 import { commitFixturesImport, previewFixturesImport } from "@/lib/admin/actions/imports";
 import { fillKnockouts } from "@/lib/admin/actions/knockouts";
 import { setConsoleHolder } from "@/lib/admin/actions/officials";
+import { INDIVIDUAL_EVENTS } from "@/lib/admin/individual";
 import type { AdminFixture, AdminMatchday } from "@/lib/admin/queries/fixtures";
 import type { AdminProfile } from "@/lib/admin/queries/officials";
 import type { AdminSport, AdminTeam } from "@/lib/admin/queries/sports";
@@ -171,9 +172,13 @@ export function FixturesAdmin(props: Props) {
   );
 }
 
+type Players = { home: string; away: string; onHome: (v: string) => void; onAway: (v: string) => void };
+
 /**
  * Home and away pick from one pool: a team taken on one side is greyed out on
- * the other, so a team can never be picked to play itself.
+ * the other, so a team can never be picked to play itself. Player-vs-player
+ * events (eFootball, EA FC, lawn tennis, table tennis singles) also take the
+ * players' names, and then two players from the same year may meet.
  */
 function TeamPair({
   teams,
@@ -181,27 +186,44 @@ function TeamPair({
   away,
   onHome,
   onAway,
+  players,
 }: {
   teams: AdminTeam[];
   home: string;
   away: string;
   onHome: (v: string) => void;
   onAway: (v: string) => void;
+  players?: Players;
 }) {
   const opts = (taken: string) =>
-    teams.map((t) => ({ value: t.id, label: t.name, disabled: t.id === taken, hint: t.id === taken ? "picked" : undefined }));
+    teams.map((t) => {
+      const off = !players && t.id === taken;
+      return { value: t.id, label: t.name, disabled: off, hint: off ? "picked" : undefined };
+    });
   const half = (home === "") !== (away === "");
+  const sameYear = !!players && home !== "" && home === away && (!players.home.trim() || !players.away.trim());
   return (
     <div className="flex flex-col gap-1.5">
       <div className="grid grid-cols-2 gap-3">
-        <Row label="Home">
+        <Row label={players ? "Home year" : "Home"}>
           <Choice label="Home team" value={home} onChange={onHome} options={opts(away)} noneLabel="To be decided" />
         </Row>
-        <Row label="Away">
+        <Row label={players ? "Away year" : "Away"}>
           <Choice label="Away team" value={away} onChange={onAway} options={opts(home)} noneLabel="To be decided" />
         </Row>
+        {players && (
+          <>
+            <Row label="Home player">
+              <Input value={players.home} maxLength={60} onChange={(e) => players.onHome(e.target.value)} placeholder="Name" />
+            </Row>
+            <Row label="Away player">
+              <Input value={players.away} maxLength={60} onChange={(e) => players.onAway(e.target.value)} placeholder="Name" />
+            </Row>
+          </>
+        )}
       </div>
       {half && <p className="text-xs font-medium text-destructive">Pick both teams, or leave both as To be decided.</p>}
+      {sameYear && <p className="text-xs font-medium text-destructive">Two players from the same year: name both players.</p>}
     </div>
   );
 }
@@ -224,6 +246,9 @@ function CreateFixture({ sports, teams, matchdays, onClose }: Props & { onClose:
   const [kickoff, setKickoff] = useState("");
   const [venue, setVenue] = useState("");
   const [matchday, setMatchday] = useState("");
+  const [homePlayer, setHomePlayer] = useState("");
+  const [awayPlayer, setAwayPlayer] = useState("");
+  const individual = INDIVIDUAL_EVENTS.has(events.find((e) => e.id === eventId)?.slug ?? "");
 
   const save = () =>
     run(
@@ -236,6 +261,7 @@ function CreateFixture({ sports, teams, matchdays, onClose }: Props & { onClose:
           kickoffAt: fromWatInput(kickoff),
           venue: venue || undefined,
           matchdayId: matchday || null,
+          ...(individual ? { homeEntrant: homePlayer, awayEntrant: awayPlayer } : {}),
         }),
       {
         success: "Fixture added",
@@ -259,7 +285,14 @@ function CreateFixture({ sports, teams, matchdays, onClose }: Props & { onClose:
         <Row label="Stage">
           <Choice label="Stage" value={stage} onChange={setStage} options={STAGES} />
         </Row>
-        <TeamPair teams={teams} home={home} away={away} onHome={setHome} onAway={setAway} />
+        <TeamPair
+          teams={teams}
+          home={home}
+          away={away}
+          onHome={setHome}
+          onAway={setAway}
+          players={individual ? { home: homePlayer, away: awayPlayer, onHome: setHomePlayer, onAway: setAwayPlayer } : undefined}
+        />
         <Row label="Kickoff (WAT)">
           <Input type="datetime-local" value={kickoff} onChange={(e) => setKickoff(e.target.value)} />
         </Row>
@@ -289,6 +322,9 @@ function EditFixture({ fixture: f, teams, matchdays, officials, onClose }: Props
   const [matchday, setMatchday] = useState(f.matchdayId ?? "");
   const [kickoff, setKickoff] = useState(toWatInput(f.kickoffAt));
   const [holder, setHolder] = useState(f.consoleHolderId ?? "");
+  const [homePlayer, setHomePlayer] = useState(f.homeEntrant ?? "");
+  const [awayPlayer, setAwayPlayer] = useState(f.awayEntrant ?? "");
+  const individual = INDIVIDUAL_EVENTS.has(f.eventSlug) || !!f.homeEntrant || !!f.awayEntrant;
   const started = !["scheduled", "postponed", "cancelled"].includes(f.status);
 
   const saveDetails = () =>
@@ -307,6 +343,7 @@ function EditFixture({ fixture: f, teams, matchdays, officials, onClose }: Props
             awayTeamId: away || null,
             venue: venue || undefined,
             matchdayId: matchday || null,
+            ...(individual ? { homeEntrant: homePlayer, awayEntrant: awayPlayer } : {}),
           });
           if (!r.ok) return r;
           warnDeadline(r.data);
@@ -347,7 +384,14 @@ function EditFixture({ fixture: f, teams, matchdays, officials, onClose }: Props
                   options={STAGES.some((o) => o.value === stage) ? STAGES : [...STAGES, { value: stage, label: stage.replace(/_/g, " ") }]}
                 />
               </Row>
-              <TeamPair teams={teams} home={home} away={away} onHome={setHome} onAway={setAway} />
+              <TeamPair
+                teams={teams}
+                home={home}
+                away={away}
+                onHome={setHome}
+                onAway={setAway}
+                players={individual ? { home: homePlayer, away: awayPlayer, onHome: setHomePlayer, onAway: setAwayPlayer } : undefined}
+              />
               <Row label="Venue">
                 <Input value={venue} onChange={(e) => setVenue(e.target.value)} />
               </Row>

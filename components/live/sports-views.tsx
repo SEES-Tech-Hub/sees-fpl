@@ -13,6 +13,7 @@ import type { SportSummary } from "@/lib/live/public-pages";
 import type { EventStandingRow, RaceResultRow, ResultFormat, StandingRow } from "@/lib/live/types";
 import { useLiveFixtures } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
+import { formatScore } from "@/lib/live/display";
 import { FixtureRow, gameName } from "./fixture-card";
 import { LivePulse, ReconnectingPill } from "./live-bits";
 import { Empty, Medal } from "./tables-view";
@@ -145,7 +146,13 @@ export function SportView({
             {current === "table" && (
               <>
                 {shownTables.map((t) => (
-                  <EventTable key={t.event.id} title={multi ? t.event.name : undefined} rows={t.rows} sets={sport.resultFormat === "sets"} />
+                  <EventTable
+                    key={t.event.id}
+                    title={multi ? t.event.name : undefined}
+                    rows={t.rows}
+                    sets={sport.resultFormat === "sets"}
+                    boards={sport.slug === "board-games"}
+                  />
                 ))}
                 <Knockouts cards={shownCards} labelOf={labelOf} stateOf={(c) => states.get(c.id) ?? c.state} />
               </>
@@ -222,7 +229,18 @@ function FixturesByDate({
   );
 }
 
-function EventTable({ title, rows, sets }: { title?: string; rows: (StandingRow | EventStandingRow)[]; sets: boolean }) {
+function EventTable({
+  title,
+  rows,
+  sets,
+  boards = false,
+}: {
+  title?: string;
+  rows: (StandingRow | EventStandingRow)[];
+  sets: boolean;
+  /** Board games: ranked by board points (stored doubled), shown as halves. */
+  boards?: boolean;
+}) {
   if (rows.length === 0) return <Empty art="trophy" title="No table yet" text="It fills in with the first results." />;
   const started = rows.some((r) => r.played > 0);
   const forOf = (r: StandingRow | EventStandingRow) => ("goalsFor" in r ? r.goalsFor : sets ? r.setsFor : r.scoreFor);
@@ -235,7 +253,7 @@ function EventTable({ title, rows, sets }: { title?: string; rows: (StandingRow 
           <tr className="border-b border-border text-xs text-muted-foreground">
             <th className="w-8 py-2 pl-3 text-left font-semibold">#</th>
             <th className="py-2 text-left font-semibold">Team</th>
-            {["P", "W", "L", sets ? "Sets" : "+/−"].map((h) => (
+            {["P", "W", "L", sets ? "Sets" : boards ? "Boards" : "+/−"].map((h) => (
               <th key={h} className="w-10 py-2 text-center font-semibold">
                 {h}
               </th>
@@ -262,7 +280,9 @@ function EventTable({ title, rows, sets }: { title?: string; rows: (StandingRow 
               <td className="text-center tabular-nums">{r.played}</td>
               <td className="text-center tabular-nums">{r.won}</td>
               <td className="text-center tabular-nums">{r.lost}</td>
-              <td className="text-center tabular-nums">{sets ? `${forOf(r)}–${againstOf(r)}` : forOf(r) - againstOf(r)}</td>
+              <td className={cn("text-center tabular-nums", boards && "font-heading text-base font-bold")}>
+                {sets ? `${forOf(r)}–${againstOf(r)}` : boards ? formatScore(forOf(r), 1) : forOf(r) - againstOf(r)}
+              </td>
               <td className="pr-3 text-center font-heading text-base font-bold tabular-nums">{r.points}</td>
             </motion.tr>
           ))}
