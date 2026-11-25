@@ -1,19 +1,22 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Crown } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, Crown } from "lucide-react";
+import { SportIcon } from "@/components/ui/shared/SportIcon";
 import { SlidingTabs } from "@/components/fantasy/motion-bits";
 import { MotionProvider } from "@/components/fantasy/motion-provider";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { teamColour } from "@/lib/design/team-colour";
-import type { MedalTableRow, PlayerTotalsRow, StandingRow, SuspensionRow, TeamSummary, TopScorerRow } from "@/lib/live/types";
+import type { EventStandingRow, MedalTableRow, PlayerTotalsRow, ResultFormat, StandingRow, SuspensionRow, TeamSummary, TopScorerRow } from "@/lib/live/types";
 import { useRefreshOnLiveChange } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
 import { EmptyState } from "@/components/brand/empty-state";
 import type { EmptyArt } from "@/components/brand/empty-art";
 import { LivePulse, ReconnectingPill } from "./live-bits";
+import { EventTable } from "./sports-views";
 
-type Tab = "football" | "championship" | "stats";
+type Tab = "football" | "sports" | "championship" | "stats";
 
 export type TablesData = {
   standings: StandingRow[];
@@ -24,6 +27,11 @@ export type TablesData = {
   discipline: PlayerTotalsRow[];
   suspensions: SuspensionRow[];
   form: Record<string, ("W" | "D" | "L")[]>;
+  /** Group tables for every other sport, by sport then event. */
+  sportTables: {
+    sport: { slug: string; name: string; resultFormat: ResultFormat };
+    tables: { event: { id: string; slug: string; name: string }; rows: EventStandingRow[] }[];
+  }[];
 };
 
 export function TablesView({ data }: { data: TablesData }) {
@@ -44,6 +52,7 @@ export function TablesView({ data }: { data: TablesData }) {
           className="w-full max-w-sm"
           items={[
             { value: "football", label: "Football" },
+            { value: "sports", label: "Sports" },
             { value: "championship", label: "Medals" },
             { value: "stats", label: "Stats" },
           ]}
@@ -58,12 +67,44 @@ export function TablesView({ data }: { data: TablesData }) {
             className="flex flex-col gap-4"
           >
             {tab === "football" && <FootballTable rows={data.standings} form={data.form} />}
+            {tab === "sports" && <SportTables sports={data.sportTables} />}
             {tab === "championship" && <MedalTable rows={data.medals} />}
             {tab === "stats" && <Stats data={data} />}
           </motion.div>
         </AnimatePresence>
       </div>
     </MotionProvider>
+  );
+}
+
+/** Every other sport's group tables, each with a link to its sport page. */
+function SportTables({ sports }: { sports: TablesData["sportTables"] }) {
+  if (sports.length === 0) return <Empty art="trophy" title="No tables yet" text="Group tables appear here once those sports have fixtures." />;
+  return (
+    <>
+      {sports.map(({ sport, tables }) => (
+        <section key={sport.slug} className="flex flex-col gap-2">
+          <Link href={`/sports/${sport.slug}`} className="group flex items-center gap-2">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-brand">
+              <SportIcon sport={sport.slug.replace(/-/g, "_")} size={18} />
+            </span>
+            <h2 className="flex-1 font-heading text-xl font-bold uppercase">{sport.name}</h2>
+            <span className="flex items-center text-xs font-semibold text-brand">
+              Fixtures <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </Link>
+          {tables.map((t) => (
+            <EventTable
+              key={t.event.id}
+              title={tables.length > 1 ? t.event.name : undefined}
+              rows={t.rows}
+              sets={sport.resultFormat === "sets"}
+              boards={sport.slug === "board-games"}
+            />
+          ))}
+        </section>
+      ))}
+    </>
   );
 }
 

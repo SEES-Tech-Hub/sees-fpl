@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { SeesMark } from "@/components/brand/sees-mark";
 import { usePathname } from "next/navigation";
-import { Megaphone, CloudOff, X, ChevronDown, BookOpen, Shield, Gauge, LogOut, Radio } from "lucide-react";
+import { CloudOff, ChevronDown, BookOpen, Shield, Gauge, LogOut, Radio } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/app/login/actions";
+import { AnnouncementStrip } from "./announcement-strip";
 import { showsHeader } from "./routes";
 
 const NAV_LINKS = [
@@ -24,13 +25,12 @@ const NAV_LINKS = [
 
 interface TopHeaderProps {
   user?: { name?: string | null; avatarUrl?: string | null } | null;
-  announcement?: { id: string; message: string } | null;
+  announcement?: { id: string; message: string; tone?: "info" | "warning" } | null;
   role?: "user" | "official" | "admin";
 }
 
 export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps) {
   const pathname = usePathname();
-  const [dismissedId, setDismissedId] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
@@ -46,8 +46,6 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
   }, []);
 
   if (!showsHeader(pathname)) return null;
-
-  const showAnnouncement = announcement && dismissedId !== announcement.id;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -141,22 +139,7 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
         </div>
       </div>
 
-      {showAnnouncement && (
-        <div className="flex items-center justify-between gap-2 bg-highlight px-4 py-2 text-xs font-semibold text-team-foreground">
-          <div className="mx-auto flex max-w-[1200px] flex-1 items-center gap-2">
-            <Megaphone className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{announcement.message}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setDismissedId(announcement.id)}
-            aria-label="Dismiss announcement"
-            className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-team-foreground/10"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
+      <AnnouncementStrip announcement={announcement ?? null} />
 
       {isOffline && (
         <div className="flex items-center justify-center gap-2 bg-muted px-4 py-1.5 text-xs font-medium text-muted-foreground">

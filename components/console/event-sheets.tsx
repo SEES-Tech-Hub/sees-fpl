@@ -310,7 +310,8 @@ export function PenaltySheet({ ctx }: { ctx: SheetContext }) {
       title="Penalty missed or saved"
       description="A scored penalty is a Goal with Penalty switched on."
       submitLabel={outcome === "saved" ? "Record saved penalty" : "Record missed penalty"}
-      canSubmit={!!teamId && !!takerId && !!outcome}
+      // A save needs the keeper: that's how the database tells a save from a miss (and fantasy pays the keeper).
+      canSubmit={!!teamId && !!takerId && !!outcome && (outcome === "missed" || !!keeperId)}
       onSubmit={() => {
         if (!teamId || !takerId) return;
         ctx.record({
@@ -329,7 +330,8 @@ export function PenaltySheet({ ctx }: { ctx: SheetContext }) {
         onChange={(id) => {
           setTeamId(id);
           setTakerId(null);
-          setKeeperId(null);
+          const gk = outcome === "saved" && id ? pick(opponentOf(id), "on_pitch").find((p) => p.position === "GK") : undefined;
+          setKeeperId(gk?.id ?? null);
         }}
       />
       <Choice
@@ -339,7 +341,14 @@ export function PenaltySheet({ ctx }: { ctx: SheetContext }) {
           { value: "saved", label: "Saved" },
         ]}
         value={outcome}
-        onChange={setOutcome}
+        onChange={(o) => {
+          setOutcome(o);
+          // Saved: start with the other side's goalkeeper picked.
+          if (o === "saved" && teamId && !keeperId) {
+            const gk = pick(opponentOf(teamId), "on_pitch").find((p) => p.position === "GK");
+            if (gk) setKeeperId(gk.id);
+          }
+        }}
       />
       {teamId && (
         <PlayerPicker
@@ -355,7 +364,6 @@ export function PenaltySheet({ ctx }: { ctx: SheetContext }) {
           players={keepers}
           value={keeperId}
           onChange={setKeeperId}
-          noneLabel="Not sure"
         />
       )}
     </Sheet>

@@ -6,6 +6,7 @@ import {
   CalendarClock,
   CalendarDays,
   LayoutDashboard,
+  ChartNoAxesCombined,
   Megaphone,
   Menu,
   ScrollText,
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/teams", label: "Teams", icon: Users },
   { href: "/admin/sports", label: "Sports and events", icon: Trophy },
   { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
+  { href: "/admin/analytics", label: "Analytics", icon: ChartNoAxesCombined },
   { href: "/admin/audit", label: "Audit log", icon: ScrollText },
 ];
 

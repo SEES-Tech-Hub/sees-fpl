@@ -29,7 +29,9 @@ async function loadViewer(): Promise<{ user: ShellUser | null; role: ShellRole |
   };
 }
 
-async function SignedInHeader({ announcement }: { announcement?: { id: string; message: string } | null }) {
+type ShellAnnouncement = { id: string; message: string; tone?: "info" | "warning" };
+
+async function SignedInHeader({ announcement }: { announcement?: ShellAnnouncement | null }) {
   // The admin's active announcement (Admin → Announcements), unless a page passes one.
   const [{ user, role }, active] = await Promise.all([loadViewer(), announcement === undefined ? getActiveAnnouncement() : null]);
   return <TopHeader user={user} role={role} announcement={announcement ?? active} />;
@@ -40,7 +42,7 @@ async function SignedInTabBar({ hasLiveMatch }: { hasLiveMatch?: boolean }) {
   return <BottomTabBar hasLiveMatch={hasLiveMatch} role={role} user={user} />;
 }
 
-export function SiteHeader({ announcement }: { announcement?: { id: string; message: string } | null }) {
+export function SiteHeader({ announcement }: { announcement?: ShellAnnouncement | null }) {
   return (
     <Suspense fallback={<div className="h-14 w-full border-b border-border/60 bg-background" />}>
       <SignedInHeader announcement={announcement} />

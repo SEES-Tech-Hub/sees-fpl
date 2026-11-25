@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { preload } from "react-dom";
+import { AnalyticsTracker } from "@/components/analytics/tracker";
 import { EarlyInstallCapture } from "@/components/pwa/early-install-capture";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
@@ -54,6 +55,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* InstallPrompt reads the pathname, which suspends on dynamic routes. */}
         <Suspense fallback={null}>
           <InstallPrompt />
+        </Suspense>
+        {/* Reads the pathname too. First-party page views and "online now" (Admin → Analytics). */}
+        <Suspense fallback={null}>
+          <AnalyticsTracker />
         </Suspense>
       </body>
     </html>

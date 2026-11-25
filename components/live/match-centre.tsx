@@ -499,7 +499,15 @@ function EventContent({ entry: e, alignEnd }: { entry: TimelineEntry; alignEnd: 
       <div className={row}>
         <X className="size-4 text-live" aria-hidden />
         <span className="text-sm">
-          {e.playerName ?? "Penalty"} <span className="text-muted-foreground">missed a penalty</span>
+          {e.otherPlayerName ? (
+            <>
+              {e.otherPlayerName} <span className="text-muted-foreground">saved a penalty from</span> {e.playerName ?? "the taker"}
+            </>
+          ) : (
+            <>
+              {e.playerName ?? "Penalty"} <span className="text-muted-foreground">missed a penalty</span>
+            </>
+          )}
         </span>
       </div>
     );
