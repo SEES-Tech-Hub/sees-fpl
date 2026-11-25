@@ -12,8 +12,8 @@ import type { FixtureStatus, MatchdayStatus } from "../types";
 
 export const FIXTURE_FIELDS = `
   id, event_id, stage, home_team_id, away_team_id, kickoff_at, venue, status, matchday_id,
-  console_holder, home_score, away_score, updated_at,
-  event:events ( name, sport:sports ( id, name, slug ) ),
+  console_holder, home_score, away_score, updated_at, home_entrant, away_entrant, tie, leg,
+  event:events ( name, slug, sport:sports ( id, name, slug ) ),
   home:teams!fixtures_home_team_id_fkey ( short_name ),
   away:teams!fixtures_away_team_id_fkey ( short_name ),
   matchday:matchdays ( number ),
@@ -24,6 +24,8 @@ export type AdminFixture = {
   id: string;
   eventId: string;
   eventName: string;
+  /** The event's slug: player-vs-player events (see INDIVIDUAL_EVENTS) name their players. */
+  eventSlug: string;
   sportId: string | null;
   sportName: string;
   sportSlug: string | null;
@@ -32,6 +34,11 @@ export type AdminFixture = {
   awayTeamId: string | null;
   home: string | null;
   away: string | null;
+  homeEntrant: string | null;
+  awayEntrant: string | null;
+  /** The match label from the schedule ("M1", "QF2") and the leg of a two-leg tie. */
+  tie: string | null;
+  leg: number | null;
   /** "Y1 v Y4", "Final: Y5 v Y3", "Final (teams to be confirmed)". */
   label: string;
   kickoffAt: string | null;
@@ -60,7 +67,11 @@ export type FixtureRow = {
   home_score: number | null;
   away_score: number | null;
   updated_at: string;
-  event: { name: string; sport: { id: string; name: string; slug: string } | null } | null;
+  home_entrant: string | null;
+  away_entrant: string | null;
+  tie: string | null;
+  leg: number | null;
+  event: { name: string; slug: string; sport: { id: string; name: string; slug: string } | null } | null;
   home: { short_name: string } | null;
   away: { short_name: string } | null;
   matchday: { number: number } | null;
@@ -68,12 +79,15 @@ export type FixtureRow = {
 };
 
 export function toAdminFixture(row: FixtureRow): AdminFixture {
-  const home = row.home?.short_name ?? null;
-  const away = row.away?.short_name ?? null;
+  const named = (entrant: string | null, short: string | null) => (entrant ? `${entrant}${short ? ` (${short})` : ""}` : short);
+  const home = named(row.home_entrant, row.home?.short_name ?? null);
+  const away = named(row.away_entrant, row.away?.short_name ?? null);
+  const tie = row.tie ? `${row.tie}${row.leg ? ` leg ${row.leg}` : ""}` : null;
   return {
     id: row.id,
     eventId: row.event_id,
     eventName: row.event?.name ?? "",
+    eventSlug: row.event?.slug ?? "",
     sportId: row.event?.sport?.id ?? null,
     sportName: row.event?.sport?.name ?? "Unknown sport",
     sportSlug: row.event?.sport?.slug ?? null,
@@ -82,7 +96,11 @@ export function toAdminFixture(row: FixtureRow): AdminFixture {
     awayTeamId: row.away_team_id,
     home,
     away,
-    label: fixtureLabel(row.stage, home, away),
+    homeEntrant: row.home_entrant,
+    awayEntrant: row.away_entrant,
+    tie: row.tie,
+    leg: row.leg,
+    label: `${tie ? `${tie} · ` : ""}${fixtureLabel(row.stage, home, away)}`,
     kickoffAt: row.kickoff_at,
     venue: row.venue,
     status: row.status,

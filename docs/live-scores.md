@@ -442,6 +442,15 @@ Call it once the group is finished, and again after each knockout round. It fill
 
 ---
 
+## Board games, player-vs-player matches and two-leg ties (25 Nov)
+
+Migration `20261125075848_live_boards_players_legs.sql`.
+
+- **Board games.** `events.boards` is the number of boards per match (Chess 1, the other games 2). Record each board as a `point` with `board` set: `points: 2` to the winner, or `points: 1` to each side for a draw (the rulebook's 1 and 0.5, doubled so scores stay whole). A board can't take more than 2 points. Scores show as halves on the site (`formatScore` in `lib/live/display.ts`). `events.rank_by_score` ranks the group table by total board points first.
+- **Players, not years.** eFootball, EA FC, lawn tennis and table tennis singles name their players: `fixtures.home_entrant` and `away_entrant`; `home_team_id` and `away_team_id` stay the players' years. Two players from the same year may meet, so every `point` and a declared `full_time` winner carry `side` (`home` or `away`); `record_match_event` refuses a same-year point without it. `fixtures.winner_side` says who won (`winner_team_id` is still that side's year).
+- **Two-leg ties.** `fixtures.tie` labels the match from the schedule ("QF1", "M3") and `fixtures.leg` is 1 or 2. A first leg can end level. A second leg needs a declared winner only when the aggregate of both legs is level (extra time or penalties).
+- **Console.** Head-to-head fixtures open `components/console/head-to-head-console.tsx`: one row per board for board games, +1 buttons per side for the rest, and End match (asks for the winner when it's needed). Set-based sports and races don't have a console screen yet.
+
 ## Rules the database enforces
 
 These rules hold whatever the app does. They're tested in 290+ database scenarios:

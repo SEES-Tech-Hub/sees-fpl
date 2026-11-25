@@ -72,6 +72,8 @@ export type RecordEventInput = RecordEventBase &
          * Sets: the admin ending a match early (a retirement). Ignored for timed matches.
          */
         winnerTeamId?: string | null;
+        /** With winnerTeamId when both players are from the same year. */
+        winnerSide?: Side | null;
       }
     | {
         /** Sets and head-to-head: a point (or game) for a team. */
@@ -80,6 +82,10 @@ export type RecordEventInput = RecordEventBase &
         playerId?: string | null;
         /** 1 per tap. The admin can enter a set's total at once (up to 99). */
         points?: number;
+        /** home or away: needed when both players are from the same year. */
+        side?: Side | null;
+        /** Board games: the board this result is for (2 points a win, 1 each a draw). */
+        board?: number | null;
       }
     | {
         /** Sets: close the current set. Refused unless the score is a finished set (25-20, 27-25 ...). */
@@ -246,11 +252,18 @@ export type MatchEvent = {
   isOwnGoal: boolean;
   scored: boolean | null;
   points: number | null;
+  /** home or away, when recorded (two players from the same year). */
+  side: Side | null;
+  /** Board games: which board this result is for. */
+  board: number | null;
   occurredAt: string;
   recordedAt: string;
   voidedAt: string | null;
   voidReason: string | null;
 };
+
+/** Which side of a fixture: home or away. */
+export type Side = "home" | "away";
 
 export type TeamSummary = {
   id: string;
@@ -281,6 +294,14 @@ export type LiveFixture = {
   currentSet: number | null;
   homeSetPoints: number | null;
   awaySetPoints: number | null;
+  /** Player-vs-player events: the players' names (home and away are their years). */
+  homeEntrant: string | null;
+  awayEntrant: string | null;
+  /** The match label from the schedule ("M1", "QF2") and, for two-leg ties, the leg. */
+  tie: string | null;
+  leg: number | null;
+  /** home or away: who won (needed when both players are from the same year). */
+  winnerSide: Side | null;
   event: {
     id: string;
     name: string;
@@ -288,6 +309,8 @@ export type LiveFixture = {
     extraPeriodMinutes: number | null;
     /** Timed: 2 halves or 4 quarters. */
     periodCount: number | null;
+    /** Board games: boards per match (each worth 2 points). Null for other games. */
+    boards: number | null;
     /** Sets: sets to win (2 = best of 3), points per set and in the deciding set. */
     setsToWin: number | null;
     setPoints: number | null;

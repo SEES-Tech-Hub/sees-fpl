@@ -48,9 +48,9 @@ export type ConsoleViewer = {
   heldBySomeoneElse: boolean;
 };
 
-const UNDO_FOR_MS = 10_000;
+export const UNDO_FOR_MS = 10_000;
 
-type LastAction = { id: string; label: string; expiresAt: number };
+export type LastAction = { id: string; label: string; expiresAt: number };
 
 export function ConsoleApp({
   fixture,
@@ -291,7 +291,7 @@ function TeamName({ team, align }: { team: TeamSummary; align: "left" | "right" 
 // Sending status and the lost-control banner
 // -----------------------------------------------------------------------------
 
-function SendStatus({ queue }: { queue: ReturnType<typeof useConsoleQueue> }) {
+export function SendStatus({ queue }: { queue: ReturnType<typeof useConsoleQueue> }) {
   const waiting = queue.items.length;
 
   if (queue.lostControl) {
@@ -378,7 +378,7 @@ function SendStatus({ queue }: { queue: ReturnType<typeof useConsoleQueue> }) {
 // Take this match / Hand over
 // -----------------------------------------------------------------------------
 
-function HolderBar({
+export function HolderBar({
   viewer,
   fixtureId,
   waiting,
@@ -490,7 +490,7 @@ function HolderBar({
 // Undo
 // -----------------------------------------------------------------------------
 
-function UndoBar({ action, onUndo, onExpire }: { action: LastAction; onUndo: () => void; onExpire: () => void }) {
+export function UndoBar({ action, onUndo, onExpire }: { action: LastAction; onUndo: () => void; onExpire: () => void }) {
   const [secondsLeft, setSecondsLeft] = useState(() => Math.ceil((action.expiresAt - Date.now()) / 1000));
 
   useEffect(() => {
@@ -640,7 +640,7 @@ function useClockLabel(clock: ClockFixture): string {
 }
 
 /** router.refresh(), at most once a second however many updates arrive. */
-function useThrottledRefresh(refresh: () => void) {
+export function useThrottledRefresh(refresh: () => void) {
   const timer = useRef<number | null>(null);
   return useCallback(() => {
     if (timer.current !== null) return;

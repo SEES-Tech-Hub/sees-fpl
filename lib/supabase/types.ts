@@ -238,6 +238,7 @@ export type Database = {
       }
       events: {
         Row: {
+          boards: number | null
           created_at: string
           draw_points: number | null
           extra_period_minutes: number | null
@@ -248,6 +249,7 @@ export type Database = {
           period_count: number | null
           period_minutes: number | null
           qualifiers_per_heat: number | null
+          rank_by_score: boolean
           set_points: number | null
           set_points_cap: number | null
           set_win_by: number | null
@@ -257,6 +259,7 @@ export type Database = {
           win_points: number | null
         }
         Insert: {
+          boards?: number | null
           created_at?: string
           draw_points?: number | null
           extra_period_minutes?: number | null
@@ -267,6 +270,7 @@ export type Database = {
           period_count?: number | null
           period_minutes?: number | null
           qualifiers_per_heat?: number | null
+          rank_by_score?: boolean
           set_points?: number | null
           set_points_cap?: number | null
           set_win_by?: number | null
@@ -276,6 +280,7 @@ export type Database = {
           win_points?: number | null
         }
         Update: {
+          boards?: number | null
           created_at?: string
           draw_points?: number | null
           extra_period_minutes?: number | null
@@ -286,6 +291,7 @@ export type Database = {
           period_count?: number | null
           period_minutes?: number | null
           qualifiers_per_heat?: number | null
+          rank_by_score?: boolean
           set_points?: number | null
           set_points_cap?: number | null
           set_win_by?: number | null
@@ -453,6 +459,7 @@ export type Database = {
       }
       fixtures: {
         Row: {
+          away_entrant: string | null
           away_score: number | null
           away_set_points: number | null
           away_shootout: number | null
@@ -462,22 +469,27 @@ export type Database = {
           current_period: Database["public"]["Enums"]["match_period"] | null
           current_set: number | null
           event_id: string
+          home_entrant: string | null
           home_score: number | null
           home_set_points: number | null
           home_shootout: number | null
           home_team_id: string | null
           id: string
           kickoff_at: string | null
+          leg: number | null
           matchday_id: string | null
           period_started_at: string | null
           result_note: string | null
           stage: string
           status: Database["public"]["Enums"]["fixture_status"]
+          tie: string | null
           updated_at: string
           venue: string | null
+          winner_side: string | null
           winner_team_id: string | null
         }
         Insert: {
+          away_entrant?: string | null
           away_score?: number | null
           away_set_points?: number | null
           away_shootout?: number | null
@@ -487,22 +499,27 @@ export type Database = {
           current_period?: Database["public"]["Enums"]["match_period"] | null
           current_set?: number | null
           event_id: string
+          home_entrant?: string | null
           home_score?: number | null
           home_set_points?: number | null
           home_shootout?: number | null
           home_team_id?: string | null
           id?: string
           kickoff_at?: string | null
+          leg?: number | null
           matchday_id?: string | null
           period_started_at?: string | null
           result_note?: string | null
           stage?: string
           status?: Database["public"]["Enums"]["fixture_status"]
+          tie?: string | null
           updated_at?: string
           venue?: string | null
+          winner_side?: string | null
           winner_team_id?: string | null
         }
         Update: {
+          away_entrant?: string | null
           away_score?: number | null
           away_set_points?: number | null
           away_shootout?: number | null
@@ -512,19 +529,23 @@ export type Database = {
           current_period?: Database["public"]["Enums"]["match_period"] | null
           current_set?: number | null
           event_id?: string
+          home_entrant?: string | null
           home_score?: number | null
           home_set_points?: number | null
           home_shootout?: number | null
           home_team_id?: string | null
           id?: string
           kickoff_at?: string | null
+          leg?: number | null
           matchday_id?: string | null
           period_started_at?: string | null
           result_note?: string | null
           stage?: string
           status?: Database["public"]["Enums"]["fixture_status"]
+          tie?: string | null
           updated_at?: string
           venue?: string | null
+          winner_side?: string | null
           winner_team_id?: string | null
         }
         Relationships: [
@@ -852,6 +873,7 @@ export type Database = {
       }
       match_events: {
         Row: {
+          board: number | null
           card: Database["public"]["Enums"]["card_colour"] | null
           client_event_id: string
           fixture_id: string
@@ -866,6 +888,7 @@ export type Database = {
           recorded_at: string
           recorded_by: string | null
           scored: boolean | null
+          side: string | null
           team_id: string | null
           type: Database["public"]["Enums"]["match_event_type"]
           void_reason: string | null
@@ -873,6 +896,7 @@ export type Database = {
           voided_by: string | null
         }
         Insert: {
+          board?: number | null
           card?: Database["public"]["Enums"]["card_colour"] | null
           client_event_id: string
           fixture_id: string
@@ -887,6 +911,7 @@ export type Database = {
           recorded_at?: string
           recorded_by?: string | null
           scored?: boolean | null
+          side?: string | null
           team_id?: string | null
           type: Database["public"]["Enums"]["match_event_type"]
           void_reason?: string | null
@@ -894,6 +919,7 @@ export type Database = {
           voided_by?: string | null
         }
         Update: {
+          board?: number | null
           card?: Database["public"]["Enums"]["card_colour"] | null
           client_event_id?: string
           fixture_id?: string
@@ -908,6 +934,7 @@ export type Database = {
           recorded_at?: string
           recorded_by?: string | null
           scored?: boolean | null
+          side?: string | null
           team_id?: string | null
           type?: Database["public"]["Enums"]["match_event_type"]
           void_reason?: string | null
@@ -2318,6 +2345,7 @@ export type Database = {
       }
       record_match_event: {
         Args: {
+          p_board?: number
           p_card?: Database["public"]["Enums"]["card_colour"]
           p_client_event_id: string
           p_fixture_id: string
@@ -2329,10 +2357,12 @@ export type Database = {
           p_player_id?: string
           p_points?: number
           p_scored?: boolean
+          p_side?: string
           p_team_id?: string
           p_type: Database["public"]["Enums"]["match_event_type"]
         }
         Returns: {
+          board: number | null
           card: Database["public"]["Enums"]["card_colour"] | null
           client_event_id: string
           fixture_id: string
@@ -2347,6 +2377,7 @@ export type Database = {
           recorded_at: string
           recorded_by: string | null
           scored: boolean | null
+          side: string | null
           team_id: string | null
           type: Database["public"]["Enums"]["match_event_type"]
           void_reason: string | null
@@ -2480,6 +2511,7 @@ export type Database = {
       void_match_event: {
         Args: { p_client_event_id: string; p_reason?: string }
         Returns: {
+          board: number | null
           card: Database["public"]["Enums"]["card_colour"] | null
           client_event_id: string
           fixture_id: string
@@ -2494,6 +2526,7 @@ export type Database = {
           recorded_at: string
           recorded_by: string | null
           scored: boolean | null
+          side: string | null
           team_id: string | null
           type: Database["public"]["Enums"]["match_event_type"]
           void_reason: string | null

@@ -13,11 +13,12 @@ export type { FixtureCard } from "./fixture-card-types";
 
 const COLUMNS = `
   id, stage, status, kickoff_at, venue, updated_at,
-  home_score, away_score, home_shootout, away_shootout, winner_team_id,
+  home_score, away_score, home_shootout, away_shootout, winner_team_id, winner_side,
+  home_entrant, away_entrant, tie, leg,
   current_period, period_started_at, current_set, home_set_points, away_set_points,
   matchday:matchdays!fixtures_matchday_id_fkey ( number ),
   event:events!fixtures_event_id_fkey (
-    id, name, period_minutes, extra_period_minutes,
+    id, name, period_minutes, extra_period_minutes, boards,
     sport:sports!events_sport_id_fkey ( slug, name, result_format, sort_order )
   ),
   home:teams!fixtures_home_team_id_fkey ( id, name, short_name, year ),
@@ -46,11 +47,16 @@ export async function getFixtureCards(): Promise<FixtureCard[]> {
         matchdayNumber: f.matchday?.number ?? null,
         home: team(f.home),
         away: team(f.away),
+        homeEntrant: f.home_entrant,
+        awayEntrant: f.away_entrant,
+        tie: f.tie,
+        leg: f.leg,
         event: {
           id: f.event.id,
           name: f.event.name,
           periodMinutes: f.event.period_minutes,
           extraPeriodMinutes: f.event.extra_period_minutes,
+          boards: f.event.boards,
         },
         sport: {
           slug: f.event.sport.slug,
@@ -67,6 +73,7 @@ export async function getFixtureCards(): Promise<FixtureCard[]> {
           homeShootout: f.home_shootout,
           awayShootout: f.away_shootout,
           winnerTeamId: f.winner_team_id,
+          winnerSide: f.winner_side === "home" || f.winner_side === "away" ? f.winner_side : null,
           currentPeriod: f.current_period,
           periodStartedAt: f.period_started_at,
           currentSet: f.current_set,

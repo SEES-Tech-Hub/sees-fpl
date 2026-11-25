@@ -1,7 +1,7 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { getFixtureVersion } from "./live-state";
-import { getFixtureLineups, getLiveFixture, getMatchTimeline } from "./queries";
+import { getFirstLeg, getFixtureLineups, getHeadToHeadEvents, getLiveFixture, getMatchTimeline } from "./queries";
 import { getRaceResults, getSetScores } from "./results";
 import { liveTags } from "./tags";
 
@@ -18,14 +18,16 @@ export async function getMatchPage(fixtureId: string) {
   const fixture = await getLiveFixture(fixtureId);
   if (!fixture) return null;
   const format = fixture.sport.resultFormat;
-  const [timeline, lineups, setScores, race, live] = await Promise.all([
+  const [timeline, lineups, setScores, race, live, boardEvents, firstLeg] = await Promise.all([
     getMatchTimeline(fixtureId),
     format === "timed" ? getFixtureLineups(fixtureId) : Promise.resolve([]),
     format === "sets" ? getSetScores(fixtureId) : Promise.resolve([]),
     format === "ranked" ? getRaceResults(fixtureId) : Promise.resolve([]),
     getFixtureVersion(fixtureId),
+    fixture.event.boards ? getHeadToHeadEvents(fixtureId) : Promise.resolve([]),
+    getFirstLeg(fixture),
   ]);
-  return { fixture, timeline, lineups, setScores, race, state: live!.state, version: live!.version };
+  return { fixture, timeline, lineups, setScores, race, boardEvents, firstLeg, state: live!.state, version: live!.version };
 }
 
 export type MatchPageData = NonNullable<Awaited<ReturnType<typeof getMatchPage>>>;

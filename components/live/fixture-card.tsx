@@ -5,6 +5,7 @@ import { SportIcon } from "@/components/ui/shared/SportIcon";
 import type { FixtureCard } from "@/lib/live/fixture-card-types";
 import type { FixtureState } from "@/lib/live/live-state-types";
 import type { TeamSummary } from "@/lib/live/types";
+import { formatScore, sideName, sideWon, sideYear, tieLabel } from "@/lib/live/display";
 import { cn } from "@/lib/utils";
 import { MatchStatus, RollingScore, teamColour, useClock, useGoalFlash } from "./live-bits";
 
@@ -78,16 +79,22 @@ export function LiveCard({ card, state }: { card: FixtureCard; state: FixtureSta
       <div className="relative mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div className="flex flex-col items-center gap-1.5">
           <TeamDisc team={card.home} size="lg" />
-          <span className="text-sm font-semibold">{card.home?.name ?? "TBD"}</span>
+          <span className="text-center text-sm leading-tight font-semibold">
+            {sideName(card, "home")}
+            {sideYear(card, "home") && <span className="block text-xs font-medium opacity-75">{sideYear(card, "home")}</span>}
+          </span>
         </div>
         <div className="flex items-baseline gap-2 font-heading text-score font-bold">
-          <RollingScore value={state.homeScore} />
+          <RollingScore value={state.homeScore} text={formatScore(state.homeScore, card.event.boards)} />
           <span className="text-2xl opacity-60">–</span>
-          <RollingScore value={state.awayScore} />
+          <RollingScore value={state.awayScore} text={formatScore(state.awayScore, card.event.boards)} />
         </div>
         <div className="flex flex-col items-center gap-1.5">
           <TeamDisc team={card.away} size="lg" />
-          <span className="text-sm font-semibold">{card.away?.name ?? "TBD"}</span>
+          <span className="text-center text-sm leading-tight font-semibold">
+            {sideName(card, "away")}
+            {sideYear(card, "away") && <span className="block text-xs font-medium opacity-75">{sideYear(card, "away")}</span>}
+          </span>
         </div>
       </div>
       <div className="relative mt-3 h-5 text-center text-xs text-brand-foreground/80">
@@ -96,7 +103,7 @@ export function LiveCard({ card, state }: { card: FixtureCard; state: FixtureSta
             className="inline-block rounded-full px-3 py-0.5 font-heading text-sm font-bold tracking-wide text-team-foreground uppercase motion-safe:animate-in motion-safe:zoom-in-50"
             style={{ background: teamColour(flashTeam.year) }}
           >
-            Goal {flashTeam.shortName}!
+            {card.sport.resultFormat === "timed" ? "Goal" : "Point"} {flash ? sideName(card, flash) : flashTeam.shortName}!
           </span>
         ) : (
           card.venue
@@ -114,7 +121,7 @@ export function FixtureRow({ card, state, label }: { card: FixtureCard; state: F
   const clock = useClock({ state, periodMinutes: card.event.periodMinutes, extraPeriodMinutes: card.event.extraPeriodMinutes });
   const flash = useGoalFlash(state.homeScore, state.awayScore);
   const showScore = hasScore(state);
-  const won = (t: TeamSummary | null) => state.status === "full_time" && t && state.winnerTeamId === t.id;
+  const line = [label, card.stage !== "group" && card.stage !== "league" ? tieLabel(card) : null].filter(Boolean).join(" · ");
 
   return (
     <li>
@@ -125,26 +132,27 @@ export function FixtureRow({ card, state, label }: { card: FixtureCard; state: F
           flash && "bg-highlight/20",
         )}
       >
-        {label && (
-          <span className="col-span-4 -mb-1 truncate text-[0.6875rem] font-semibold tracking-[0.06em] text-brand uppercase">{label}</span>
+        {line && (
+          <span className="col-span-4 -mb-1 truncate text-[0.6875rem] font-semibold tracking-[0.06em] text-brand uppercase">{line}</span>
         )}
         <MatchStatus clock={clock} kickoffAt={card.kickoffAt} className="justify-self-start" />
-        <span className={cn("flex min-w-0 items-center justify-end gap-2 text-right text-[0.9375rem]", won(card.home) && "font-bold")}>
-          <span className="truncate">{card.home?.name ?? "TBD"}</span>
+        <span className={cn("flex min-w-0 items-center justify-end gap-2 text-right text-[0.9375rem]", sideWon(card, state, "home") && "font-bold")}>
+          <span className="truncate">{sideName(card, "home")}</span>
           <TeamDisc team={card.home} />
         </span>
         <span className="min-w-12 text-center font-heading text-lg font-bold tabular-nums">
           {showScore ? (
             <>
-              <RollingScore value={state.homeScore} /> – <RollingScore value={state.awayScore} />
+              <RollingScore value={state.homeScore} text={formatScore(state.homeScore, card.event.boards)} /> –{" "}
+              <RollingScore value={state.awayScore} text={formatScore(state.awayScore, card.event.boards)} />
             </>
           ) : (
             <span className="text-sm font-medium text-muted-foreground">v</span>
           )}
         </span>
-        <span className={cn("flex min-w-0 items-center gap-2 text-[0.9375rem]", won(card.away) && "font-bold")}>
+        <span className={cn("flex min-w-0 items-center gap-2 text-[0.9375rem]", sideWon(card, state, "away") && "font-bold")}>
           <TeamDisc team={card.away} />
-          <span className="truncate">{card.away?.name ?? "TBD"}</span>
+          <span className="truncate">{sideName(card, "away")}</span>
         </span>
       </Link>
     </li>

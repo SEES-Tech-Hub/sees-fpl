@@ -48,6 +48,8 @@ export async function createFixture(input: unknown): Promise<ActionResult<Fixtur
         kickoff_at: v.kickoffAt ?? null,
         venue: v.venue ?? null,
         matchday_id: v.matchdayId ?? null,
+        home_entrant: v.homeEntrant ?? null,
+        away_entrant: v.awayEntrant ?? null,
       })
       .select(FIXTURE_FIELDS)
       .single();
@@ -75,12 +77,16 @@ export async function updateFixture(input: unknown): Promise<ActionResult<Fixtur
       away_team_id?: string | null;
       venue?: string | null;
       matchday_id?: string | null;
+      home_entrant?: string | null;
+      away_entrant?: string | null;
     } = {};
     if (v.stage !== undefined) patch.stage = v.stage;
     if (v.homeTeamId !== undefined) patch.home_team_id = v.homeTeamId;
     if (v.awayTeamId !== undefined) patch.away_team_id = v.awayTeamId;
     if (v.venue !== undefined) patch.venue = v.venue;
     if (v.matchdayId !== undefined) patch.matchday_id = v.matchdayId;
+    if (v.homeEntrant !== undefined) patch.home_entrant = v.homeEntrant;
+    if (v.awayEntrant !== undefined) patch.away_entrant = v.awayEntrant;
     if (Object.keys(patch).length === 0) return fail("admin.invalid_input", "Nothing to change.");
 
     return writeFixture(supabase, "fixtures.update", fixtureId, patch);
@@ -126,7 +132,10 @@ async function writeFixture(
   supabase: AdminSupabase,
   action: string,
   fixtureId: string,
-  patch: Pick<TablesUpdate<"fixtures">, "stage" | "home_team_id" | "away_team_id" | "venue" | "matchday_id" | "kickoff_at" | "status">,
+  patch: Pick<
+    TablesUpdate<"fixtures">,
+    "stage" | "home_team_id" | "away_team_id" | "venue" | "matchday_id" | "kickoff_at" | "status" | "home_entrant" | "away_entrant"
+  >,
 ): Promise<ActionResult<FixtureWriteResult>> {
   const { data, error } = await supabase
     .from("fixtures")

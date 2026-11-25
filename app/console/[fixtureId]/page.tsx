@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ConsoleApp, type ConsoleViewer } from "@/components/console/console-app";
+import { HeadToHeadConsole } from "@/components/console/head-to-head-console";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser, hasRole } from "@/lib/auth";
-import { getFixtureLineups, getLiveFixture, getMatchTimeline } from "@/lib/live/queries";
+import { getFirstLeg, getFixtureLineups, getHeadToHeadEvents, getLiveFixture, getMatchTimeline } from "@/lib/live/queries";
 import { getSquads } from "./squads";
 
 // Owner: Samuel (console app). Bolu owns the API it calls (lib/live).
@@ -33,7 +34,19 @@ export default function ConsolePage({ params }: PageProps<"/console/[fixtureId]"
 async function ConsoleLoader({ params }: { params: PageProps<"/console/[fixtureId]">["params"] }) {
   const { fixtureId } = await params;
   const [fixture, current] = await Promise.all([getLiveFixture(fixtureId), getCurrentUser()]);
-  if (!fixture || fixture.sport.resultFormat !== "timed") notFound();
+  if (!fixture) notFound();
+
+  const format = fixture.sport.resultFormat;
+  if (format !== "timed" && format !== "head_to_head") {
+    return (
+      <div className="flex flex-col gap-2 px-4 py-12 text-center">
+        <h1 className="font-heading text-2xl font-semibold text-brand">{fixture.event.name}</h1>
+        <p className="text-muted-foreground">
+          The console for {format === "sets" ? "set-based sports" : "races"} is coming soon. Ask the admin to enter this result.
+        </p>
+      </div>
+    );
+  }
 
   if (!fixture.home || !fixture.away) {
     return (
@@ -43,12 +56,6 @@ async function ConsoleLoader({ params }: { params: PageProps<"/console/[fixtureI
       </div>
     );
   }
-
-  const [timeline, lineups, squads] = await Promise.all([
-    getMatchTimeline(fixtureId),
-    getFixtureLineups(fixtureId),
-    getSquads([fixture.home.id, fixture.away.id]),
-  ]);
 
   const role = current?.profile.role;
   const isHolder = !!current && fixture.consoleHolderId === current.user.id;
@@ -60,6 +67,17 @@ async function ConsoleLoader({ params }: { params: PageProps<"/console/[fixtureI
     canTake: hasRole(role, "official") && fixture.consoleHolderId === null,
     heldBySomeoneElse: fixture.consoleHolderId !== null && !isHolder,
   };
+
+  if (format === "head_to_head") {
+    const [events, firstLeg] = await Promise.all([getHeadToHeadEvents(fixtureId), getFirstLeg(fixture)]);
+    return <HeadToHeadConsole fixture={fixture} events={events} firstLeg={firstLeg} viewer={viewer} />;
+  }
+
+  const [timeline, lineups, squads] = await Promise.all([
+    getMatchTimeline(fixtureId),
+    getFixtureLineups(fixtureId),
+    getSquads([fixture.home.id, fixture.away.id]),
+  ]);
 
   return <ConsoleApp fixture={fixture} timeline={timeline} lineups={lineups} squads={squads} viewer={viewer} />;
 }
