@@ -315,6 +315,9 @@ export type LiveFixture = {
     setsToWin: number | null;
     setPoints: number | null;
     finalSetPoints: number | null;
+    /** Sets: a set is won by this many points, or at the cap by one. */
+    setWinBy: number | null;
+    setPointsCap: number | null;
   };
   sport: { slug: string; name: string; resultFormat: ResultFormat };
 };

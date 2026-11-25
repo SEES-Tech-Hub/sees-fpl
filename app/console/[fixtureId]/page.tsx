@@ -3,9 +3,12 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ConsoleApp, type ConsoleViewer } from "@/components/console/console-app";
 import { HeadToHeadConsole } from "@/components/console/head-to-head-console";
+import { RaceConsole } from "@/components/console/race-console";
+import { SetsConsole } from "@/components/console/sets-console";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser, hasRole } from "@/lib/auth";
-import { getFirstLeg, getFixtureLineups, getHeadToHeadEvents, getLiveFixture, getMatchTimeline } from "@/lib/live/queries";
+import { eventHasHeats, getFirstLeg, getFixtureLineups, getHeadToHeadEvents, getLiveFixture, getMatchTimeline, getTeams } from "@/lib/live/queries";
+import { getRaceResults } from "@/lib/live/results";
 import { getSquads } from "./squads";
 
 // Owner: Samuel (console app). Bolu owns the API it calls (lib/live).
@@ -37,26 +40,6 @@ async function ConsoleLoader({ params }: { params: PageProps<"/console/[fixtureI
   if (!fixture) notFound();
 
   const format = fixture.sport.resultFormat;
-  if (format !== "timed" && format !== "head_to_head") {
-    return (
-      <div className="flex flex-col gap-2 px-4 py-12 text-center">
-        <h1 className="font-heading text-2xl font-semibold text-brand">{fixture.event.name}</h1>
-        <p className="text-muted-foreground">
-          The console for {format === "sets" ? "set-based sports" : "races"} is coming soon. Ask the admin to enter this result.
-        </p>
-      </div>
-    );
-  }
-
-  if (!fixture.home || !fixture.away) {
-    return (
-      <div className="flex flex-col gap-2 px-4 py-12 text-center">
-        <h1 className="font-heading text-2xl font-semibold text-brand">{fixture.stage.replace("_", " ")}</h1>
-        <p className="text-muted-foreground">The teams for this match aren&apos;t known yet.</p>
-      </div>
-    );
-  }
-
   const role = current?.profile.role;
   const isHolder = !!current && fixture.consoleHolderId === current.user.id;
   const viewer: ConsoleViewer = {
@@ -68,9 +51,27 @@ async function ConsoleLoader({ params }: { params: PageProps<"/console/[fixtureI
     heldBySomeoneElse: fixture.consoleHolderId !== null && !isHolder,
   };
 
+  // Races have no home or away: entrants and results.
+  if (format === "ranked") {
+    const [entries, teams, hasHeats] = await Promise.all([getRaceResults(fixtureId), getTeams(), eventHasHeats(fixture.event.id)]);
+    return <RaceConsole fixture={fixture} entries={entries} teams={teams} hasHeats={hasHeats} viewer={viewer} />;
+  }
+
+  if (!fixture.home || !fixture.away) {
+    return (
+      <div className="flex flex-col gap-2 px-4 py-12 text-center">
+        <h1 className="font-heading text-2xl font-semibold text-brand">{fixture.stage.replace("_", " ")}</h1>
+        <p className="text-muted-foreground">The teams for this match aren&apos;t known yet.</p>
+      </div>
+    );
+  }
+
   if (format === "head_to_head") {
     const [events, firstLeg] = await Promise.all([getHeadToHeadEvents(fixtureId), getFirstLeg(fixture)]);
     return <HeadToHeadConsole fixture={fixture} events={events} firstLeg={firstLeg} viewer={viewer} />;
+  }
+  if (format === "sets") {
+    return <SetsConsole fixture={fixture} events={await getHeadToHeadEvents(fixtureId)} viewer={viewer} />;
   }
 
   const [timeline, lineups, squads] = await Promise.all([

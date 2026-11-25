@@ -34,7 +34,7 @@ const FIXTURE_COLUMNS = `
   home_entrant, away_entrant, tie, leg, winner_side,
   event:events!fixtures_event_id_fkey (
     id, name, period_minutes, extra_period_minutes, period_count, boards,
-    sets_to_win, set_points, final_set_points,
+    sets_to_win, set_points, final_set_points, set_win_by, set_points_cap,
     sport:sports!events_sport_id_fkey ( slug, name, result_format )
   ),
   home:teams!fixtures_home_team_id_fkey ( id, name, short_name, year ),
@@ -91,6 +91,8 @@ export const getLiveFixture = cache(async (fixtureId: string): Promise<LiveFixtu
       setsToWin: data.event.sets_to_win,
       setPoints: data.event.set_points,
       finalSetPoints: data.event.final_set_points,
+      setWinBy: data.event.set_win_by,
+      setPointsCap: data.event.set_points_cap,
     },
     sport: {
       slug: data.event.sport.slug,
@@ -155,6 +157,24 @@ export const getFirstLeg = cache(async (fixture: Pick<LiveFixture, "id" | "tie" 
     homeTeamId: data.home_team_id,
     homeEntrant: data.home_entrant,
   };
+});
+
+/** The five year teams, Year 1 first (race entrants pick from these). */
+export const getTeams = cache(async (): Promise<TeamSummary[]> => {
+  const { data, error } = await createPublicClient().from("teams").select("id, name, short_name, year").order("year");
+  if (error) queryFailed("the teams", error);
+  return (data ?? []).map((t) => ({ id: t.id, name: t.name, shortName: t.short_name, year: t.year }));
+});
+
+/** Does this event run heats before its final (athletics sprints)? */
+export const eventHasHeats = cache(async (eventId: string): Promise<boolean> => {
+  const { count, error } = await createPublicClient()
+    .from("fixtures")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .like("stage", "heat_%");
+  if (error) queryFailed("the heats", error);
+  return (count ?? 0) > 0;
 });
 
 /** The fixture's events in order, with match minutes and names. */
