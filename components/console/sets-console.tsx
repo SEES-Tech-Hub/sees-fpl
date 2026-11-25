@@ -169,7 +169,7 @@ export function SetsConsole({
           </div>
           <SideHeader fixture={fixture} side="away" team={away} won={finished && winner === "away"} />
         </div>
-        <ol className="mt-2 flex flex-wrap justify-center gap-1.5" aria-label="Set scores">
+        <ol className={cn("mt-2 flex flex-wrap justify-center gap-1.5", events.length === 0 && "hidden")} aria-label="Set scores">
           {sets.sets.map((s) => (
             <li
               key={s.number}
@@ -280,7 +280,7 @@ function SideHeader({ fixture, side, team, won }: { fixture: LiveFixture; side: 
         {won && <Trophy className="mr-1 inline size-4 align-[-2px]" aria-label="Winner" />}
         {sideName(fixture, side)}
       </p>
-      <p className="truncate text-xs text-muted-foreground">{year ?? team.name}</p>
+      {year && <p className="truncate text-xs text-muted-foreground">{year}</p>}
     </div>
   );
 }

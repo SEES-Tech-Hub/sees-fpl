@@ -80,7 +80,14 @@ export function MatchCentre({ data }: { data: MatchPageData }) {
             transition={{ duration: 0.2 }}
           >
             {tab === "timeline" ? (
-              <Timeline entries={timeline} home={fixture.home} away={fixture.away} state={state} kickoffAt={fixture.kickoffAt} />
+              <Timeline
+                entries={timeline}
+                home={fixture.home}
+                away={fixture.away}
+                state={state}
+                kickoffAt={fixture.kickoffAt}
+                kind={fixture.event.boards ? "boards" : fixture.sport.resultFormat}
+              />
             ) : (
               <Lineups players={lineups} home={fixture.home} away={fixture.away} />
             )}
@@ -374,18 +381,21 @@ function Timeline({
   away,
   state,
   kickoffAt,
+  kind = "timed",
 }: {
   entries: TimelineEntry[];
   home: TeamSummary | null;
   away: TeamSummary | null;
   state: FixtureState;
   kickoffAt: string | null;
+  /** What's coming differs by sport: football's goals and cards, a board game's boards. */
+  kind?: "timed" | "sets" | "head_to_head" | "ranked" | "boards";
 }) {
   const kicks = entries.filter((e) => e.type === "shootout_kick");
   const shown = entries.filter((e) => e.type !== "shootout_kick" && e.type !== "point" && e.type !== "set_end").reverse();
 
   if (shown.length === 0 && kicks.length === 0) {
-    if (state.status === "scheduled") return <PreMatch kickoffAt={kickoffAt} home={home} away={away} />;
+    if (state.status === "scheduled") return <PreMatch kickoffAt={kickoffAt} home={home} away={away} kind={kind} />;
     return <EmptyState art="whistle" title="Nothing recorded yet" description="Goals, cards and subs land here the moment the official records them." />;
   }
 
@@ -554,13 +564,43 @@ function Shootout({ kicks, home, away }: { kicks: TimelineEntry[]; home: TeamSum
 }
 
 /** Before kickoff: what's coming, a countdown, and a nudge to the bell. */
-function PreMatch({ kickoffAt, home, away }: { kickoffAt: string | null; home: TeamSummary | null; away: TeamSummary | null }) {
-  const items = [
-    { icon: <BallIcon />, text: "Goals, with who set them up" },
-    { icon: <span className="h-4 w-3 rounded-[2px] bg-highlight" />, text: "Yellow and red cards" },
-    { icon: <ArrowUp className="size-4 text-success" />, text: "Every substitution" },
-    { icon: <Star className="size-4 fill-highlight text-highlight" />, text: "Player of the match" },
-  ];
+function PreMatch({
+  kickoffAt,
+  home,
+  away,
+  kind = "timed",
+}: {
+  kickoffAt: string | null;
+  home: TeamSummary | null;
+  away: TeamSummary | null;
+  kind?: "timed" | "sets" | "head_to_head" | "ranked" | "boards";
+}) {
+  const dot = <span className="size-2.5 rounded-full bg-brand" />;
+  const star = <Star className="size-4 fill-highlight text-highlight" />;
+  const items =
+    kind === "boards"
+      ? [
+          { icon: dot, text: "Each board's result as it finishes" },
+          { icon: dot, text: "The score in board points (a win is 1, a draw ½)" },
+          { icon: star, text: "The game's table, by board points" },
+        ]
+      : kind === "sets"
+        ? [
+            { icon: dot, text: "Every point, live" },
+            { icon: dot, text: "Set by set scores" },
+            { icon: star, text: "The winner as soon as it's decided" },
+          ]
+        : kind === "head_to_head"
+          ? [
+              { icon: dot, text: "The score, live" },
+              { icon: star, text: "The winner, and who goes through" },
+            ]
+          : [
+              { icon: <BallIcon />, text: "Goals, with who set them up" },
+              { icon: <span className="h-4 w-3 rounded-[2px] bg-highlight" />, text: "Yellow and red cards" },
+              { icon: <ArrowUp className="size-4 text-success" />, text: "Every substitution" },
+              { icon: star, text: "Player of the match" },
+            ];
   return (
     <section className="relative overflow-hidden rounded-2xl bg-card px-5 py-7 text-center shadow-card">
       <span

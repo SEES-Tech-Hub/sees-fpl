@@ -363,7 +363,7 @@ function SideName({ fixture, side, team, won }: { fixture: LiveFixture; side: Si
         {won && <Trophy className="mr-1 inline size-4 align-[-2px]" aria-label="Winner" />}
         {sideName(fixture, side)}
       </p>
-      <p className="truncate text-xs text-muted-foreground">{year ?? team.name}</p>
+      {year && <p className="truncate text-xs text-muted-foreground">{year}</p>}
     </div>
   );
 }

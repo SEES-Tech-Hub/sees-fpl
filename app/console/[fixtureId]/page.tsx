@@ -60,8 +60,12 @@ async function ConsoleLoader({ params }: { params: PageProps<"/console/[fixtureI
   if (!fixture.home || !fixture.away) {
     return (
       <div className="flex flex-col gap-2 px-4 py-12 text-center">
-        <h1 className="font-heading text-2xl font-semibold text-brand">{fixture.stage.replace("_", " ")}</h1>
-        <p className="text-muted-foreground">The teams for this match aren&apos;t known yet.</p>
+        <h1 className="font-heading text-2xl font-semibold text-brand">
+          {[fixture.event.name, fixture.tie ? (fixture.leg ? `${fixture.tie} · Leg ${fixture.leg}` : fixture.tie) : null].filter(Boolean).join(" · ")}
+        </h1>
+        <p className="text-muted-foreground">
+          The sides for this match aren&apos;t known yet. The admin adds them in Admin → Fixtures once they&apos;re decided.
+        </p>
       </div>
     );
   }
