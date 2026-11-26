@@ -80,7 +80,7 @@ type ActionResult<T> =
 | `recordMatchEvent(input)` | One event (table below; sets and head-to-head further down) | Holder or admin |
 | `setRaceEntries({ fixtureId, entries })` | Races: who runs | Holder until results are in; admin any time |
 | `recordRaceResults({ fixtureId, results, publish? })` | Races: places, times, DNF/DNS/DQ | Holder until published; admin any time |
-| `undoMatchEvent({ clientEventId, reason? })` | Undo | Holder: own latest event, within 30 s. Admin: any event, reason required |
+| `undoMatchEvent({ clientEventId, reason? })` | Undo | Holder (the admin too): own latest event, within 30 s. With a reason, the admin can void any event |
 
 **Hand-over** is two steps: `releaseFixture` on the old phone, then `takeFixture` on the new one. If the old phone is dead, the admin clears or reassigns `console_holder` in the admin portal. The new holder carries on from the same event log.
 
@@ -197,6 +197,7 @@ await recordRaceResults({
 | `undo_expired`, `undo_not_latest`, `undo_not_allowed`, `event_not_found` | Undo checks |
 | `reason_required` | Admin corrections need a reason |
 | `too_old`, `invalid_time` | Event time more than 6 hours ago; correction time before kickoff |
+| `too_early` | A match's first event (kick-off, first point) more than 2 hours before its scheduled start. Walkovers are exempt; change the time in Admin → Fixtures if it really starts earlier |
 | `event_not_configured` | The event's period length or set rules are missing: the admin sets them |
 | `set_over`, `set_not_over` | Sets: close the set first; or the score isn't a finished set yet |
 | `not_entered`, `results_entered`, `results_published`, `results_incomplete`, `invalid_places` | Races: a result for someone not entered; entrants locked once results are in; published (admin only now); every entrant needs a result; places must run 1, 2, 3 |
@@ -465,7 +466,8 @@ These rules hold whatever the app does. They're tested in 290+ database scenario
 - Event times are never in the future and never before the previous event.
 - Periods run in order. Extra time and penalties happen only in knockouts, only when level. A knockout can't finish level.
 - Players must belong to the team, and (with lineups) be on the pitch or the bench as the event needs. A sent-off player does nothing more.
-- Officials undo only their own latest event, within 30 s. The admin's corrections need a reason.
+- Officials, and the admin on the console, undo only their own latest event, within 30 s. The admin's corrections (any event) need a reason.
+- The console shows controls only to the match's holder, the admin included: the admin takes the match (or takes it over) first. A match's first event is refused until 2 hours before its scheduled start (`too_early`).
 - A player sent off misses the team's next fixture (the admin can override).
 - Stats, the table, totals and bans are views: they can't be written to, and they always match the events.
 - Every sport only takes the events its format allows. A set closes only at a finished score; a sets match ends itself when a team wins enough sets.

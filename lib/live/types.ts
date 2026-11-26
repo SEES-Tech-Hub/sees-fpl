@@ -174,6 +174,7 @@ export const LIVE_ERROR_CODES = [
   "needs_winner",
   "invalid_time",
   "too_old",
+  "too_early",
   // Players and lineups
   "wrong_team",
   "player_not_found",
