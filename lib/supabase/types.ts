@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      notification_log: {
+        Row: { key: string; sent_at: string }
+        Insert: { key: string; sent_at?: string }
+        Update: { key?: string; sent_at?: string }
+        Relationships: []
+      }
       admin_imports: {
         Row: {
           actor: string | null

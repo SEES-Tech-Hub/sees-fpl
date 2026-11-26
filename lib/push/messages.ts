@@ -16,7 +16,13 @@ export type MatchMessage = { title: string; body: string; audience: "major" | "m
 /** Sports where a goal is rare enough to be worth a notification. */
 const GOAL_SPORTS = new Set(["football"]);
 
-export function matchMessage(event: MatchEvent, fixture: LiveFixture, entry: TimelineEntry | null): MatchMessage | null {
+export function matchMessage(
+  event: MatchEvent,
+  fixture: LiveFixture,
+  entry: TimelineEntry | null,
+  /** The match's whole timeline, oldest first: goal stories (opener, equaliser, comeback…) need it. */
+  timeline: TimelineEntry[] = [],
+): MatchMessage | null {
   if (!fixture.home || !fixture.away) return null;
   const format = fixture.sport.resultFormat;
   const what = fixture.sport.slug === "football" || fixture.event.name === fixture.sport.name ? fixture.sport.name : fixture.event.name;
@@ -49,8 +55,7 @@ export function matchMessage(event: MatchEvent, fixture: LiveFixture, entry: Tim
     }
     case "goal": {
       if (!GOAL_SPORTS.has(fixture.sport.slug)) return null;
-      const how = entry?.isOwnGoal ? " (own goal)" : entry?.isPenalty ? " (pen)" : "";
-      return { title: `GOAL! ${score}`, body: `${player ?? "Goal"}${how}${minute} · ${what}`, audience: "major" };
+      return goalMessage(event, fixture, entry, timeline, { score, what, minute, player });
     }
     case "card": {
       const red = event.card === "red";
@@ -86,13 +91,96 @@ export function matchMessage(event: MatchEvent, fixture: LiveFixture, entry: Tim
   }
 }
 
+/**
+ * The result: who won, or a draw. Penalties say so. Uses winner_side when
+ * known (players from one year), else the winning year.
+ */
 function resultMessage(fixture: LiveFixture, score: string, what: string, vs: string): MatchMessage {
-  const pens =
-    fixture.homeShootout !== null && fixture.awayShootout !== null ? ` (${fixture.homeShootout}–${fixture.awayShootout} on pens)` : "";
-  const winner = fixture.winnerSide ? sideName(fixture, fixture.winnerSide) : null;
-  return {
-    title: `Full time: ${score}${pens}`,
-    body: winner && fixture.sport.resultFormat !== "timed" ? `${winner} wins · ${what}` : `${what} · ${vs}`,
-    audience: "major",
-  };
+  const pens = fixture.homeShootout !== null && fixture.awayShootout !== null;
+  const side: "home" | "away" | null =
+    fixture.winnerSide ??
+    (fixture.winnerTeamId && fixture.home && fixture.away && fixture.home.id !== fixture.away.id
+      ? fixture.winnerTeamId === fixture.home.id
+        ? "home"
+        : "away"
+      : null);
+  if (!side) return { title: `Honours even: ${score}`, body: `Full time · ${what} · ${vs}`, audience: "major" };
+  const winner = sideName(fixture, side);
+  const loser = sideName(fixture, side === "home" ? "away" : "home");
+  if (pens) {
+    return {
+      title: `${winner} win on penalties!`,
+      body: `${score}, ${fixture.homeShootout}–${fixture.awayShootout} in the shootout · ${what}`,
+      audience: "major",
+    };
+  }
+  return { title: `${winner} win! ${score}`, body: `Full time · beat ${loser} · ${what}`, audience: "major" };
+}
+
+/**
+ * A goal's headline, from the match so far. One story per goal, the
+ * strongest first: hat-trick, comeback, late goal, equaliser, opener,
+ * brace, penalty, own goal, then a plain GOAL!.
+ */
+function goalMessage(
+  event: MatchEvent,
+  fixture: LiveFixture,
+  entry: TimelineEntry | null,
+  timeline: TimelineEntry[],
+  t: { score: string; what: string; minute: string; player: string | null },
+): MatchMessage {
+  const home = fixture.home!;
+  const goals = timeline.filter((e) => e.type === "goal");
+  const index = goals.findIndex((g) => g.clientEventId === event.clientEventId);
+  const before = index >= 0 ? goals.slice(0, index) : goals;
+  const scoringHome = event.teamId === home.id;
+  const team = scoringHome ? sideName(fixture, "home") : sideName(fixture, "away");
+
+  // The score just before this goal, and whether the scoring side trailed at any point.
+  let h = 0;
+  let a = 0;
+  let trailed = false;
+  for (const g of before) {
+    if (g.teamId === home.id) h += g.points ?? 1;
+    else a += g.points ?? 1;
+    if (scoringHome ? h < a : a < h) trailed = true;
+  }
+  const mine = scoringHome ? h : a;
+  const theirs = scoringHome ? a : h;
+  const nowMine = mine + (event.points ?? 1);
+
+  const scorer = t.player ?? "";
+  const scorerGoals = entry?.playerId && !entry.isOwnGoal
+    ? [...before, entry].filter((g) => g.playerId === entry.playerId && !g.isOwnGoal).length
+    : 0;
+
+  // Late: the last 5 minutes of normal time, or the last 3 of extra time.
+  const p = fixture.event.periodMinutes ?? 0;
+  const x = fixture.event.extraPeriodMinutes ?? 0;
+  const m = entry?.minute ?? 0;
+  const late =
+    (entry?.period === "second_half" && p > 0 && m >= 2 * p - 5) ||
+    (entry?.period === "extra_second" && x > 0 && m >= 2 * p + 2 * x - 3);
+
+  const tag = entry?.isPenalty ? " (pen)" : entry?.isOwnGoal ? " (own goal)" : "";
+  const who = scorer ? `${scorer}${tag}${t.minute}` : `${team}${tag}${t.minute}`;
+
+  if (scorerGoals === 3) return { title: `HAT-TRICK! ${t.score}`, body: `${scorer} completes the hat-trick for ${team}${t.minute}`, audience: "major" };
+  if (scorerGoals > 3) return { title: `${scorer} again! ${t.score}`, body: `That's ${scorerGoals} for ${scorer}${t.minute}`, audience: "major" };
+  if (trailed && mine === theirs && nowMine > theirs) {
+    return { title: `COMEBACK! ${team} lead ${t.score}`, body: `From behind to in front · ${who}`, audience: "major" };
+  }
+  if (late) {
+    if (mine === theirs) return { title: `LATE WINNER?! ${t.score}`, body: `${who} · ${t.what}`, audience: "major" };
+    if (nowMine === theirs) return { title: `LATE EQUALISER! ${t.score}`, body: `${who} · ${t.what}`, audience: "major" };
+    return { title: `LATE GOAL! ${t.score}`, body: `${who} · ${t.what}`, audience: "major" };
+  }
+  if (nowMine === theirs) return { title: `LEVEL! ${t.score}`, body: `${scorer || team} equalises${tag}${t.minute}`, audience: "major" };
+  if (mine === 0 && theirs === 0) {
+    return { title: `${team} take the lead! ${t.score}`, body: `${scorer || "A goal"} opens the scoring${tag}${t.minute}`, audience: "major" };
+  }
+  if (scorerGoals === 2) return { title: `${scorer} again! ${t.score}`, body: `A brace for ${scorer}${tag}${t.minute}`, audience: "major" };
+  if (entry?.isPenalty) return { title: `PENALTY SCORED! ${t.score}`, body: `${scorer || team} scores from the spot${t.minute}`, audience: "major" };
+  if (entry?.isOwnGoal) return { title: `Own goal! ${t.score}`, body: `${scorer ? `${scorer} turns it in` : "Turned in"} for ${team}${t.minute}`, audience: "major" };
+  return { title: `GOAL! ${t.score}`, body: `${who} · ${t.what}`, audience: "major" };
 }
