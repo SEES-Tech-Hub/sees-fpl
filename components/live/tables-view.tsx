@@ -7,7 +7,6 @@ import { SportIcon } from "@/components/ui/shared/SportIcon";
 import { SlidingTabs } from "@/components/fantasy/motion-bits";
 import { MotionProvider } from "@/components/fantasy/motion-provider";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
-import { teamColour } from "@/lib/design/team-colour";
 import type { EventStandingRow, MedalTableRow, PlayerTotalsRow, ResultFormat, StandingRow, SuspensionRow, TeamSummary, TopScorerRow } from "@/lib/live/types";
 import { useRefreshOnLiveChange } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
@@ -15,6 +14,7 @@ import { EmptyState } from "@/components/brand/empty-state";
 import type { EmptyArt } from "@/components/brand/empty-art";
 import { LivePulse, ReconnectingPill } from "./live-bits";
 import { EventTable } from "./sports-views";
+import { YearCrest } from "@/components/brand/year-crest";
 
 type Tab = "football" | "sports" | "championship" | "stats";
 
@@ -111,12 +111,7 @@ function SportTables({ sports }: { sports: TablesData["sportTables"] }) {
 function TeamCell({ team, live }: { team: TeamSummary; live?: boolean }) {
   return (
     <span className="flex items-center gap-2">
-      <span
-        className="inline-flex size-7 shrink-0 items-center justify-center rounded-full font-heading text-xs font-bold text-team-foreground"
-        style={{ background: teamColour(team.year) }}
-      >
-        {team.shortName}
-      </span>
+      <YearCrest year={team.year} size={28} label="" />
       <span className="truncate font-semibold">{team.name}</span>
       {live && <LivePulse />}
     </span>
@@ -315,12 +310,7 @@ function Leaders({
           {rows.map((r, i) => (
             <li key={r.id} className="flex items-center gap-3 px-3 py-2 text-sm">
               <span className="w-4 font-heading font-bold text-muted-foreground tabular-nums">{i + 1}</span>
-              <span
-                className="inline-flex size-6 shrink-0 items-center justify-center rounded-full font-heading text-[0.625rem] font-bold text-team-foreground"
-                style={{ background: teamColour(r.team.year) }}
-              >
-                {r.team.shortName}
-              </span>
+              <YearCrest year={r.team.year} size={26} />
               <span className="flex-1 truncate font-semibold">{r.name}</span>
               {cards ? (
                 <span className="flex items-center gap-2 tabular-nums" aria-label={`${r.value} yellow, ${r.extra ?? 0} red`}>

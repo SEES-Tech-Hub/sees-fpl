@@ -2,7 +2,6 @@ import { Suspense, type ReactNode } from "react";
 import { ArrowLeftRight, Ban, CalendarClock, Crown, Repeat, ShieldCheck, Sparkles, Users, Wallet } from "lucide-react";
 import { CircuitPattern } from "@/components/fantasy/patterns";
 import { LoadingPage } from "@/components/fantasy/states";
-import { teamColour } from "@/lib/design/team-colour";
 import { getFantasyRules, getMatchdayState } from "@/lib/fantasy/api";
 import { formatMoney, formatSigned } from "@/lib/fantasy/format";
 import { formatWAT } from "@/lib/fantasy/time";
@@ -10,6 +9,7 @@ import { POSITIONS, type FantasyRules, type Matchday, type Position, type Scorin
 import { allowedFormations } from "@/lib/fantasy/validate";
 import { pageMeta } from "@/lib/seo";
 import { cn } from "@/lib/utils";
+import { YearCrest } from "@/components/brand/year-crest";
 
 export const metadata = pageMeta({
   title: "SEES Fantasy rules",
@@ -246,14 +246,7 @@ const yearOf = (short: string | null) => {
 };
 
 function Side({ short }: { short: string | null }) {
-  return (
-    <span
-      className="inline-flex size-6 items-center justify-center rounded-full font-heading text-[0.625rem] font-bold text-team-foreground"
-      style={{ background: teamColour(yearOf(short)) }}
-    >
-      {short ?? "?"}
-    </span>
-  );
+  return <YearCrest year={yearOf(short)} size={26} label={short ? `Year ${yearOf(short)}` : "To be decided"} />;
 }
 
 const stageName = (stage: string) => (stage === "final" ? "Final" : stage === "third_place" ? "Third place" : "TBD");

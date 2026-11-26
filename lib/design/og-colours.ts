@@ -8,5 +8,8 @@ export const OG = {
   live: "#d92d20",
   white: "#ffffff",
   ink: "#0f0f0f",
+  /** Crests (lib/design/og-crest.tsx): a side not known yet, and the ribbon tails. */
+  neutral: "#cfd8d4",
+  ribbonShade: "#012a21",
   team: { 1: "#38bdf8", 2: "#ff7a59", 3: "#a78bfa", 4: "#9be15d", 5: "#f472b6" } as Record<number, string>,
 };

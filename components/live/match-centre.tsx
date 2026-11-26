@@ -21,6 +21,7 @@ import { ShareButton } from "./share-button";
 import { RaceView } from "./race-view";
 import { EmptyIllustration } from "@/components/brand/empty-art";
 import { EmptyState } from "@/components/brand/empty-state";
+import { YearCrest } from "@/components/brand/year-crest";
 
 type Tab = "timeline" | "lineups";
 
@@ -251,12 +252,7 @@ function HeaderTeam({
 }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
-      <span
-        className="inline-flex size-16 items-center justify-center rounded-full font-heading text-xl font-bold text-team-foreground ring-4 ring-brand-foreground/25 sm:size-20 sm:text-2xl"
-        style={{ background: teamColour(team?.year) }}
-      >
-        {team?.shortName ?? "?"}
-      </span>
+      <YearCrest year={team?.year} variant="crest" tone="dark" size={96} label="" className="sm:h-28 sm:w-[108px]" />
       <span className="text-sm leading-tight font-semibold sm:text-base">
         {name}
         {sub && <span className="block text-xs font-medium text-brand-foreground/75">{sub}</span>}

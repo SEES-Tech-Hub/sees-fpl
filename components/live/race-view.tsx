@@ -10,6 +10,7 @@ import type { RaceResultRow } from "@/lib/live/types";
 import { cn, formatWAT } from "@/lib/utils";
 import { EmptyState } from "@/components/brand/empty-state";
 import { Medal } from "./tables-view";
+import { YearCrest } from "@/components/brand/year-crest";
 
 // Ranked events (athletics, swimming): a podium that rises gold, silver,
 // bronze, then the full finishing order with times or marks.
@@ -101,12 +102,7 @@ export function RaceView({ data, state }: { data: MatchPageData; state: FixtureS
                 className="flex min-h-12 items-center gap-3 px-3 py-2 text-sm"
               >
                 <span className="w-6 font-heading font-bold tabular-nums">{published ? (r.position ?? "–") : r.lane ? `L${r.lane}` : "–"}</span>
-                <span
-                  className="inline-flex size-6 shrink-0 items-center justify-center rounded-full font-heading text-[0.625rem] font-bold text-team-foreground"
-                  style={{ background: teamColour(r.team.year) }}
-                >
-                  {r.team.shortName}
-                </span>
+                <YearCrest year={r.team.year} size={26} />
                 <span className="flex-1 truncate font-semibold">{r.athleteName ?? r.team.name}</span>
                 {r.medal && <Medal tone={r.medal} />}
                 <span className="w-20 text-right font-heading font-semibold tabular-nums">{published ? formatResult(r) : ""}</span>

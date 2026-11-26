@@ -4,22 +4,11 @@
 
 import { CLASS_LABEL, toneFor } from "@/lib/fantasy/team-tone";
 import { cn } from "@/lib/utils";
+import { YearCrest } from "@/components/brand/year-crest";
 
+/** A player's year as its crest mark (components/brand/year-crest.tsx). */
 export function TeamDot({ year, className }: { year: number; className?: string }) {
-  const tone = toneFor(year);
-  return (
-    <span
-      className={cn(
-        "inline-flex size-5 shrink-0 items-center justify-center rounded-full font-heading text-[0.6rem] font-semibold text-team-foreground",
-        tone.fill,
-        className,
-      )}
-      aria-label={`Year ${year}, ${CLASS_LABEL[year] ?? ""}`}
-      role="img"
-    >
-      Y{year}
-    </span>
-  );
+  return <YearCrest year={year} size={22} className={className} label={`Year ${year}, ${CLASS_LABEL[year] ?? ""}`} />;
 }
 
 /** The small shirt used on the fantasy pitch (TeamBadge `kit` variant). */

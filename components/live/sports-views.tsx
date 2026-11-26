@@ -7,7 +7,6 @@ import { SlidingTabs } from "@/components/fantasy/motion-bits";
 import { MotionProvider } from "@/components/fantasy/motion-provider";
 import { SportIcon } from "@/components/ui/shared/SportIcon";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
-import { teamColour } from "@/lib/design/team-colour";
 import type { FixtureCard } from "@/lib/live/fixture-card-types";
 import type { SportSummary } from "@/lib/live/public-pages";
 import type { EventStandingRow, RaceResultRow, ResultFormat, StandingRow } from "@/lib/live/types";
@@ -17,6 +16,7 @@ import { formatScore } from "@/lib/live/display";
 import { FixtureRow, gameName } from "./fixture-card";
 import { LivePulse, ReconnectingPill } from "./live-bits";
 import { Empty, Medal } from "./tables-view";
+import { YearCrest } from "@/components/brand/year-crest";
 
 const FORMAT_LABEL: Record<ResultFormat, string> = {
   timed: "Timed match",
@@ -267,12 +267,7 @@ export function EventTable({
               <td className="py-2.5 pl-3 font-heading font-bold">{started ? `${r.position}${r.positionShared ? "=" : ""}` : "–"}</td>
               <td className="max-w-0 py-2.5">
                 <span className="flex items-center gap-2">
-                  <span
-                    className="inline-flex size-7 shrink-0 items-center justify-center rounded-full font-heading text-xs font-bold text-team-foreground"
-                    style={{ background: teamColour(r.team.year) }}
-                  >
-                    {r.team.shortName}
-                  </span>
+                  <YearCrest year={r.team.year} size={28} label="" />
                   <span className="truncate font-semibold">{r.team.name}</span>
                   {r.live && <LivePulse />}
                 </span>
