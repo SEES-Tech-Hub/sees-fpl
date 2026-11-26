@@ -6,10 +6,13 @@ import { Megaphone, TriangleAlert, X } from "lucide-react";
 import { useHydrated } from "@/hooks/use-local-storage-state";
 import { cn } from "@/lib/utils";
 
-// The admin's announcement as a strip under the header. It slides down when
-// it arrives, the megaphone gives a little shake, and a light sweeps across
-// once so people notice it. Dismissing slides it away and is remembered on
-// this phone for that announcement only (a new one shows again).
+// The admin's announcement as a strip under the header: one line, scrolling
+// like a news ticker (it pauses while you hover or touch it). It slides down
+// when it arrives, the megaphone gives a little shake, and a light sweeps
+// across once. Anyone who asked their device for less motion gets the line
+// still, cut off with an ellipsis (the full text is its title and label).
+// Dismissing slides it away and is remembered on this phone for that
+// announcement only (a new one shows again).
 
 const KEY = "sees:announcement-dismissed";
 
@@ -57,7 +60,7 @@ export function AnnouncementStrip({
           >
             <div
               className={cn(
-                "relative flex items-center gap-2 overflow-hidden px-4 py-2 text-sm font-semibold",
+                "relative flex h-11 items-center gap-2 overflow-hidden px-4 text-sm font-semibold",
                 warning ? "bg-highlight text-highlight-foreground" : "bg-pitch text-brand-foreground",
               )}
             >
@@ -78,14 +81,7 @@ export function AnnouncementStrip({
                 >
                   <Icon className="size-4" aria-hidden />
                 </motion.span>
-                <motion.span
-                  className="min-w-0 flex-1 leading-snug"
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2, duration: 0.3 }}
-                >
-                  {announcement.message}
-                </motion.span>
+                <Ticker message={announcement.message} />
               </div>
               <button
                 type="button"
@@ -103,5 +99,26 @@ export function AnnouncementStrip({
         )}
       </AnimatePresence>
     </MotionConfig>
+  );
+}
+
+/**
+ * The message on one line, scrolling right to left forever: two copies side
+ * by side, the track moving by exactly one copy, so the loop has no seam.
+ * About 60 pixels a second, whatever the length.
+ */
+function Ticker({ message }: { message: string }) {
+  const seconds = Math.max(10, Math.round(message.length * 0.16));
+  return (
+    <span
+      className="sees-ticker relative min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_1.5rem,#000_calc(100%-1.5rem),transparent)]"
+      title={message}
+      aria-label={message}
+    >
+      <span className="sees-ticker-track inline-flex whitespace-nowrap" style={{ animationDuration: `${seconds}s` }} aria-hidden>
+        <span className="px-6">{message}</span>
+        <span className="px-6">{message}</span>
+      </span>
+    </span>
   );
 }

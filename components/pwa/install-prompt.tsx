@@ -173,7 +173,7 @@ export function InstallPrompt() {
               </li>
             </ol>
             <p className="rounded-lg bg-secondary px-3 py-2 text-secondary-foreground">
-              On iPhone, goal alerts and deadline reminders only work once the app is on your home screen
+              On iPhone, match alerts and deadline reminders only work once the app is on your home screen
               (iOS 16.4 or later).
             </p>
           </CardContent>

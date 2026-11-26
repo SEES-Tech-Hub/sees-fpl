@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createAnnouncement, endAnnouncement } from "@/lib/admin/actions/announcements";
+import { createAnnouncement, endAnnouncement, notifyAnnouncementNow } from "@/lib/admin/actions/announcements";
 import type { AdminAnnouncement } from "@/lib/admin/queries/announcements";
 import { cn } from "@/lib/utils";
 import { FieldMessage, fromWatInput, PageTitle, Row, Choice, toWatInput, useAdminAction } from "../_kit/admin-kit";
@@ -86,6 +86,20 @@ export function AnnouncementsAdmin({ announcements, now }: { announcements: Admi
                 </span>
               </span>
               <Badge variant={a.state === "showing" ? "default" : a.state === "scheduled" ? "secondary" : "outline"}>{a.state}</Badge>
+              {a.state === "showing" && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={pending}
+                  onClick={() =>
+                    run(() => notifyAnnouncementNow({ announcementId: a.id }), {
+                      success: "Sent to every device with notifications on",
+                    })
+                  }
+                >
+                  Notify everyone
+                </Button>
+              )}
               {a.state !== "ended" && (
                 <Button
                   size="sm"

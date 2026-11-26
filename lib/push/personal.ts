@@ -162,3 +162,13 @@ function ordinal(n: number) {
   const v = n % 100;
   return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 }
+
+/**
+ * An announcement goes to every device with notifications on, whatever it
+ * follows (a match, a year or all matches). Returns how many it reached.
+ */
+export async function sendToEveryDevice(payload: PushPayload): Promise<number> {
+  const { data: subs } = await createAdminClient().from("push_subscriptions").select("endpoint, p256dh, auth, user_id, topics");
+  const targets: Target[] = (subs ?? []).map((s) => ({ endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth, userId: s.user_id, topics: s.topics }));
+  return deliver(targets, () => payload);
+}

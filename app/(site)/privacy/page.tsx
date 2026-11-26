@@ -103,7 +103,7 @@ export default function PrivacyPage() {
       <Section title="Your choices">
         <ul className="list-disc space-y-1.5 pl-5">
           <li>Use the scores and tables without signing in.</li>
-          <li>Turn goal alerts off from the bell on any match, or in your browser&apos;s site settings.</li>
+          <li>Turn match alerts off from the bell on any match, or in your browser&apos;s site settings.</li>
           <li>Ask us to see, correct or delete your data, including your account and fantasy team.</li>
         </ul>
         <p className="mt-3">
