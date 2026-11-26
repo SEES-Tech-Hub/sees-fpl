@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { OG } from "@/lib/design/og-colours";
 import { getMatchPage } from "@/lib/live/match-page";
 import { formatWAT } from "@/lib/utils";
+import { OgCrest } from "@/lib/design/og-crest";
 
 // The WhatsApp / social preview for a match: both teams in their colours,
 // the score (or kickoff time) and the sport.
@@ -29,25 +30,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           : f?.kickoffAt
             ? formatWAT(f.kickoffAt, "datetime").toUpperCase()
             : "TIME TO BE CONFIRMED";
-  const disc = (year: number | undefined, label: string | undefined) => (
-    <div
-      style={{
-        width: 210,
-        height: 210,
-        borderRadius: 999,
-        background: year ? OG.team[year] : OG.white,
-        color: OG.ink,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 84,
-        fontWeight: 800,
-        border: `8px solid rgba(255,255,255,0.35)`,
-      }}
-    >
-      {label ?? "?"}
-    </div>
-  );
+  const disc = (year: number | undefined) => <OgCrest year={year} size={230} />;
 
   return new ImageResponse(
     (
@@ -74,14 +57,14 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: 64 }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-              {disc(home?.year, home?.shortName)}
+              {disc(home?.year)}
               <div style={{ display: "flex", fontSize: 40, fontWeight: 700 }}>{home?.name ?? "TBD"}</div>
             </div>
             <div style={{ display: "flex", fontSize: started ? 150 : 90, fontWeight: 800, opacity: started ? 1 : 0.7 }}>
               {started ? `${s.homeScore ?? 0} – ${s.awayScore ?? 0}` : "v"}
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-              {disc(away?.year, away?.shortName)}
+              {disc(away?.year)}
               <div style={{ display: "flex", fontSize: 40, fontWeight: 700 }}>{away?.name ?? "TBD"}</div>
             </div>
           </div>

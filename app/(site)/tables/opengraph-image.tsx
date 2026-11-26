@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { OG } from "@/lib/design/og-colours";
 import { OG_SIZE, OgFrame } from "@/lib/design/og-frame";
 import { getTablesPage } from "@/lib/live/public-pages";
+import { OgCrestMark } from "@/lib/design/og-crest";
 
 // Share image for /tables: the top of the football table, live.
 
@@ -19,7 +20,7 @@ export default async function Image() {
           {standings.slice(0, 5).map((r, i) => (
             <div key={r.team.id} style={{ display: "flex", alignItems: "center", gap: 20, fontSize: 28, height: 44 }}>
               <div style={{ display: "flex", width: 40, fontWeight: 800 }}>{started ? r.position : i + 1}</div>
-              <div style={{ display: "flex", width: 24, height: 24, borderRadius: 999, background: OG.team[r.team.year] }} />
+              <OgCrestMark year={r.team.year} size={40} />
               <div style={{ display: "flex", flex: 1, fontWeight: 700 }}>{r.team.name}</div>
               <div style={{ display: "flex", width: 140, opacity: 0.75 }}>{`P ${r.played}`}</div>
               <div style={{ display: "flex", width: 120, fontWeight: 800, color: OG.brandLight }}>{`${r.points} pts`}</div>

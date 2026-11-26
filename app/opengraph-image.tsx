@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { OG } from "@/lib/design/og-colours";
+import { OgCrestMark } from "@/lib/design/og-crest";
 
 // The site-wide share preview (home, tables, sports, fantasy).
 
@@ -26,7 +27,7 @@ export default function Image() {
       >
         <div style={{ display: "flex", gap: 14 }}>
           {[1, 2, 3, 4, 5].map((y) => (
-            <div key={y} style={{ width: 54, height: 54, borderRadius: 999, background: OG.team[y], display: "flex" }} />
+            <OgCrestMark key={y} year={y} size={72} />
           ))}
         </div>
         <div style={{ display: "flex", fontSize: 110, fontWeight: 800, letterSpacing: -2 }}>SEES GAMES 2026</div>

@@ -13,6 +13,7 @@ import { useLiveFixtures } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
 import { FixtureRow, LiveCard, gameName } from "./fixture-card";
 import { LivePulse, ReconnectingPill, teamColour } from "./live-bits";
+import { YearCrest } from "@/components/brand/year-crest";
 
 // The home page's live parts: Live now, the next match, fixtures by date and
 // the latest results. All of it stays live through useLiveFixtures.
@@ -191,14 +192,11 @@ function NextUp({ card }: { card: FixtureCard }) {
   );
 }
 
-function Side({ name, short, year }: { name?: string; short?: string; year?: number }) {
+function Side({ name, year }: { name?: string; short?: string; year?: number }) {
   return (
     <div className="flex flex-col items-center gap-2">
-      <span
-        className="inline-flex size-16 items-center justify-center rounded-full font-heading text-xl font-bold text-team-foreground ring-4 ring-brand-foreground/20 motion-safe:animate-in motion-safe:zoom-in-75 motion-safe:duration-500"
-        style={{ background: teamColour(year) }}
-      >
-        {short ?? "?"}
+      <span className="motion-safe:animate-in motion-safe:zoom-in-75 motion-safe:duration-500">
+        <YearCrest year={year} variant="crest" tone="dark" size={84} label="" />
       </span>
       <span className="text-sm font-semibold">{name ?? "TBD"}</span>
     </div>

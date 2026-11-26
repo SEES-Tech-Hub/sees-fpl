@@ -8,20 +8,16 @@ import type { TeamSummary } from "@/lib/live/types";
 import { formatScore, sideName, sideWon, sideYear, tieLabel } from "@/lib/live/display";
 import { cn } from "@/lib/utils";
 import { MatchStatus, RollingScore, teamColour, useClock, useGoalFlash } from "./live-bits";
+import { YearCrest } from "@/components/brand/year-crest";
 
 const sportSlug = (slug: string) => slug.replace(/-/g, "_");
 
+/** The year's crest: the full crest on the big live cards, the small mark in rows. */
 function TeamDisc({ team, size = "md" }: { team: TeamSummary | null; size?: "md" | "lg" }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-heading font-bold text-team-foreground ring-2 ring-brand-foreground/70",
-        size === "lg" ? "size-12 text-base" : "size-7 text-xs",
-      )}
-      style={{ background: teamColour(team?.year) }}
-    >
-      {team?.shortName ?? "?"}
-    </span>
+  return size === "lg" ? (
+    <YearCrest year={team?.year} variant="crest" tone="dark" size={68} label="" />
+  ) : (
+    <YearCrest year={team?.year} size={30} label="" />
   );
 }
 
