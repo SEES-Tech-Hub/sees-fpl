@@ -57,15 +57,16 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
           </span>
         </Link>
 
-        <nav aria-label="Primary" className="hidden items-center gap-6 lg:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
           {NAV_LINKS.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`text-sm font-medium transition-colors ${
-                  active ? "font-semibold text-primary" : "text-muted-foreground hover:text-foreground"
+                aria-current={active ? "page" : undefined}
+                className={`inline-flex h-9 items-center rounded-full px-3.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  active ? "bg-secondary font-semibold text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 {item.label}
@@ -74,7 +75,7 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
           })}
 
           <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="group inline-flex items-center gap-1 rounded-md text-sm font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:text-foreground">
+            <DropdownMenuTrigger className="group inline-flex h-9 items-center gap-1 rounded-full px-3.5 text-sm font-medium text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-muted data-[state=open]:text-foreground">
               More
               <ChevronDown className="size-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </DropdownMenuTrigger>
