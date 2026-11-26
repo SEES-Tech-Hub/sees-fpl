@@ -9,7 +9,7 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } f
 import type { TeamSummary } from "@/lib/live/types";
 import { cn } from "@/lib/utils";
 
-// "Notify me": goal, kick-off, half-time and full-time alerts for this match,
+// "Notify me": alerts for this match (the start, big moments, the result),
 // a team's matches, or every match. Works without signing in. On iPhone, push
 // only works once the app is added to the Home Screen (iOS 16.4+).
 
@@ -91,7 +91,7 @@ export function NotifyBell({ fixtureId, home, away }: { fixtureId: string; home:
       const r = await followTopics(json, [topic]);
       if (r.ok) {
         setTopics(r.topics);
-        toast.success("You'll get goal alerts.");
+        toast.success("Alerts on. We'll tell you when it starts, the big moments and the result.");
       } else toast.error(r.message);
     } catch {
       toast.error("Couldn't turn on notifications on this device.");
@@ -115,7 +115,7 @@ export function NotifyBell({ fixtureId, home, away }: { fixtureId: string; home:
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>Notify me</DrawerTitle>
-            <DrawerDescription>Kick-off, goals, half-time and full time.</DrawerDescription>
+            <DrawerDescription>The start, the big moments and the result.</DrawerDescription>
           </DrawerHeader>
           <div className="flex flex-col gap-2 px-4 pb-6">
             {why === "ios-install" && (

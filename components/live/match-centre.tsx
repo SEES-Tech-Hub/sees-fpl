@@ -223,7 +223,7 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
 
         {notStarted && fixture.kickoffAt && (
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-semibold tracking-[0.08em] text-brand-foreground/70 uppercase">Kickoff in</span>
+            <span className="text-xs font-semibold tracking-[0.08em] text-brand-foreground/70 uppercase">{fixture.sport.resultFormat === "timed" ? "Kickoff in" : "Starts in"}</span>
             <Countdown targetAt={fixture.kickoffAt} showDeadlineLabel={false} className="font-heading text-3xl text-brand-foreground!" />
           </div>
         )}
@@ -616,9 +616,14 @@ function PreMatch({
         className="absolute inset-x-0 top-0 h-1.5"
         style={{ background: `linear-gradient(90deg, ${teamColour(home?.year)} 0 50%, ${teamColour(away?.year)} 50% 100%)` }}
       />
-      <EmptyIllustration art="whistle" className="mx-auto h-24" />
+      {/* A whistle for sports with a referee; a calendar for games, sets and the rest. */}
+      <EmptyIllustration art={kind === "timed" ? "whistle" : "calendar"} className="mx-auto h-24" />
       <p className="mt-2 font-heading text-2xl font-bold uppercase">
-        {kickoffAt ? `Kick-off ${formatWAT(kickoffAt, "time")}` : "Kick-off time to be confirmed"}
+        {kickoffAt
+          ? `${kind === "timed" ? "Kick-off" : "Starts"} ${formatWAT(kickoffAt, "time")}`
+          : kind === "timed"
+            ? "Kick-off time to be confirmed"
+            : "Start time to be confirmed"}
       </p>
       {kickoffAt && (
         <p className="mt-0.5 text-sm text-muted-foreground">
@@ -637,7 +642,9 @@ function PreMatch({
           </li>
         ))}
       </ul>
-      <p className="mt-5 text-xs text-muted-foreground">Tap the bell above for goal alerts on this phone.</p>
+      <p className="mt-5 text-xs text-muted-foreground">
+        Tap the bell above for alerts on this match: the start, {kind === "timed" ? "goals, cards " : "the big moments "}and the result.
+      </p>
     </section>
   );
 }

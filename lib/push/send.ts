@@ -81,9 +81,13 @@ export async function notifyMatchEvent(event: MatchEvent): Promise<void> {
   });
 }
 
-/** An announcement that's live now goes to everyone who turned notifications on. */
-export async function notifyAnnouncement(a: { id: string; message: string; tone: "info" | "warning" }): Promise<void> {
-  await sendPush(["all"], {
+/**
+ * An announcement goes to every device with notifications on (not only "All
+ * matches" followers). Returns how many devices it reached.
+ */
+export async function notifyAnnouncement(a: { id: string; message: string; tone: "info" | "warning" }): Promise<number> {
+  const { sendToEveryDevice } = await import("./personal");
+  return sendToEveryDevice({
     title: a.tone === "warning" ? "Heads up from SEES Games" : "SEES Games",
     body: a.message,
     url: "/",

@@ -151,7 +151,7 @@ function NextUp({ card }: { card: FixtureCard }) {
       <div className="relative flex flex-col items-center gap-4 text-center">
         <p className="flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase">
           <SportIcon sport={card.sport.slug.replace(/-/g, "_")} size={14} />
-          Next up · {card.sport.name}
+          Next up · {gameName(card)}
           {card.matchdayNumber ? ` · Matchday ${card.matchdayNumber}` : ""}
         </p>
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
@@ -160,7 +160,7 @@ function NextUp({ card }: { card: FixtureCard }) {
           <Side name={card.away?.name} short={card.away?.shortName} year={card.away?.year} />
         </div>
         <div className="flex flex-col items-center gap-1">
-          <span className="text-xs font-semibold tracking-[0.08em] text-brand-foreground/70 uppercase">Kickoff in</span>
+          <span className="text-xs font-semibold tracking-[0.08em] text-brand-foreground/70 uppercase">{card.sport.resultFormat === "timed" ? "Kickoff in" : "Starts in"}</span>
           <Countdown
             targetAt={card.kickoffAt!}
             serverOffsetMs={0}

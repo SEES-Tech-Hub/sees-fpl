@@ -318,3 +318,26 @@
 :root {
   color-scheme: only light;
 }
+
+/* Announcement ticker (components/shell/announcement-strip.tsx): two copies
+   of the message slide left by one copy's width, so the loop is seamless.
+   It pauses on hover or touch, and stands still (with an ellipsis) for
+   anyone who asked for less motion. */
+@keyframes sees-ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.sees-ticker-track {
+  animation: sees-ticker linear infinite;
+  will-change: transform;
+}
+.sees-ticker:hover .sees-ticker-track,
+.sees-ticker:active .sees-ticker-track {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sees-ticker { mask-image: none; }
+  .sees-ticker-track { animation: none; display: block; overflow: hidden; text-overflow: ellipsis; }
+  .sees-ticker-track > span { padding: 0; }
+  .sees-ticker-track > span + span { display: none; }
+}

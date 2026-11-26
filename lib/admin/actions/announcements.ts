@@ -101,3 +101,20 @@ export async function endAnnouncement(input: unknown): Promise<ActionResult<{ id
     return ok({ id: announcementId, removed: false });
   });
 }
+
+/** Sends a live announcement as a notification to every device that has them on (again, if it was sent before). */
+export async function notifyAnnouncementNow(input: unknown): Promise<ActionResult<{ devices: number }>> {
+  return runAdminAction("announcements.notify", async ({ supabase }) => {
+    const parsed = parseInput(announcementIdInput, input);
+    if (!parsed.ok) return parsed.result;
+    const { data, error } = await supabase.from("announcements").select(FIELDS).eq("id", parsed.data.announcementId).maybeSingle();
+    if (error) return databaseFailure("announcements.notify", error);
+    if (!data) return fail("admin.not_found", "That announcement wasn't found.");
+    try {
+      return ok({ devices: await notifyAnnouncement(toAnnouncement(data)) });
+    } catch (e) {
+      console.error("[push] announcement notify failed:", e);
+      return fail("admin.unavailable", "Couldn't send the notification. Try again.", { retryable: true });
+    }
+  });
+}
