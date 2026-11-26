@@ -17,11 +17,17 @@ function authorised(request: Request) {
 
 export async function POST(request: Request) {
   if (!authorised(request)) return Response.json({ error: "unauthorised" }, { status: 401 });
-  try {
-    const [kickoffs, deadlines] = await Promise.all([sendKickoffReminders(), sendDeadlineReminders()]);
-    return Response.json({ ok: true, kickoffs, deadlines });
-  } catch (e) {
-    console.error("[cron] notifications failed:", e);
-    return Response.json({ ok: false }, { status: 500 });
-  }
+  // Run each job on its own, so one failing doesn't hide the other, and say
+  // what failed (only to a caller holding the secret).
+  const run = async (job: () => Promise<number>) => {
+    try {
+      return { ok: true as const, sent: await job() };
+    } catch (e) {
+      console.error("[cron] notifications job failed:", e);
+      return { ok: false as const, error: e instanceof Error ? e.message : String(e) };
+    }
+  };
+  const [kickoffs, deadlines] = await Promise.all([run(sendKickoffReminders), run(sendDeadlineReminders)]);
+  const ok = kickoffs.ok && deadlines.ok;
+  return Response.json({ ok, kickoffs, deadlines }, { status: ok ? 200 : 500 });
 }
