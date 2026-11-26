@@ -183,8 +183,8 @@ async function Rules() {
 
       <Section id="transfers" n={4} title="Transfers and Wildcard">
         <div className="grid gap-2 sm:grid-cols-3">
-          <TransferCard icon={ArrowLeftRight} value={String(rules.freeTransfersPerMatchday)} label="free transfer each matchday" />
-          <TransferCard icon={CalendarClock} value={String(rules.maxSavedFreeTransfers)} label="the most you can save up" />
+          <TransferCard icon={ArrowLeftRight} value={String(rules.freeTransfersPerMatchday)} label={rules.freeTransfersPerMatchday === 1 ? "free transfer each matchday" : "free transfers each matchday"} />
+          <TransferCard icon={CalendarClock} value={String(rules.maxSavedFreeTransfers)} label="the most you can have saved up" />
           <TransferCard icon={Ban} value={formatSigned(-rules.transferHitPoints)} label="points for each extra transfer" />
         </div>
         <ul className="grid gap-2">
@@ -386,7 +386,7 @@ function WorkedExamples({ rules }: { rules: FantasyRules }) {
       />
       <ExampleCard
         title="Transfer hit"
-        story={`You have ${rules.freeTransfersPerMatchday} free transfer and make ${rules.freeTransfersPerMatchday + extra}.`}
+        story={`You have ${rules.freeTransfersPerMatchday} free ${rules.freeTransfersPerMatchday === 1 ? "transfer" : "transfers"} and make ${rules.freeTransfersPerMatchday + extra}.`}
         lines={[
           ["Extra transfers", String(extra)],
           ["Cost each", formatSigned(-rules.transferHitPoints)],
