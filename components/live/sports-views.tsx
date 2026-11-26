@@ -15,7 +15,8 @@ import { cn, formatWAT } from "@/lib/utils";
 import { formatScore } from "@/lib/live/display";
 import { FixtureRow, gameName } from "./fixture-card";
 import { LivePulse, ReconnectingPill } from "./live-bits";
-import { Empty, Medal } from "./tables-view";
+import { Empty } from "./tables-view";
+import { Medal } from "./medal-table";
 import { YearCrest } from "@/components/brand/year-crest";
 
 const FORMAT_LABEL: Record<ResultFormat, string> = {

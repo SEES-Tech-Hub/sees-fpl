@@ -11,5 +11,7 @@ export const OG = {
   /** Crests (lib/design/og-crest.tsx): a side not known yet, and the ribbon tails. */
   neutral: "#cfd8d4",
   ribbonShade: "#012a21",
+  /** Medals in the race share images (gold is the highlight token, bronze the Year 2 colour). */
+  silver: "#a9b4ba",
   team: { 1: "#38bdf8", 2: "#ff7a59", 3: "#a78bfa", 4: "#9be15d", 5: "#f472b6" } as Record<number, string>,
 };

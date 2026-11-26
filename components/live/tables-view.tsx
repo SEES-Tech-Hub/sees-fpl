@@ -1,8 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { MedalTowers } from "./medal-towers";
+import { Medal, MedalTable } from "./medal-table";
 import Link from "next/link";
-import { ChevronRight, Crown } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { SportIcon } from "@/components/ui/shared/SportIcon";
 import { SlidingTabs } from "@/components/fantasy/motion-bits";
 import { MotionProvider } from "@/components/fantasy/motion-provider";
@@ -68,7 +70,15 @@ export function TablesView({ data }: { data: TablesData }) {
           >
             {tab === "football" && <FootballTable rows={data.standings} form={data.form} />}
             {tab === "sports" && <SportTables sports={data.sportTables} />}
-            {tab === "championship" && <MedalTable rows={data.medals} />}
+            {tab === "championship" && (
+              <>
+                <MedalTowers rows={data.medals} />
+                <MedalTable rows={data.medals} />
+                <Link href="/championship" className="self-start text-sm font-semibold text-primary underline-offset-4 hover:underline">
+                  See the race for the championship
+                </Link>
+              </>
+            )}
             {tab === "stats" && <Stats data={data} />}
           </motion.div>
         </AnimatePresence>
@@ -192,59 +202,6 @@ function FootballTable({ rows, form }: { rows: StandingRow[]; form: TablesData["
   );
 }
 
-function MedalTable({ rows }: { rows: MedalTableRow[] }) {
-  if (rows.length === 0) return <Empty art="trophy" title="No medals yet" text="The race for the championship starts with the first results." />;
-  const byPoints = rows[0].rankBy === "points";
-  return (
-    <section className="overflow-x-auto rounded-xl bg-card shadow-card">
-      <table className="w-full min-w-[20rem] text-sm">
-        <thead>
-          <tr className="border-b border-border text-xs text-muted-foreground">
-            <th className="w-8 py-2 pl-3 text-left font-semibold">#</th>
-            <th className="py-2 text-left font-semibold">Year</th>
-            <th className="w-10 py-2 text-center" aria-label="Gold">
-              <Medal tone="gold" />
-            </th>
-            <th className="w-10 py-2 text-center" aria-label="Silver">
-              <Medal tone="silver" />
-            </th>
-            <th className="w-10 py-2 text-center" aria-label="Bronze">
-              <Medal tone="bronze" />
-            </th>
-            <th className="w-12 py-2 pr-3 text-center font-semibold">{byPoints ? "Pts" : "Total"}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <motion.tr layout key={r.team.id} className="border-b border-border last:border-b-0">
-              <td className="py-2.5 pl-3 font-heading font-bold">
-                <span className="flex items-center gap-1">
-                  {r.position}
-                  {r.position === 1 && r.total > 0 && <Crown className="size-3.5 text-highlight" aria-label="Leader" />}
-                </span>
-              </td>
-              <td className="max-w-0 py-2.5">
-                <TeamCell team={r.team} />
-              </td>
-              <td className="text-center tabular-nums">{r.gold}</td>
-              <td className="text-center tabular-nums">{r.silver}</td>
-              <td className="text-center tabular-nums">{r.bronze}</td>
-              <td className="pr-3 text-center font-heading text-base font-bold tabular-nums">{byPoints ? r.points : r.total}</td>
-            </motion.tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
-  );
-}
-
-export function Medal({ tone }: { tone: "gold" | "silver" | "bronze" }) {
-  const fill = { gold: "var(--highlight)", silver: "var(--muted-foreground)", bronze: "var(--team-y2)" }[tone];
-  return (
-    <span aria-hidden className="mx-auto block size-4 rounded-full ring-2 ring-background" style={{ background: fill, boxShadow: `0 0 0 1px ${fill}` }} />
-  );
-}
-
 function Stats({ data }: { data: TablesData }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -333,6 +290,8 @@ function Leaders({
     </section>
   );
 }
+
+export { Medal };
 
 export function Empty({ text, title = "Nothing here yet", art = "net", compact }: { text: string; title?: string; art?: EmptyArt; compact?: boolean }) {
   return <EmptyState art={art} title={title} description={text} compact={compact} />;

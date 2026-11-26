@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, Shirt } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { CircuitPattern } from "@/components/fantasy/patterns";
 import { Countdown } from "@/components/ui/shared/CountDown";
 import { SportIcon } from "@/components/ui/shared/SportIcon";
@@ -24,7 +24,18 @@ const DONE = new Set<FixtureState["status"]>(["full_time", "walkover"]);
 const dayKey = (iso: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 
-export function HomeLive({ cards, serverNow, championship }: { cards: FixtureCard[]; serverNow: number; championship?: ReactNode }) {
+export function HomeLive({
+  cards,
+  serverNow,
+  championship,
+  fantasy,
+}: {
+  cards: FixtureCard[];
+  serverNow: number;
+  championship?: ReactNode;
+  /** The fantasy stub on the next-match ticket (components/fantasy/ticket-stub.tsx). */
+  fantasy?: ReactNode;
+}) {
   const { states, status } = useLiveFixtures(cards.map((c) => c.state));
   const stateOf = (c: FixtureCard) => states.get(c.id) ?? c.state;
 
@@ -60,7 +71,7 @@ export function HomeLive({ cards, serverNow, championship }: { cards: FixtureCar
           </div>
         </section>
       ) : next ? (
-        <NextUp card={next} />
+        <NextUp card={next} fantasy={fantasy} />
       ) : null}
 
       {championship}
@@ -134,13 +145,13 @@ export function HomeLive({ cards, serverNow, championship }: { cards: FixtureCar
   );
 }
 
-/** Nothing live: a big countdown to the next match. */
-function NextUp({ card }: { card: FixtureCard }) {
+/**
+ * Nothing live: the next match as a ticket. The match on top with one clear
+ * action, fantasy on a tear-off stub with its own deadline.
+ */
+function NextUp({ card, fantasy }: { card: FixtureCard; fantasy?: ReactNode }) {
   return (
-    <section
-      aria-label="Next match"
-      className="relative mx-4 overflow-hidden rounded-2xl bg-pitch px-5 pt-5 pb-6 text-brand-foreground shadow-raised lg:mx-0"
-    >
+    <section aria-label="Next match" className="relative mx-4 overflow-hidden rounded-2xl bg-pitch text-brand-foreground shadow-raised lg:mx-0">
       <CircuitPattern />
       <span
         aria-hidden
@@ -149,7 +160,7 @@ function NextUp({ card }: { card: FixtureCard }) {
           background: `linear-gradient(110deg, ${teamColour(card.home?.year)} 0 18%, transparent 40% 60%, ${teamColour(card.away?.year)} 82% 100%)`,
         }}
       />
-      <div className="relative flex flex-col items-center gap-4 text-center">
+      <div className="relative flex flex-col items-center gap-4 px-5 pt-5 pb-5 text-center">
         <p className="flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase">
           <SportIcon sport={card.sport.slug.replace(/-/g, "_")} size={14} />
           Next up · {gameName(card)}
@@ -173,21 +184,22 @@ function NextUp({ card }: { card: FixtureCard }) {
             {card.venue ? ` · ${card.venue}` : ""}
           </span>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
-          <Link
-            href={`/matches/${card.id}`}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-foreground px-5 text-sm font-semibold text-brand transition-transform active:scale-95"
-          >
-            Match centre <ArrowRight className="size-4" />
-          </Link>
-          <Link
-            href="/fantasy"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-light px-5 text-sm font-semibold text-brand transition-transform active:scale-95"
-          >
-            <Shirt className="size-4" /> Play SEES Fantasy
-          </Link>
-        </div>
+        <Link
+          href={`/matches/${card.id}`}
+          className="inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-brand-foreground text-[0.9375rem] font-bold text-brand transition-transform outline-none focus-visible:ring-3 focus-visible:ring-brand-light active:scale-[0.98] sm:max-w-xs"
+        >
+          Open match centre <ChevronRight className="size-4" aria-hidden />
+        </Link>
       </div>
+      {fantasy && (
+        <>
+          <div aria-hidden className="relative mx-4 border-t-2 border-dashed border-brand-foreground/25">
+            <span className="absolute -top-[13px] -left-[29px] size-6 rounded-full bg-background" />
+            <span className="absolute -top-[13px] -right-[29px] size-6 rounded-full bg-background" />
+          </div>
+          {fantasy}
+        </>
+      )}
     </section>
   );
 }
