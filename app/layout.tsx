@@ -8,13 +8,18 @@ import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register"
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/components/shell/AppShell";
+import { ThemeProvider } from "@/components/shell/theme";
 import "./globals.css";
 import { SITE_DESCRIPTION } from "@/lib/seo";
 
 // Fonts are self-hosted (app/fonts.css, public/fonts), so neither the dev
-// server nor a build needs Google Fonts. Every page uses Inter and Oswald, so
-// their Latin files are preloaded; Playfair Display loads only where used.
-const PRELOAD_FONTS = ["/fonts/inter-normal-latin.woff2", "/fonts/oswald-normal-latin.woff2"];
+// server nor a build needs Google Fonts. Every page uses Poppins (text) and
+// Menseal (headings), so those files are preloaded; Playfair Display loads
+// only where used.
+const PRELOAD_FONTS = [
+  { href: "/fonts/poppins-regular.otf", type: "font/otf" },
+  { href: "/fonts/menseal-bold.ttf", type: "font/ttf" },
+];
 
 export const metadata: Metadata = {
   // Share cards need absolute URLs: the live domain in production, the
@@ -33,33 +38,37 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#013f31",
-  // Light theme only, and stop phone browsers (Chrome's auto-dark, Samsung
-  // Internet) from forcing their own dark version onto the pages.
-  colorScheme: "only light",
+  // Light and dark are both designed (manual toggle in the header, defaulting
+  // to the device setting), so browsers shouldn't force their own dark version.
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  for (const href of PRELOAD_FONTS) preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  for (const f of PRELOAD_FONTS) preload(f.href, { as: "font", type: f.type, crossOrigin: "anonymous" });
   return (
-    <html lang="en" className="h-full antialiased">
+    // next-themes sets the `dark` class on <html> before paint, so the server
+    // markup and the first client render can differ there.
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="flex min-h-full flex-col font-sans">
-        <EarlyInstallCapture />
-        <TooltipProvider>
-          <AppShell>{children}</AppShell>
-        </TooltipProvider>
-        <Toaster />
-        <ServiceWorkerRegister />
+        <ThemeProvider>
+          <EarlyInstallCapture />
+          <TooltipProvider>
+            <AppShell>{children}</AppShell>
+          </TooltipProvider>
+          <Toaster />
+          <ServiceWorkerRegister />
 
-        {/* InstallPrompt reads the pathname, which suspends on dynamic routes. */}
-        <Suspense fallback={null}>
-          <InstallPrompt />
-        </Suspense>
-        {/* Reads the pathname too. First-party page views and "online now" (Admin → Analytics). */}
-        <Suspense fallback={null}>
-          <AnalyticsTracker />
-        </Suspense>
+          {/* InstallPrompt reads the pathname, which suspends on dynamic routes. */}
+          <Suspense fallback={null}>
+            <InstallPrompt />
+          </Suspense>
+          {/* Reads the pathname too. First-party page views and "online now" (Admin → Analytics). */}
+          <Suspense fallback={null}>
+            <AnalyticsTracker />
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   );

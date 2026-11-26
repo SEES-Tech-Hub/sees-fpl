@@ -23,6 +23,7 @@ import { SeesMark } from "@/components/brand/sees-mark";
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 import { showsTabBar } from "./routes";
+import { ThemeToggle } from "./theme";
 
 // The phone navigation: a floating dock. The active tab is a mint pill that
 // slides between tabs and opens out to show its name; the rest are icons.
@@ -235,6 +236,7 @@ function MoreSheet({
           animate={{ opacity: open ? 1 : 0 }}
           transition={{ duration: 0.2, delay: open ? 0.06 + links.length * 0.04 : 0 }}
         >
+          <ThemeToggle withLabel className="mb-3 h-12 w-full rounded-2xl bg-muted text-sm font-semibold text-foreground" />
           {user ? (
             <form action={signOut}>
               <button
@@ -248,7 +250,7 @@ function MoreSheet({
             <Link
               href="/login"
               onClick={close}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-semibold text-primary-foreground"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand-gradient text-sm font-semibold text-brand-foreground"
             >
               <LogIn className="size-4" aria-hidden /> Sign in with Google
             </Link>

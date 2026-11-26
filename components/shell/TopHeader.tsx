@@ -15,6 +15,7 @@ import {
 import { signOut } from "@/app/login/actions";
 import { AnnouncementStrip } from "./announcement-strip";
 import { showsHeader } from "./routes";
+import { ThemeToggle } from "./theme";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -48,24 +49,25 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
   if (!showsHeader(pathname)) return null;
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-4 md:px-6">
+    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/85 backdrop-blur-md">
+      <div className="mx-auto grid h-16 max-w-[1200px] grid-cols-[1fr_auto] items-center gap-6 px-4 md:px-6 lg:grid-cols-[1fr_auto_1fr]">
         <Link href="/" className="flex items-center gap-2.5">
-          <SeesMark className="size-7 text-brand dark:text-brand-light" />
-          <span className="font-heading text-lg font-semibold tracking-tight text-foreground">
+          <SeesMark className="size-8 text-brand dark:text-brand-light" />
+          <span className="font-heading text-base font-bold tracking-tight text-foreground">
             SEES Games
           </span>
         </Link>
 
-        <nav aria-label="Primary" className="hidden items-center gap-6 lg:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
           {NAV_LINKS.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`text-sm font-medium transition-colors ${
-                  active ? "font-semibold text-primary" : "text-muted-foreground hover:text-foreground"
+                aria-current={active ? "page" : undefined}
+                className={`inline-flex h-10 items-center rounded-full px-4 text-sm font-medium transition-colors ${
+                  active ? "bg-soft-gradient font-semibold text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 {item.label}
@@ -74,7 +76,7 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
           })}
 
           <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="group inline-flex items-center gap-1 rounded-md text-sm font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:text-foreground">
+            <DropdownMenuTrigger className="group inline-flex h-10 items-center gap-1 rounded-full px-4 text-sm font-medium text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:text-foreground">
               More
               <ChevronDown className="size-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </DropdownMenuTrigger>
@@ -119,19 +121,20 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
           </DropdownMenu>
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
+          <ThemeToggle className="size-10 bg-muted text-foreground hover:bg-secondary" />
           {user ? (
             <Link
               href="/fantasy"
               aria-label="Account"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary font-heading text-xs font-semibold text-primary"
+              className="flex size-10 items-center justify-center rounded-full bg-brand-gradient font-heading text-xs font-bold text-brand-foreground"
             >
               {user.name?.slice(0, 2).toUpperCase() || "ME"}
             </Link>
           ) : (
             <Link
               href="/login"
-              className="inline-flex h-9 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
+              className="inline-flex h-10 items-center rounded-full bg-brand-gradient px-5 text-sm font-semibold text-brand-foreground shadow-card transition-transform active:scale-95"
             >
               Sign in
             </Link>

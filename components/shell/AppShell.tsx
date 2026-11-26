@@ -44,7 +44,7 @@ async function SignedInTabBar({ hasLiveMatch }: { hasLiveMatch?: boolean }) {
 
 export function SiteHeader({ announcement }: { announcement?: ShellAnnouncement | null }) {
   return (
-    <Suspense fallback={<div className="h-14 w-full border-b border-border/60 bg-background" />}>
+    <Suspense fallback={<div className="h-16 w-full border-b border-border/60 bg-background" />}>
       <SignedInHeader announcement={announcement} />
     </Suspense>
   );

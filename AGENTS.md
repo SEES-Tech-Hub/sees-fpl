@@ -35,8 +35,9 @@ Product spec: `docs/PRD.md` (live version: https://claude.ai/artifact/5vxb7y7RGN
 
 - Colours exist only as tokens in `app/globals.css`. Use the utilities (`bg-primary`, `bg-brand`, `text-muted-foreground`, `border-border`, `text-live`, `bg-highlight`). No hex values or raw Tailwind palette colours (`bg-green-600`) anywhere else.
 - UI components come from shadcn (Radix base, Nova style; see `components.json`). Add more with `pnpm dlx shadcn@latest add <name>`. Treat `components/ui/*` as vendored: change it only for SEES-wide fixes, and build app-specific pieces in `components/` instead. shadcn's names (`primary`, `secondary`, `accent`) are mapped to the SEES palette, so its components are branded automatically.
-- Dark mode follows the device setting through `prefers-color-scheme`. A manual toggle would need next-themes and a class-based `dark` variant.
-- Fonts: Oswald for headings (`font-heading`), Inter for body text (`font-sans`).
+- Dark mode uses next-themes (`components/shell/theme.tsx`): it starts from the device setting and remembers the header/More-sheet toggle, through a class-based `dark` variant. Pitch surfaces (`bg-pitch`, `bg-pitch-gradient`) stay dark in both themes; put light text on them with `text-on-pitch`.
+- Brand gradients: `bg-brand-gradient` (with `text-brand-foreground`), `bg-soft-gradient`, `bg-pitch-gradient`. Section titles can take `heading-bar`.
+- Fonts: Menseal for headings (`font-heading`), Poppins for body text (`font-sans`), self-hosted in `public/fonts`. Oswald and Inter remain as fallbacks.
 - Phones first: everything must work at 360 px wide.
 
 ## Database

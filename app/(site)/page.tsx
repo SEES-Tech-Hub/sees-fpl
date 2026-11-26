@@ -14,7 +14,7 @@ import { siteBase, SITE_DESCRIPTION } from "@/lib/seo";
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 py-4 pb-12 lg:max-w-4xl lg:px-6">
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 py-6 pb-16 lg:max-w-4xl lg:gap-12 lg:px-6 lg:py-10">
       <JsonLd
         data={{
           "@context": "https://schema.org",

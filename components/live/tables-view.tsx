@@ -124,21 +124,31 @@ function FootballTable({ rows, form }: { rows: StandingRow[]; form: TablesData["
   if (rows.length === 0) return <Empty art="trophy" title="No table yet" text="It fills in after the first match on 28 Nov, and moves live while matches are on." />;
   // Before any match everyone is joint first: show plain order, no zones.
   const started = rows.some((r) => r.played > 0);
+  const zone = (p: number) => (!started ? "standing-rest" : p <= 2 ? "standing-final" : p <= 4 ? "standing-third" : "standing-rest");
   return (
-    <section className="flex flex-col gap-2">
-      <div className="overflow-x-auto rounded-xl bg-card shadow-card">
-        <table className="w-full min-w-[22rem] text-sm">
+    <section className="relative isolate overflow-hidden rounded-3xl bg-pitch-gradient px-4 pt-7 pb-6 text-on-pitch shadow-raised sm:px-7">
+      <span aria-hidden className="board-corners pointer-events-none absolute inset-3.5" />
+      <div className="mb-6 flex flex-col items-center gap-1 text-center">
+        <span className="text-[0.6875rem] font-semibold tracking-[0.2em] text-on-pitch-accent uppercase">SEES Games 2026 · Men&apos;s football</span>
+        <h2 className="relative font-heading text-3xl font-black tracking-tight uppercase sm:text-4xl">
+          <span aria-hidden className="echo-ghost absolute inset-x-0 -top-[0.55em] [clip-path:inset(45%_0_0_0)] [mask-image:linear-gradient(0deg,black,transparent_75%)]">Leaderboard</span>
+          <span className="echo-title relative">Leaderboard</span>
+          <span aria-hidden className="echo-ghost absolute inset-x-0 -bottom-[0.55em] [clip-path:inset(0_0_45%_0)] [mask-image:linear-gradient(180deg,black,transparent_75%)]">Leaderboard</span>
+        </h2>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[21rem] border-separate border-spacing-y-1 text-sm">
           <thead>
-            <tr className="border-b border-border text-xs text-muted-foreground">
-              <th className="w-8 py-2 pl-3 text-left font-semibold">#</th>
-              <th className="py-2 text-left font-semibold">Team</th>
+            <tr className="text-[0.6875rem] font-semibold tracking-[0.1em] text-on-pitch/60 uppercase">
+              <th className="w-9 py-1 pl-3 text-left">#</th>
+              <th className="py-1 text-left">Team</th>
               {["P", "W", "D", "L", "GD"].map((h) => (
-                <th key={h} className="w-8 py-2 text-center font-semibold">
+                <th key={h} className="w-8 py-1 text-center">
                   {h}
                 </th>
               ))}
-              <th className="w-10 py-2 pr-1 text-center font-semibold">Pts</th>
-              <th className="hidden py-2 pr-3 text-left font-semibold sm:table-cell">Form</th>
+              <th className="w-11 py-1 pr-2 text-center">Pts</th>
+              <th className="hidden py-1 pr-3 text-left sm:table-cell">Form</th>
             </tr>
           </thead>
           <tbody>
@@ -147,15 +157,12 @@ function FootballTable({ rows, form }: { rows: StandingRow[]; form: TablesData["
                 layout
                 key={r.team.id}
                 transition={{ type: "spring", stiffness: 380, damping: 34 }}
-                className={cn("border-b border-border last:border-b-0", r.live && "bg-live/5")}
-                style={{
-                  boxShadow: `inset 3px 0 0 ${!started ? "transparent" : r.position <= 2 ? "var(--success)" : r.position <= 4 ? "var(--highlight)" : "transparent"}`,
-                }}
+                className={cn(zone(r.position), "font-semibold [&>td:first-child]:rounded-l-xl [&>td:last-child]:rounded-r-xl", r.live && "ring-1 ring-live")}
               >
-                <td className="py-2.5 pl-3 font-heading font-bold tabular-nums">
+                <td className="py-3 pl-3 font-heading font-black tabular-nums">
                   {started ? `${r.position}${r.positionShared ? "=" : ""}` : "–"}
                 </td>
-                <td className="max-w-0 py-2.5">
+                <td className="max-w-0 py-3 uppercase">
                   <TeamCell team={r.team} live={r.live} />
                 </td>
                 {[r.played, r.won, r.drawn, r.lost].map((v, i) => (
@@ -164,7 +171,7 @@ function FootballTable({ rows, form }: { rows: StandingRow[]; form: TablesData["
                   </td>
                 ))}
                 <td className="text-center tabular-nums">{r.goalDifference > 0 ? `+${r.goalDifference}` : r.goalDifference}</td>
-                <td className="pr-1 text-center font-heading text-base font-bold tabular-nums">{r.points}</td>
+                <td className="pr-2 text-center font-heading text-base font-black tabular-nums">{r.points}</td>
                 <td className="hidden pr-3 sm:table-cell">
                   <span className="flex gap-1">
                     {(form[r.team.id] ?? []).map((f, i) => (
@@ -179,12 +186,12 @@ function FootballTable({ rows, form }: { rows: StandingRow[]; form: TablesData["
           </tbody>
         </table>
       </div>
-      <p className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-muted-foreground">
+      <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-on-pitch/75">
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-1 rounded bg-success" /> Final
+          <span className="standing-final h-3 w-3 rounded" /> Final
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-1 rounded bg-highlight" /> Third-place match
+          <span className="standing-third h-3 w-3 rounded" /> Third-place match
         </span>
         <span>Ties: goal difference, goals scored, then head-to-head.</span>
       </p>
@@ -301,15 +308,18 @@ function Leaders({
   cards?: boolean;
 }) {
   return (
-    <section className="rounded-xl bg-card shadow-card">
-      <h2 className="border-b border-border px-3 py-2.5 font-heading text-lg font-bold">{title}</h2>
+    <section className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-card">
+      <h2 className="heading-bar border-b border-border bg-soft-gradient px-4 py-3 font-heading text-base font-bold uppercase">{title}</h2>
       {rows.length === 0 ? (
         <EmptyState art="ball" title="Nothing yet" description="Shows after the first match." compact bare />
       ) : (
         <ol className="divide-y divide-border">
           {rows.map((r, i) => (
-            <li key={r.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-              <span className="w-4 font-heading font-bold text-muted-foreground tabular-nums">{i + 1}</span>
+            <li key={r.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+              <span className="w-11 -skew-x-6 font-heading text-lg font-black text-brand tabular-nums italic">
+                {i + 1}
+                <sup className="ml-0.5 text-[0.55em]">{ordinalSuffix(i + 1)}</sup>
+              </span>
               <YearCrest year={r.team.year} size={26} />
               <span className="flex-1 truncate font-semibold">{r.name}</span>
               {cards ? (
@@ -332,6 +342,13 @@ function Leaders({
       )}
     </section>
   );
+}
+
+/** 1 → ST, 2 → ND, 3 → RD, everything else → TH (11–13 included). */
+function ordinalSuffix(n: number) {
+  const t = n % 100;
+  if (t >= 11 && t <= 13) return "TH";
+  return ["TH", "ST", "ND", "RD"][n % 10] ?? "TH";
 }
 
 export function Empty({ text, title = "Nothing here yet", art = "net", compact }: { text: string; title?: string; art?: EmptyArt; compact?: boolean }) {

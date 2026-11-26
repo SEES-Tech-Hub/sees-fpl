@@ -4,13 +4,9 @@
 /* Inter, Oswald and Playfair Display, served from public/fonts. */
 @import "./fonts.css";
 
-/* Dark mode is OFF for launch. Dark styles apply only under a `dark` class on
-   <html>, which nothing sets, so everyone gets the light theme; the dark
-   tokens below are kept. To bring it back, either:
-   - follow the device setting again: change this line back to
-     `@custom-variant dark (@media (prefers-color-scheme: dark));` and wrap the
-     two `:root.dark` blocks in `@media (prefers-color-scheme: dark) { :root { … } }`;
-   - or add a manual toggle with next-themes (attribute="class"). */
+/* Dark mode is ON, with a manual toggle. next-themes (components/shell/theme.tsx)
+   puts a `dark` class on <html>: it follows the device setting until someone
+   picks light or dark from the header toggle, then remembers that choice. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
@@ -121,8 +117,9 @@
 
 /* Font stacks: the self-hosted face first, then close system fallbacks. */
 :root {
-  --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-oswald: "Oswald", "Arial Narrow", ui-sans-serif, sans-serif;
+  /* 2026 redesign: Poppins for text, Menseal for headings. The old faces stay as fallbacks. */
+  --font-inter: "Poppins", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-oswald: "Menseal", "Oswald", "Arial Narrow", ui-sans-serif, sans-serif;
   --font-playfair: "Playfair Display", Georgia, "Times New Roman", serif;
 }
 
@@ -313,10 +310,142 @@
   50% { transform: translateY(-4px); }
 }
 
-/* Light only for now (see the dark-mode note at the top): native controls,
-   scrollbars and form fields stay light too. */
+/* Native controls, scrollbars and form fields follow the chosen theme. */
 :root {
-  color-scheme: only light;
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+
+/* ------------------------------------------------------------------
+   2026 redesign: brand gradients, page glow, section headings.
+   Raw colours stay in this file, as the styling rules ask.
+   ------------------------------------------------------------------ */
+:root {
+  /* Deep SEES green, lit from the top left */
+  --gradient-brand: linear-gradient(135deg, #0a7a5e 0%, #02533f 38%, #013f31 64%, #011f18 100%);
+  /* Soft mint tint for selected rows, chips and section headers */
+  --gradient-soft: linear-gradient(135deg, #e3f8f1 0%, #c9f5e7 100%);
+  /* Dark pitch panels (next match, leaderboards) */
+  --gradient-pitch: radial-gradient(90% 60% at 50% 0%, rgb(149 253 226 / 0.14), transparent 70%),
+    linear-gradient(180deg, #0b3a2d 0%, #05211a 55%, #010a08 100%);
+  /* Text and controls on the dark pitch panels: the same in light and dark mode */
+  --on-pitch: #ffffff;
+  --on-pitch-ink: #013f31;
+  --on-pitch-accent: #95fde2;
+  /* Grass for the 3D pitch */
+  --grass-1: #3e8f3a;
+  --grass-2: #4a9c45;
+  --grass-line: rgb(255 255 255 / 0.6);
+  /* Page background: a faint mint glow and dot grid */
+  --page-glow: radial-gradient(60% 50% at 15% 0%, rgb(149 253 226 / 0.3), transparent 70%),
+    radial-gradient(45% 40% at 100% 8%, rgb(255 183 3 / 0.08), transparent 70%);
+  --page-dots: radial-gradient(circle at 1px 1px, rgb(1 63 49 / 0.06) 1px, transparent 0);
+}
+:root.dark {
+  --gradient-brand: linear-gradient(135deg, #d2fff2 0%, #95fde2 45%, #4fd8b4 100%);
+  --gradient-soft: linear-gradient(135deg, #12382d 0%, #17463a 100%);
+  --page-glow: radial-gradient(60% 50% at 15% 0%, rgb(149 253 226 / 0.09), transparent 70%),
+    radial-gradient(45% 40% at 100% 8%, rgb(255 183 3 / 0.05), transparent 70%);
+  --page-dots: radial-gradient(circle at 1px 1px, rgb(149 253 226 / 0.06) 1px, transparent 0);
+}
+
+@theme inline {
+  --color-on-pitch: var(--on-pitch);
+  --color-on-pitch-ink: var(--on-pitch-ink);
+  --color-on-pitch-accent: var(--on-pitch-accent);
+  --color-grass-1: var(--grass-1);
+  --color-grass-2: var(--grass-2);
+  --color-grass-line: var(--grass-line);
+}
+
+/* Pitch surfaces (bg-pitch, the dock, match heroes, the fantasy pitch) are
+   dark green in BOTH themes, and their contents were built with the light
+   brand tokens (white text, mint accents, mint buttons with green text).
+   Keep those light values inside them in dark mode, or the text disappears. */
+:root.dark :where([class~="bg-pitch"], [class*="bg-pitch/"], .bg-pitch-gradient) {
+  --brand: #013f31;
+  --brand-foreground: #ffffff;
+  --brand-light: #95fde2;
+}
+
+/* bg-brand-gradient: use with text-brand-foreground (white in light, deep green in dark). */
+@utility bg-brand-gradient {
+  background-image: var(--gradient-brand);
+}
+@utility bg-soft-gradient {
+  background-image: var(--gradient-soft);
+}
+@utility bg-pitch-gradient {
+  background-image: var(--gradient-pitch);
+}
+
+@layer base {
+  body {
+    background-image: var(--page-glow), var(--page-dots);
+    background-size: 100% 900px, 22px 22px;
+    background-repeat: no-repeat, repeat;
+  }
+}
+
+/* Leaderboard board (components/live/tables-view.tsx): dark panel, corner
+   marks, echoed title, and rows tinted by what the place earns. */
+@utility board-corners {
+  background-image:
+    linear-gradient(rgb(149 253 226 / 0.6), rgb(149 253 226 / 0.6)), linear-gradient(rgb(149 253 226 / 0.6), rgb(149 253 226 / 0.6)),
+    linear-gradient(rgb(149 253 226 / 0.6), rgb(149 253 226 / 0.6)), linear-gradient(rgb(149 253 226 / 0.6), rgb(149 253 226 / 0.6)),
+    linear-gradient(rgb(149 253 226 / 0.6), rgb(149 253 226 / 0.6)), linear-gradient(rgb(149 253 226 / 0.6), rgb(149 253 226 / 0.6)),
+    linear-gradient(rgb(149 253 226 / 0.6), rgb(149 253 226 / 0.6)), linear-gradient(rgb(149 253 226 / 0.6), rgb(149 253 226 / 0.6));
+  background-size: 14px 1px, 1px 14px, 14px 1px, 1px 14px, 14px 1px, 1px 14px, 14px 1px, 1px 14px;
+  background-position: left top, left top, right top, right top, left bottom, left bottom, right bottom, right bottom;
+  background-repeat: no-repeat;
+}
+@utility echo-title {
+  background-image: linear-gradient(180deg, #b5ffec, #4fd8b4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@utility echo-ghost {
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(149 253 226 / 0.35);
+}
+@utility standing-final {
+  background-image: linear-gradient(90deg, #3fd9b0, #0fa37f);
+  color: #012a20;
+}
+@utility standing-third {
+  background-image: linear-gradient(90deg, rgb(149 253 226 / 0.42), rgb(149 253 226 / 0.22));
+}
+@utility standing-rest {
+  background-color: rgb(232 255 247 / 0.08);
+}
+/* Glowing place numbers for player leaderboards */
+@utility rank-glow {
+  text-shadow: 0 0 10px rgb(149 253 226 / 0.85), 0 0 24px rgb(149 253 226 / 0.4);
+}
+
+/* The ball on the next-match pitch (components/live/pitch-3d.tsx). */
+@keyframes sees-roll {
+  0%, 100% { left: 50%; top: 50%; }
+  25% { left: 38%; top: 40%; }
+  50% { left: 56%; top: 62%; }
+  75% { left: 64%; top: 44%; }
+}
+
+/* Section headings get a short mint-to-green bar in front. */
+@utility heading-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  &::before {
+    content: "";
+    width: 4px;
+    height: 1.05em;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #95fde2, #0a7a5e);
+  }
 }
 
 /* Announcement ticker (components/shell/announcement-strip.tsx): two copies

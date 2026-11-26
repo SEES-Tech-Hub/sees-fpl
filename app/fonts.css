@@ -6,6 +6,51 @@
   the subsets a page uses.
 */
 
+/* Menseal (headings) and Poppins (body), the 2026 redesign faces. Self-hosted
+   like the others. Inter and Oswald below stay as fallbacks. */
+@font-face {
+  font-family: 'Menseal';
+  font-style: normal;
+  font-weight: 600 700;
+  font-display: swap;
+  src: url("/fonts/menseal-bold.ttf") format('truetype');
+}
+@font-face {
+  font-family: 'Menseal';
+  font-style: normal;
+  font-weight: 800 900;
+  font-display: swap;
+  src: url("/fonts/menseal-black.ttf") format('truetype');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/poppins-regular.otf") format('opentype');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/poppins-medium.otf") format('opentype');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/poppins-semibold.otf") format('opentype');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+  src: url("/fonts/poppins-bold.otf") format('opentype');
+}
+
 /* Inter normal, latin-ext */
 @font-face {
   font-family: 'Inter';
