@@ -1,5 +1,6 @@
 "use client";
 
+import { ConsoleGuide, ConsoleHelpButton } from "./console-help";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ListOrdered, Plus, Send, Trash2, Trophy, Users } from "lucide-react";
@@ -169,7 +170,8 @@ export function RaceConsole({
 
   return (
     <div className="flex flex-1 flex-col gap-4 px-4 pt-4 pb-16">
-      <header className="flex flex-col items-center gap-1 text-center">
+      <header className="relative flex flex-col items-center gap-1 px-10 text-center">
+        <ConsoleHelpButton kind="race" className="absolute top-0 right-0" />
         <p className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
           {fixture.sport.name} · {stageName(fixture.stage)}
         </p>
@@ -189,6 +191,7 @@ export function RaceConsole({
       </header>
 
       <HolderBar viewer={viewer} fixtureId={fixture.id} waiting={0} onTaken={() => router.refresh()} />
+      <ConsoleGuide kind="race" show={viewer.canRecord || viewer.canTake} />
 
       {viewer.isAdmin && hasHeats && fixture.stage === "final" && !hasResults && (
         <Button

@@ -1,5 +1,6 @@
 "use client";
 
+import { ConsoleGuide, ConsoleHelpButton } from "./console-help";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Flag, Minus, Plus, Trophy, Wifi } from "lucide-react";
@@ -214,6 +215,7 @@ export function HeadToHeadConsole({
   return (
     <div className="flex flex-1 flex-col gap-4 px-4 pt-4 pb-32">
       <header className="sticky top-0 z-10 -mx-4 border-b border-border bg-background/95 px-4 pt-2 pb-3 backdrop-blur">
+        <ConsoleHelpButton kind={boards ? "boards" : "points"} className="absolute top-1 right-1" />
         <p className="text-center text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">{kicker}</p>
         <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
           <SideName fixture={fixture} side="home" team={home} won={match.finished && match.winner === "home"} />
@@ -246,6 +248,7 @@ export function HeadToHeadConsole({
 
       {(viewer.canRecord || queue.items.length > 0) && <SendStatus queue={queue} />}
       <HolderBar viewer={viewer} fixtureId={fixture.id} waiting={queue.items.length} onTaken={queue.resume} />
+      <ConsoleGuide kind={boards ? "boards" : "points"} show={viewer.canRecord || viewer.canTake} />
 
       {boards ? (
         <section aria-label="Boards" className="flex flex-col gap-2">

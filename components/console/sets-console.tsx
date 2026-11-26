@@ -1,5 +1,6 @@
 "use client";
 
+import { ConsoleGuide, ConsoleHelpButton } from "./console-help";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CircleCheck, Flag, Plus, Trophy, Wifi } from "lucide-react";
@@ -156,6 +157,7 @@ export function SetsConsole({
   return (
     <div className="flex flex-1 flex-col gap-4 px-4 pt-4 pb-32">
       <header className="sticky top-0 z-10 -mx-4 border-b border-border bg-background/95 px-4 pt-2 pb-3 backdrop-blur">
+        <ConsoleHelpButton kind="sets" className="absolute top-1 right-1" />
         <p className="text-center text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
           {kicker} · best of {bestOf}
         </p>
@@ -197,6 +199,7 @@ export function SetsConsole({
 
       {(viewer.canRecord || queue.items.length > 0) && <SendStatus queue={queue} />}
       <HolderBar viewer={viewer} fixtureId={fixture.id} waiting={queue.items.length} onTaken={queue.resume} />
+      <ConsoleGuide kind="sets" show={viewer.canRecord || viewer.canTake} />
 
       {viewer.canRecord && !configured && (
         <p className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">

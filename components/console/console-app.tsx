@@ -1,5 +1,6 @@
 "use client";
 
+import { ConsoleGuide, ConsoleHelpButton } from "./console-help";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -224,6 +225,7 @@ export function ConsoleApp({
   return (
     <div className="flex flex-1 flex-col gap-4 px-4 pt-4 pb-32">
       <header className="sticky top-0 z-10 -mx-4 border-b border-border bg-background/95 px-4 pt-2 pb-3 backdrop-blur">
+        <ConsoleHelpButton kind={teamOnly ? "team" : "football"} className="absolute top-1 right-1" />
         <p className="text-center text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {fixture.event.name}
           {fixture.stage !== "league" && ` · ${fixture.stage.replace("_", " ")}`}
@@ -261,6 +263,7 @@ export function ConsoleApp({
       {(viewer.canRecord || queue.items.length > 0) && <SendStatus queue={queue} />}
 
       <HolderBar viewer={viewer} fixtureId={fixture.id} waiting={queue.items.length} onTaken={queue.resume} />
+      <ConsoleGuide kind={teamOnly ? "team" : "football"} show={viewer.canRecord || viewer.canTake} />
 
       {viewer.canRecord && (
         <ConsoleControls
