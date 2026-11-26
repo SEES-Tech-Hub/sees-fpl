@@ -1,5 +1,8 @@
 "use server";
 
+import { after } from "next/server";
+import { sendFantasyResults } from "@/lib/push/personal";
+
 import { recalculateMatchdayAndRankings } from "@/lib/fantasy/actions";
 import { recordMatchEvent, undoMatchEvent } from "@/lib/live/actions";
 import type { ActionResult as LiveResult, MatchEvent, RecordEventInput } from "@/lib/live/types";
@@ -204,6 +207,8 @@ export async function finaliseMatchday(input: unknown): Promise<ActionResult<{ m
     const outcome = await recalculate(matchday, true);
     expire(["matchdays"]);
     if (outcome.status === "failed") return failWith(outcome.error);
+    // Tell each manager their score (once per matchday; after the admin has their answer).
+    after(() => sendFantasyResults(matchday.id).catch((e) => console.error("[push] fantasy results failed:", e)));
     return ok({ managersUpdated: outcome.status === "done" ? outcome.managersUpdated : 0 });
   });
 }

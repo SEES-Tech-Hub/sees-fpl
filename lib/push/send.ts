@@ -18,7 +18,8 @@ export type PushPayload = { title: string; body: string; url: string; tag: strin
 
 const GOAL_DELAY_MS = 12_000;
 
-function configured() {
+/** True when the VAPID keys are set (they are on Vercel; not on a laptop before setup). */
+export function configuredPush() {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return false;
@@ -30,7 +31,7 @@ function configured() {
 }
 
 export async function sendPush(topics: string[], payload: PushPayload): Promise<void> {
-  if (!configured()) return;
+  if (!configuredPush()) return;
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("push_targets", { p_topics: topics });
   if (error || !data?.length) return;
@@ -68,7 +69,7 @@ export async function notifyMatchEvent(event: MatchEvent): Promise<void> {
   const [fixture, timeline] = await Promise.all([getLiveFixture(event.fixtureId), getMatchTimeline(event.fixtureId)]);
   if (!fixture?.home || !fixture.away) return;
   const entry = timeline.find((e) => e.clientEventId === event.clientEventId) ?? null;
-  const message = matchMessage(event, fixture, entry);
+  const message = matchMessage(event, fixture, entry, timeline);
   if (!message) return;
 
   const followers = [`fixture:${fixture.id}`, `team:${fixture.home.id}`, `team:${fixture.away.id}`];
