@@ -18,6 +18,7 @@ import {
   type LineupEntry,
 } from "@/lib/console/match-state";
 import type { SquadPlayer } from "@/lib/console/squad";
+import { setConsoleHolder } from "@/lib/admin/actions/officials";
 import { releaseFixture, takeFixture } from "@/lib/live/actions";
 import { getClockState, msUntilNextMinute, type ClockFixture } from "@/lib/live/clock";
 import { subscribeToFixture, type ConnectionStatus } from "@/lib/live/realtime";
@@ -38,9 +39,10 @@ import { useConsoleQueue } from "./use-console-queue";
 
 export type ConsoleViewer = {
   signedIn: boolean;
+  userId: string | null;
   /** This account is the fixture's console holder. */
   isHolder: boolean;
-  /** Holder or admin: show the controls. */
+  /** The holder (or the admin once the match is over): show the controls. */
   canRecord: boolean;
   isAdmin: boolean;
   /** An official, and nobody holds the match. */
@@ -273,6 +275,7 @@ export function ConsoleApp({
           motmName={names.player(state.motmPlayerId)}
           teamOnly={teamOnly}
           pointValues={pointValues}
+          kickoffAt={fixture.kickoffAt}
         />
       )}
 
@@ -402,7 +405,11 @@ export function HolderBar({
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  async function run(action: typeof takeFixture, success: string, after?: () => void) {
+  async function run(
+    action: (fixtureId: string) => Promise<{ ok: true } | { ok: false; error: { message: string } }>,
+    success: string,
+    after?: () => void,
+  ) {
     setBusy(true);
     try {
       const result = await action(fixtureId);
@@ -469,10 +476,33 @@ export function HolderBar({
     );
   }
 
+  if (viewer.isAdmin && viewer.heldBySomeoneElse && !viewer.canRecord) {
+    const takeOver = (id: string) => setConsoleHolder({ fixtureId: id, profileId: viewer.userId });
+    return (
+      <div className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+        <p className="flex-1">{confirming ? "Take over? The official recording it loses the controls." : "Another official is recording this match."}</p>
+        {confirming ? (
+          <>
+            <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" disabled={busy} onClick={() => void run(takeOver, "You're recording this match.", onTaken)}>
+              Take over
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => setConfirming(true)}>
+            Take over
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   if (viewer.canRecord) {
     return (
       <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-        You&apos;re recording as the admin{viewer.heldBySomeoneElse ? " (another official holds this match)" : ""}.
+        This match is over. As the admin you can still correct it here.
       </p>
     );
   }

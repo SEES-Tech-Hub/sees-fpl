@@ -7,7 +7,8 @@ import { Drawer } from "@/components/ui/drawer";
 import type { Controls, MatchState, PeriodButton } from "@/lib/console/match-state";
 import type { SquadPlayer } from "@/lib/console/squad";
 import type { SetLineupInput, TeamSummary } from "@/lib/live/types";
-import { cn } from "@/lib/utils";
+import { KICKOFF_OPENS_BEFORE_MS } from "@/lib/live/kickoff-window";
+import { cn, formatWAT } from "@/lib/utils";
 import {
   CardSheet,
   GoalSheet,
@@ -44,6 +45,7 @@ export function ConsoleControls({
   motmName,
   teamOnly = false,
   pointValues = [1],
+  kickoffAt = null,
 }: {
   state: MatchState;
   controls: Controls;
@@ -58,9 +60,12 @@ export function ConsoleControls({
   teamOnly?: boolean;
   /** Team-only scoring: the values to offer (basketball 1, 2, 3). */
   pointValues?: number[];
+  /** The scheduled start. Kick-off opens 2 hours before it (the database enforces the same). */
+  kickoffAt?: string | null;
 }) {
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
   const [confirmKickoff, setConfirmKickoff] = useState(false);
+  const [tooEarly, setTooEarly] = useState(false);
   const close = () => setSheet(null);
   const ctx: SheetContext = { state, home, away, squads, record: (c) => record(c), close };
 
@@ -69,23 +74,31 @@ export function ConsoleControls({
     !state.hasLineup.away ? away.shortName : null,
   ].filter((n): n is string => n !== null);
 
+  // Starting the match is the one tap that tells everyone following it, so it
+  // always takes a second tap, and it waits until 2 hours before the start.
   function periodButton(button: PeriodButton, index: number) {
-    const isKickoff = button.command.type === "period_start" && button.command.period === "first_half";
+    const isKickoff = button.command.type === "period_start" && controls.phase === "not_started";
     return (
       <Button
         key={button.key}
         variant={index === 0 ? "default" : "outline"}
         className={cn(BIG, "w-full")}
         onClick={() => {
-          if (isKickoff && missingLineups.length > 0 && !confirmKickoff) {
-            setConfirmKickoff(true);
-            return;
+          if (isKickoff) {
+            if (kickoffAt && Date.now() < new Date(kickoffAt).getTime() - KICKOFF_OPENS_BEFORE_MS) {
+              setTooEarly(true);
+              return;
+            }
+            if (!confirmKickoff) {
+              setConfirmKickoff(true);
+              return;
+            }
           }
           setConfirmKickoff(false);
           record(button.command, button.label);
         }}
       >
-        {isKickoff && confirmKickoff ? "Kick off anyway" : button.label}
+        {isKickoff && confirmKickoff ? "Tap again to kick off" : button.label}
       </Button>
     );
   }
@@ -210,7 +223,24 @@ export function ConsoleControls({
       )}
 
       {controls.periodButtons.length > 0 && (
-        <div className="flex flex-col gap-2">{controls.periodButtons.map(periodButton)}</div>
+        <div className="flex flex-col gap-2">
+          {controls.periodButtons.map(periodButton)}
+          {tooEarly && kickoffAt && (
+            <p role="alert" className="flex items-start gap-2 rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
+              <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+              Too early. This match starts {formatWAT(kickoffAt, "datetime")}, and kick-off opens 2 hours before. If the time
+              has changed, update it in Admin → Fixtures first.
+            </p>
+          )}
+          {confirmKickoff && (
+            <div role="alert" className="flex items-center gap-3 rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
+              <p className="flex-1">This starts the match clock and sends a kick-off alert to everyone following it.</p>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmKickoff(false)}>
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       {controls.phase === "finished" && teamOnly && (

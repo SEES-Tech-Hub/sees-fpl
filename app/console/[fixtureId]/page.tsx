@@ -14,10 +14,12 @@ import { getSquads } from "./squads";
 // Owner: Samuel (console app). Bolu owns the API it calls (lib/live).
 //
 // Anyone can open a console and see it read-only (the PRD: "Everyone else
-// gets a read-only view"). The controls appear for the fixture's console
-// holder and the admin. Officials get "Take this match" when nobody holds it.
-// None of this is the real check: the database refuses events from anyone
-// else (see docs/live-scores.md).
+// gets a read-only view"). The controls appear only for the fixture's console
+// holder, the admin included: an admin takes the match (or takes it over)
+// before recording, so a look around the console can't start a match. After
+// a match is over the admin keeps the controls for corrections. None of this
+// is the real check: the database refuses events from anyone else (see
+// docs/live-scores.md).
 
 export const metadata: Metadata = {
   title: "Match console",
@@ -42,12 +44,15 @@ async function ConsoleLoader({ params }: { params: PageProps<"/console/[fixtureI
   const format = fixture.sport.resultFormat;
   const role = current?.profile.role;
   const isHolder = !!current && fixture.consoleHolderId === current.user.id;
+  const isAdmin = role === "admin";
+  const over = fixture.status === "full_time" || fixture.status === "walkover" || fixture.status === "cancelled";
   const viewer: ConsoleViewer = {
     signedIn: !!current,
+    userId: current?.user.id ?? null,
     isHolder,
-    canRecord: isHolder || role === "admin",
-    isAdmin: role === "admin",
-    canTake: hasRole(role, "official") && fixture.consoleHolderId === null,
+    canRecord: isHolder || (isAdmin && over),
+    isAdmin,
+    canTake: hasRole(role, "official") && fixture.consoleHolderId === null && !over,
     heldBySomeoneElse: fixture.consoleHolderId !== null && !isHolder,
   };
 
