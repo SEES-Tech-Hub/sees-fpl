@@ -12,6 +12,7 @@ import {
   toSetScore,
 } from "./results-rows";
 import type { EventStandingRow, MedalRow, MedalTableRow, RaceResultRow, SetScore } from "./types";
+import type { ChampionshipProgress } from "./race";
 
 // Live scores: results for every format except football's own table, and the
 // overall championship. Worked out in the database when read (views in
@@ -88,4 +89,23 @@ export const getMedalTable = cache(async (): Promise<MedalTableRow[]> => {
     .order("team_year", { ascending: true });
   if (error) queryFailed("the medal table", error);
   return mapRows(data, toMedalTableRow);
+});
+
+/** How far the festival has got: events decided out of all, and its first and last match. */
+export const getChampionshipProgress = cache(async (): Promise<ChampionshipProgress> => {
+  const supabase = createPublicClient();
+  const [golds, events, first, last] = await Promise.all([
+    supabase.from("event_medals").select("event_id").eq("place", 1),
+    supabase.from("events").select("id", { count: "exact", head: true }),
+    supabase.from("fixtures").select("kickoff_at").not("kickoff_at", "is", null).order("kickoff_at", { ascending: true }).limit(1),
+    supabase.from("fixtures").select("kickoff_at").not("kickoff_at", "is", null).order("kickoff_at", { ascending: false }).limit(1),
+  ]);
+  if (golds.error) queryFailed("medals", golds.error);
+  if (events.error) queryFailed("events", events.error);
+  return {
+    decided: new Set((golds.data ?? []).map((g) => g.event_id)).size,
+    total: events.count ?? 0,
+    firstAt: first.data?.[0]?.kickoff_at ?? null,
+    lastAt: last.data?.[0]?.kickoff_at ?? null,
+  };
 });

@@ -9,7 +9,7 @@ import type { MatchPageData } from "@/lib/live/match-page";
 import type { RaceResultRow } from "@/lib/live/types";
 import { cn, formatWAT } from "@/lib/utils";
 import { EmptyState } from "@/components/brand/empty-state";
-import { Medal } from "./tables-view";
+import { Medal } from "./medal-table";
 import { YearCrest } from "@/components/brand/year-crest";
 
 // Ranked events (athletics, swimming): a podium that rises gold, silver,

@@ -2,9 +2,11 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { BrandLoader } from "@/components/brand/brand-loader";
 import { ChampionshipStrip } from "@/components/live/championship-strip";
+import { FantasyTicketStub } from "@/components/fantasy/ticket-stub";
+import { RaceShare } from "@/components/live/race-share";
 import { HomeLive } from "@/components/live/home-live";
 import { getFixtureCards } from "@/lib/live/fixture-cards";
-import { getMedalTable } from "@/lib/live/results";
+import { getChampionshipProgress, getMedalTable } from "@/lib/live/results";
 import { JsonLd } from "@/components/seo/json-ld";
 import { siteBase, SITE_DESCRIPTION } from "@/lib/seo";
 
@@ -39,10 +41,17 @@ export default function Home() {
 
 async function HomeContent() {
   await connection();
-  const [cards, medals] = await Promise.all([getFixtureCards(), getMedalTable()]);
+  const [cards, medals, progress] = await Promise.all([getFixtureCards(), getMedalTable(), getChampionshipProgress()]);
   const serverNow = requestTime();
   return (
-    <HomeLive cards={cards} serverNow={serverNow} championship={<ChampionshipStrip rows={medals} />} />
+    <HomeLive
+      cards={cards}
+      serverNow={serverNow}
+      championship={<ChampionshipStrip rows={medals} progress={progress} now={serverNow} share={<RaceShare />} />}
+      // Rendered with the rest of Home (inside its Suspense): a nested boundary
+      // inside HomeLive (a client component) never got swapped in.
+      fantasy={<FantasyTicketStub />}
+    />
   );
 }
 
