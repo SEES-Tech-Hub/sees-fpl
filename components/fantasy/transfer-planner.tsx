@@ -355,6 +355,8 @@ export function TransferPlanner({ squad, players, state, rules, deadlineAt, serv
                 position={pickOut.position}
                 hideBlocked
                 reasonFor={(p) => reasonFor(pickOut.id, p)}
+                verb="Bring in"
+                onChoose={(p) => choose(p.id)}
                 renderAction={(p, reason) => (
                   <RoundButton added={false} disabled={Boolean(reason)} name={p.displayName} onClick={() => choose(p.id)} />
                 )}
