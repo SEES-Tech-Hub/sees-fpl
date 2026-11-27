@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { RankingTable } from "@/components/fantasy/ranking-table";
-import { RankingTabs } from "@/components/fantasy/ranking-tabs";
+import { RankingTabs, YearChips } from "@/components/fantasy/ranking-tabs";
 import { EmptyState, LoadingPage, PageHeader } from "@/components/fantasy/states";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,21 +54,7 @@ async function Rankings({ searchParams }: { searchParams: PageProps<"/fantasy/ra
     <>
       <RankingTabs active={activeYear ? "year" : "overall"} myYear={manager?.yearGroup ?? user?.yearGroup ?? null} />
       {activeYear && (
-        <nav aria-label="Year" className="flex flex-wrap gap-2">
-          {[1, 2, 3, 4, 5].map((y) => (
-            <Link
-              key={y}
-              href={href(y)}
-              aria-current={activeYear === y ? "page" : undefined}
-              className={cn(
-                "flex h-11 min-w-11 items-center justify-center rounded-full border border-border px-3 text-[0.9375rem] font-medium",
-                activeYear === y && "border-primary bg-primary text-primary-foreground",
-              )}
-            >
-              Y{y}
-            </Link>
-          ))}
-        </nav>
+        <YearChips active={activeYear} href={Object.fromEntries([1, 2, 3, 4, 5].map((y) => [y, href(y)]))} />
       )}
 
       {ranking.me ? (
