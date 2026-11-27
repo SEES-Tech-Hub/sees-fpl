@@ -95,6 +95,10 @@ export type Player = {
   totalPoints: number;
   /** Share of managers who own the player, 0–100 (Mary). */
   selectedByPct: number;
+  /** The player's face (public/players/<id>.webp), or null: show the year crest. */
+  photoUrl: string | null;
+  /** The team's next fantasy match that hasn't kicked off, for the player card. */
+  nextMatch: { opponentShort: string | null; kickoffAt: string } | null;
 };
 
 export type Fixture = {

@@ -11,6 +11,7 @@ import "server-only";
 // so links like /fantasy/points?manager=<id> and "is this me?" checks use the
 // same id as the signed-in user. managers.id stays internal to this file.
 
+import { playerPhotoUrl } from "./player-photos";
 import { cache } from "react";
 import { connection } from "next/server";
 import { getCurrentUser, requireSignedIn } from "@/lib/auth";
@@ -193,7 +194,7 @@ const getMatchdayStats = cache(async (): Promise<Map<string, PlayerMatchStats[]>
 
 export const getPlayers = cache(async (): Promise<Player[]> => {
   const supabase = await createClient();
-  const [players, selection, rules, stats] = await Promise.all([
+  const [players, selection, rules, stats, md] = await Promise.all([
     supabase
       .from("players")
       .select("id, team_id, full_name, display_name, position, price_tenths, status, shirt_number, teams(year, short_name)")
@@ -201,8 +202,20 @@ export const getPlayers = cache(async (): Promise<Player[]> => {
     supabase.rpc("fantasy_player_selection"),
     getRulesRow(),
     getMatchdayStats(),
+    getMatchdayState(),
   ]);
   if (players.error) fail(players.error.message, "players");
+
+  // Each team's next match that hasn't kicked off (fantasy matchdays only).
+  const nextByTeam = new Map<string, NonNullable<Player["nextMatch"]>>();
+  const upcoming = md.matchdays
+    .flatMap((m) => m.fixtures)
+    .filter((f) => f.kickoffAt && f.status === "scheduled" && new Date(f.kickoffAt).getTime() > md.serverNow)
+    .sort((a, b) => a.kickoffAt!.localeCompare(b.kickoffAt!));
+  for (const f of upcoming) {
+    if (f.homeTeamId && !nextByTeam.has(f.homeTeamId)) nextByTeam.set(f.homeTeamId, { opponentShort: f.awayShort, kickoffAt: f.kickoffAt! });
+    if (f.awayTeamId && !nextByTeam.has(f.awayTeamId)) nextByTeam.set(f.awayTeamId, { opponentShort: f.homeShort, kickoffAt: f.kickoffAt! });
+  }
   const selectedBy = new Map((selection.data ?? []).map((s) => [s.player_id, Number(s.selected_by_pct)]));
 
   // Fantasy points so far: each matchday's stats, scored with the live rules.
@@ -229,6 +242,8 @@ export const getPlayers = cache(async (): Promise<Player[]> => {
     shirtNumber: p.shirt_number,
     totalPoints: totals.get(p.id) ?? 0,
     selectedByPct: selectedBy.get(p.id) ?? 0,
+    photoUrl: playerPhotoUrl(p.id),
+    nextMatch: nextByTeam.get(p.team_id) ?? null,
   }));
 });
 
