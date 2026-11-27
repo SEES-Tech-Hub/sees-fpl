@@ -17,9 +17,14 @@
 --
 -- A position change would leave a squad with the wrong shape (6 MID, 2 FWD),
 -- which transfers can't fix (a player is only swapped for the same
--- position). So this stops, naming the managers, if any squad holds a player
--- whose position changes. Prices lock at the matchday 1 deadline; this runs
--- as the migration role, which the price lock lets through. Safe to run twice.
+-- position). Three managers held one of those players when this was written:
+-- LDR, UltimateFC and ThePantheon. With Tayo's go-ahead, their squads and
+-- lineups are cleared (the manager and team name stay), so they pick again
+-- in the squad builder before the matchday 1 deadline. If any other squad
+-- holds one of those players, this stops and names it instead.
+--
+-- Prices lock at the matchday 1 deadline; this runs as the migration role,
+-- which the price lock lets through. Safe to run twice.
 -- =============================================================================
 
 -- The changes, by year and name (unique within a year).
@@ -36,6 +41,13 @@ insert into roster_changes values
 
 do $$
 declare
+  -- Cleared with Tayo's go-ahead (27 Nov): LDR, UltimateFC, ThePantheon.
+  v_cleared constant uuid[] := array[
+    'c85feb21-36b9-435a-a7be-b1bf91786413',
+    'efcfe217-4fa7-48d4-88d4-a0b4bf5dadc0',
+    '43b77797-977a-442a-9300-59a1393b7ebc'
+  ]::uuid[];
+  v_clear   uuid[];
   v_held    text;
   v_missing text;
 begin
@@ -56,10 +68,27 @@ begin
   join public.players p on p.id = s.player_id
   join public.teams t on t.id = p.team_id
   join roster_changes c on c.year = t.year and c.name = p.display_name
-  where c.position is not null and p.position <> c.position;
+  where c.position is not null and p.position <> c.position
+    and s.manager_id <> all (v_cleared);
   if v_held is not null then
     raise exception 'These players are in a squad and would change position: %. Nothing changed.', v_held;
   end if;
+
+  -- Clear those three squads, only while they still hold a player whose
+  -- position is about to change, so running this again never touches the
+  -- squads they pick afterwards. Lineups first, then the squad.
+  select coalesce(array_agg(distinct s.manager_id), '{}')
+  into v_clear
+  from public.squads s
+  join public.players p on p.id = s.player_id
+  join public.teams t on t.id = p.team_id
+  join roster_changes c on c.year = t.year and c.name = p.display_name
+  where c.position is not null and p.position <> c.position
+    and s.manager_id = any (v_cleared);
+
+  delete from public.picks  where manager_id = any (v_clear);
+  delete from public.squads where manager_id = any (v_clear);
+  raise notice 'Cleared % squad(s).', cardinality(v_clear);
 end;
 $$;
 

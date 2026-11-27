@@ -28,6 +28,27 @@ async function player(year: number, name: string) {
   return rows;
 }
 
+async function alvinY4() {
+  const { rows } = await db.query<{ id: string }>(
+    "select p.id from public.players p join public.teams t on t.id = p.team_id where t.year = 4 and p.display_name = 'Alvin'",
+  );
+  return rows[0].id;
+}
+
+/** A manager with this id (and a user and profile behind it). */
+async function newManager(id: string) {
+  const user = randomUUID();
+  await db.query("insert into auth.users (id) values ($1)", [user]);
+  await db.query("insert into public.profiles (id) values ($1) on conflict do nothing", [user]);
+  await db.query("insert into public.managers (id, user_id, team_name) values ($1, $2, 'Test FC')", [id, user]);
+  return id;
+}
+
+async function count(table: "squads" | "picks" | "managers", managerId: string, column = "manager_id") {
+  const { rows } = await db.query<{ n: number }>(`select count(*)::int as n from public.${table} where ${column} = $1`, [managerId]);
+  return rows[0].n;
+}
+
 describe("roster update", () => {
   it("sets the new prices", async () => {
     expect((await player(1, "Ezekiel"))[0].price_tenths).toBe(50);
@@ -58,19 +79,36 @@ describe("roster update", () => {
     expect((await player(5, "Korede"))[0].price_tenths).toBe(65);
   });
 
+  it("clears the three named squads, and only while they hold a player about to move", async () => {
+    const ldr = "c85feb21-36b9-435a-a7be-b1bf91786413";
+    const alvin = await alvinY4();
+    const md = await db.query<{ id: string }>("select id from public.matchdays order by number limit 1");
+    await newManager(ldr);
+    await db.query("update public.players set position = 'FWD' where id = $1", [alvin]);
+    await db.query("insert into public.squads (manager_id, player_id) values ($1, $2)", [ldr, alvin]);
+    await db.query("insert into public.picks (manager_id, matchday_id, player_id, is_starter) values ($1, $2, $3, true)", [
+      ldr,
+      md.rows[0].id,
+      alvin,
+    ]);
+
+    await rerunMigration(db, MIGRATION);
+    expect(await count("squads", ldr)).toBe(0);
+    expect(await count("picks", ldr)).toBe(0);
+    expect(await count("managers", ldr, "id")).toBe(1);
+    expect((await player(4, "Alvin"))[0].position).toBe("MID");
+
+    // Their new squad (Alvin now a midfielder) is left alone on a rerun.
+    await db.query("insert into public.squads (manager_id, player_id) values ($1, $2)", [ldr, alvin]);
+    await rerunMigration(db, MIGRATION);
+    expect(await count("squads", ldr)).toBe(1);
+  });
+
   it("stops if a squad holds a player whose position would change", async () => {
-    const user = randomUUID();
-    await db.query("insert into auth.users (id) values ($1)", [user]);
-    await db.query("insert into public.profiles (id) values ($1) on conflict do nothing", [user]);
-    const { rows } = await db.query<{ id: string }>(
-      "insert into public.managers (user_id, team_name) values ($1, 'Test FC') returning id",
-      [user],
-    );
-    const alvin = await db.query<{ id: string }>(
-      "select p.id from public.players p join public.teams t on t.id = p.team_id where t.year = 4 and p.display_name = 'Alvin'",
-    );
-    await db.query("update public.players set position = 'FWD' where id = $1", [alvin.rows[0].id]);
-    await db.query("insert into public.squads (manager_id, player_id) values ($1, $2)", [rows[0].id, alvin.rows[0].id]);
+    const other = await newManager(randomUUID());
+    const alvin = await alvinY4();
+    await db.query("update public.players set position = 'FWD' where id = $1", [alvin]);
+    await db.query("insert into public.squads (manager_id, player_id) values ($1, $2)", [other, alvin]);
 
     expect(await errorCode(rerunMigration(db, MIGRATION))).toMatch(/would change position: Alvin/);
     expect((await player(4, "Alvin"))[0].position).toBe("FWD");
