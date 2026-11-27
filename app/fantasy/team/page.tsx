@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { LineupEditor } from "@/components/fantasy/lineup-editor";
 import { LoadingPitch, PageHeader } from "@/components/fantasy/states";
+import { XiShare } from "@/components/fantasy/xi-share";
 import { getFantasyRules, getMatchdayState, getPlayers } from "@/lib/fantasy/api";
 import { formatMoney } from "@/lib/fantasy/format";
 import { requireSquad } from "@/lib/fantasy/guards";
@@ -9,10 +10,10 @@ import { privatePage } from "@/lib/seo";
 
 export const metadata = privatePage("My team");
 
-export default function TeamPage() {
+export default function TeamPage({ searchParams }: PageProps<"/fantasy/team">) {
   return (
     <Suspense fallback={<LoadingPitch />}>
-      <Team />
+      <Team searchParams={searchParams} />
     </Suspense>
   );
 }
@@ -27,7 +28,9 @@ function fixtureLabels(matchday: Matchday | null) {
   return labels;
 }
 
-async function Team() {
+async function Team({ searchParams }: { searchParams: PageProps<"/fantasy/team">["searchParams"] }) {
+  // ?share=1: just saved a new squad, so the share sheet opens by itself.
+  const { share } = await searchParams;
   const { manager, team } = await requireSquad("/fantasy/team");
   const [players, rules, md] = await Promise.all([getPlayers(), getFantasyRules(), getMatchdayState()]);
   const byId = new Map(players.map((p) => [p.id, p]));
@@ -41,6 +44,7 @@ async function Team() {
         caption={md.next ? `Matchday ${md.next.number} · My team` : "My team"}
         title={manager.teamName}
         description={`${formatMoney(team.bankTenths)} in the bank`}
+        action={<XiShare autoOpen={share === "1"} matchdayNumber={team.matchdayNumber} />}
       />
       <LineupEditor
         // Re-mount when the saved lineup changes (after Save or a transfer).

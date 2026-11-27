@@ -11,9 +11,10 @@ const MIGRATION = "20261127081200_roster_update.sql";
 type Row = { year: number; display_name: string; position: string; price_tenths: number; status: string };
 
 let db: PGlite;
+// Loading every migration takes a few seconds, longer when all test files run at once.
 beforeAll(async () => {
   db = await createTestDb();
-});
+}, 60_000);
 afterAll(async () => {
   await db.close();
 });

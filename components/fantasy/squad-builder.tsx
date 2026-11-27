@@ -172,7 +172,8 @@ export function SquadBuilder({
           onSuccess: () => {
             clearDraft();
             clearTeam();
-            router.push("/fantasy/team");
+            // The team page opens "Share your amazing XI" once (?share=1).
+            router.push("/fantasy/team?share=1");
           },
         },
       );

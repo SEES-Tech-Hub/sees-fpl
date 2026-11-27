@@ -11,6 +11,8 @@ import { cn, formatWAT } from "@/lib/utils";
 import { EmptyState } from "@/components/brand/empty-state";
 import { Medal } from "./medal-table";
 import { YearCrest } from "@/components/brand/year-crest";
+import { shareCards } from "@/lib/live/match-share";
+import { MatchShare } from "./match-share";
 import { FixturePhoto, hasPhoto } from "./fixture-photo";
 
 // Ranked events (athletics, swimming): a podium that rises gold, silver,
@@ -47,6 +49,15 @@ export function RaceView({ data, state }: { data: MatchPageData; state: FixtureS
       <section className={cn("relative overflow-hidden bg-pitch px-4 pt-5 pb-6 text-brand-foreground lg:rounded-2xl", photo && "sees-on-photo")}>
         <FixturePhoto sport={fixture.sport.slug} priority />
         {!photo && <CircuitPattern />}
+        <div className="absolute top-3 left-3 z-10">
+          <MatchShare
+            fixtureId={fixture.id}
+            cards={shareCards({ fixture, state, timeline: data.timeline, race })}
+            stamp={state.updatedAt}
+            title={fixture.event.name}
+            text={`${fixture.event.name} at SEES Games:`}
+          />
+        </div>
         <div className="relative flex flex-col items-center gap-2 text-center">
           <p className="flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase">
             <SportIcon sport={fixture.sport.slug.replace(/-/g, "_")} size={14} /> {fixture.sport.name}
