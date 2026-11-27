@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { BackToHub } from "@/components/brand/back-to-hub";
 import { notFound } from "next/navigation";
 import { ConsoleApp, type ConsoleViewer } from "@/components/console/console-app";
 import { HeadToHeadConsole } from "@/components/console/head-to-head-console";
@@ -29,6 +32,14 @@ export const metadata: Metadata = {
 export default function ConsolePage({ params }: PageProps<"/console/[fixtureId]">) {
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col">
+      {/* Out of this match: back to the officials' match list, or to the Games Hub. */}
+      <nav aria-label="Console" className="flex items-center justify-between px-2">
+        <Link href="/console" className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
+          <ChevronLeft className="size-4" aria-hidden />
+          All matches
+        </Link>
+        <BackToHub className="px-2" />
+      </nav>
       <Suspense fallback={<ConsoleSkeleton />}>
         <ConsoleLoader params={params} />
       </Suspense>

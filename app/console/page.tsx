@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { ChevronRight, Radio } from "lucide-react";
+import { BackToHub } from "@/components/brand/back-to-hub";
 import { SeesMark } from "@/components/brand/sees-mark";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SportIcon } from "@/components/ui/shared/SportIcon";
@@ -22,11 +23,14 @@ export default function ConsoleHome() {
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-5 px-4 py-5">
       <header className="flex items-center gap-3">
-        <SeesMark className="size-9 text-brand" />
-        <div>
+        <Link href="/" aria-label="Back to the SEES Games Hub" className="shrink-0">
+          <SeesMark className="size-9 text-brand" />
+        </Link>
+        <div className="flex-1">
           <p className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">SEES Games</p>
           <h1 className="font-heading text-2xl leading-none font-bold text-brand">Match console</h1>
         </div>
+        <BackToHub />
       </header>
       <Suspense fallback={<Skeleton className="h-64 w-full rounded-xl" />}>
         <Matches />
