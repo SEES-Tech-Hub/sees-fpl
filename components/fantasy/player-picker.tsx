@@ -174,7 +174,12 @@ export function PlayerPickerList({
     setShown(p);
     setCardOpen(true);
   };
-  const [saved, setSaved] = useLocalStorageState<Filters>(storageKey, { ...DEFAULT_FILTERS, position });
+  // Remembered on this phone when there's a key; otherwise kept for this
+  // sheet only (the storage hook ignores changes when it has no key).
+  const [stored, setStored] = useLocalStorageState<Filters>(storageKey, { ...DEFAULT_FILTERS, position });
+  const [local, setLocal] = useState<Filters>({ ...DEFAULT_FILTERS, position });
+  const saved = storageKey ? stored : local;
+  const setSaved = (f: Filters) => (storageKey ? setStored(f) : setLocal(f));
   // Filters are remembered; the search box isn't (a stale search hides everyone).
   const [search, setSearch] = useState("");
   // The sheet is always for one position, whatever was saved.
