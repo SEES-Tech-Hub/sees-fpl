@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { timeoutFetch } from "./timeout-fetch";
 import type { Database } from "./types";
 
 // Server client for Server Components, Server Actions and Route Handlers.
@@ -11,6 +12,7 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      global: { fetch: timeoutFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();

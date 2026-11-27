@@ -35,10 +35,12 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   // whether the session has expired. connection() defers this to the request.
   await connection();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  // The signed-in user from the session token, checked locally against the
+  // project's public signing key: no network call (getUser made one per page).
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  const user = { id: claims.sub, email: typeof claims.email === "string" ? claims.email : undefined };
 
   const { data: profile } = await supabase
     .from("profiles")
