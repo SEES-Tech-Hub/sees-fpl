@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeftRight, Lock } from "lucide-react";
+import { ArrowLeftRight, Lock, TriangleAlert, X } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { toast } from "sonner";
 import { saveLineupAction } from "@/app/fantasy/actions";
@@ -22,7 +22,9 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { useHydrated, useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { ERROR_COPY } from "@/lib/fantasy/errors";
+import { applyFormation, availableFormations, formationName, type Formation } from "@/lib/fantasy/formations";
 import { formatMoney, POSITION_LABEL, POSITION_PLURAL } from "@/lib/fantasy/format";
 import type { FantasyRules, Player, Position } from "@/lib/fantasy/types";
 import { formationIssue, formationLabel } from "@/lib/fantasy/validate";
@@ -59,6 +61,17 @@ export function LineupEditor(props: Props) {
   // forward at once, so the Save bar goes away instantly; if the server
   // refuses, it moves back and the bar returns with the reason.
   const [base, setBase] = useState(() => ({ order: props.squad.map((p) => p.id), captain: props.captainId, vice: props.viceId }));
+  // Players who just came off the bench through a formation button: an "IN" tag for a moment.
+  const [fresh, setFresh] = useState<string[]>([]);
+  useEffect(() => {
+    if (fresh.length === 0) return;
+    const t = setTimeout(() => setFresh([]), 2600);
+    return () => clearTimeout(t);
+  }, [fresh]);
+  // The no-match strip, once dismissed, stays away until what it warns about changes.
+  const [dismissedStrip, setDismissedStrip] = useLocalStorageState<string | null>("sees-fantasy:no-match-strip", null);
+  // Only the browser knows it was dismissed, so it shows after hydration (no flash for those who closed it).
+  const hydrated = useHydrated();
 
   const byId = new Map(props.squad.map((p) => [p.id, p]));
   const players = order.map((id) => byId.get(id)!);
@@ -164,6 +177,26 @@ export function LineupEditor(props: Props) {
     });
   }
 
+  const formations = availableFormations(props.squad, rules);
+  const currentFormation = formationLabel(xi);
+
+  function pickFormation(f: Formation) {
+    if (locked) return;
+    const armbands = new Set([captain, vice].filter((id): id is string => Boolean(id)));
+    const result = applyFormation(order, byId, xiSize, f, armbands);
+    if (!result) {
+      toast.error(`Your squad can't line up ${formationName(f)}.`);
+      return;
+    }
+    // An armband holder only goes to the bench if nothing else could; the armband follows whoever comes on.
+    if (captain && result.wentOut.includes(captain)) setCaptain(result.cameIn[0] ?? null);
+    if (vice && result.wentOut.includes(vice)) setVice(result.cameIn[result.cameIn.length - 1] ?? null);
+    setOrder(result.order);
+    setFresh(result.cameIn);
+    setSwapFrom(null);
+    setError(null);
+  }
+
   function reset() {
     setOrder(base.order);
     setCaptain(base.captain);
@@ -173,6 +206,19 @@ export function LineupEditor(props: Props) {
   }
 
   const sub = (p: Player) => fixtureByTeam[p.teamId] ?? "No match";
+  // Fixtures known for the matchday: starters whose year has no match there score nothing.
+  const hasFixtures = Object.keys(fixtureByTeam).length > 0;
+  const rests = (p: Player) => hasFixtures && !fixtureByTeam[p.teamId];
+  const resting = xi.filter(rests);
+  const captainPlayer = captain ? byId.get(captain) : undefined;
+  const captainRests = captainPlayer !== undefined && rests(captainPlayer);
+  const bestCaptain = captainRests ? [...xi].filter((p) => !rests(p)).sort((a, b) => b.priceTenths - a.priceTenths)[0] : undefined;
+  const stripKey = `${props.matchdayNumber}:${captain}:${resting.map((p) => p.id).sort().join(",")}`;
+  const showStrip = hydrated && !locked && resting.length > 0 && dismissedStrip !== stripKey;
+  const stripLead = captainRests ? `${captainPlayer.displayName} (C)` : `${resting.length} starter${resting.length === 1 ? "" : "s"}`;
+  const stripTitle = captainRests
+    ? `Your captain, ${captainPlayer.displayName}, has no match on Matchday ${props.matchdayNumber}, so the armband passes to your vice-captain.`
+    : `${resting.map((p) => p.displayName).join(", ")} ${resting.length === 1 ? "has" : "have"} no match on Matchday ${props.matchdayNumber}. Your bench comes on for them, in order.`;
   const menuPlayer = menuFor ? byId.get(menuFor) : undefined;
   const menuStarts = menuFor ? order.indexOf(menuFor) < xiSize : false;
 
@@ -190,6 +236,8 @@ export function LineupEditor(props: Props) {
           selected={p.id === swapFrom}
           target={isTarget}
           dimmed={swapFrom !== null && p.id !== swapFrom && !isTarget}
+          resting={rests(p)}
+          fresh={fresh.includes(p.id)}
           onClick={locked ? undefined : () => tap(p.id)}
         />
       </motion.div>
@@ -222,7 +270,55 @@ export function LineupEditor(props: Props) {
           </Button>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Tap a player to make them captain or to substitute them.</p>
+        <p className="text-sm text-muted-foreground">Pick a formation, or tap a player to make them captain or substitute them.</p>
+      )}
+
+      {showStrip && (
+        <div role="status" title={stripTitle} className="flex min-h-12 items-center gap-2 rounded-lg border border-highlight bg-highlight/15 pl-3 text-[0.8125rem]">
+          <TriangleAlert className="hidden size-4 shrink-0 sm:block" aria-hidden />
+          <p className="min-w-0 flex-1 truncate">
+            <span className="sr-only">{stripTitle}</span>
+            <span aria-hidden>
+              <strong>{stripLead}</strong>: no match
+            </span>
+          </p>
+          {captainRests && bestCaptain && (
+            <Button size="sm" className="h-9 shrink-0 px-2.5 text-xs" onClick={() => makeCaptain(bestCaptain.id)}>
+              Captain {bestCaptain.displayName}
+            </Button>
+          )}
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => setDismissedStrip(stripKey)}
+            className="flex size-11 shrink-0 items-center justify-center rounded-lg text-foreground/70 hover:text-foreground"
+          >
+            <X className="size-4" aria-hidden />
+          </button>
+        </div>
+      )}
+
+      {!locked && formations.length > 1 && (
+        <div role="group" aria-label="Formation" className="grid grid-cols-4 gap-1.5 lg:mx-auto lg:w-full lg:max-w-xl">
+          {formations.map((f) => {
+            const name = formationName(f);
+            const on = name === currentFormation;
+            return (
+              <button
+                key={name}
+                type="button"
+                aria-pressed={on}
+                onClick={() => !on && pickFormation(f)}
+                className={cn(
+                  "h-10 rounded-lg font-heading text-base font-semibold tabular-nums transition-colors",
+                  on ? "bg-primary text-primary-foreground" : "border border-border bg-muted text-secondary-foreground hover:bg-secondary",
+                )}
+              >
+                {name}
+              </button>
+            );
+          })}
+        </div>
       )}
 
       <LayoutGroup id="lineup">
@@ -238,8 +334,8 @@ export function LineupEditor(props: Props) {
       </Pitch>
 
       <BenchTray
-        note="Auto-subs come on in this order. A goalkeeper only replaces a goalkeeper."
-        items={bench.map((p, i) => ({ key: `bench-${i}`, label: i === 0 ? "GK" : undefined, node: chip(p) }))}
+        note="If a starter doesn't play, subs come on in this order. The GK only covers your keeper."
+        items={bench.map((p, i) => ({ key: `bench-${i}`, label: i === 0 ? "GK" : String(i), node: chip(p) }))}
       />
       </LayoutGroup>
 

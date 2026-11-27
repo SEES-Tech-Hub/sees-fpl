@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { ChevronRight } from "lucide-react";
 import { BenchTray, Pitch, PitchRow } from "@/components/fantasy/pitch";
 import { PositionTag } from "@/components/fantasy/player-bits";
@@ -11,27 +12,80 @@ import type { ManagerMatchdayPoints, PlayerPoints, Position } from "@/lib/fantas
 import { cn } from "@/lib/utils";
 
 // Shows the numbers the backend sends. Nothing is calculated here.
+// During a matchday the page refreshes itself when a score changes
+// (LiveRefresh); a player whose points went up shows a "+N" that floats up
+// from their chip, and players in a match right now get a live dot.
 
 const PITCH_ORDER: Position[] = ["FWD", "MID", "DEF", "GK"];
 
-export function PointsView({ points, yearOf }: { points: ManagerMatchdayPoints; yearOf: Record<string, number> }) {
+export function PointsView({
+  points,
+  yearOf,
+  photoOf = {},
+  liveIds = [],
+}: {
+  points: ManagerMatchdayPoints;
+  yearOf: Record<string, number>;
+  photoOf?: Record<string, string | null>;
+  liveIds?: string[];
+}) {
   const [open, setOpen] = useState<string | null>(null);
+  const shown = (p: PlayerPoints) => (p.multiplier === 0 ? p.basePoints : p.totalPoints);
+
+  // "+N" when a player's points rise between refreshes (worked out while
+  // rendering from the previous totals; cleared a moment later).
+  const totals = Object.fromEntries(points.players.map((p) => [p.playerId, shown(p)]));
+  const [prev, setPrev] = useState({ key: `${points.matchdayNumber}`, totals });
+  const [gains, setGains] = useState<Record<string, number>>({});
+  if (prev.key !== `${points.matchdayNumber}`) {
+    setPrev({ key: `${points.matchdayNumber}`, totals });
+  } else if (points.players.some((p) => prev.totals[p.playerId] !== totals[p.playerId])) {
+    const up: Record<string, number> = {};
+    for (const p of points.players) {
+      const d = totals[p.playerId] - (prev.totals[p.playerId] ?? totals[p.playerId]);
+      if (d > 0) up[p.playerId] = d;
+    }
+    setPrev({ key: prev.key, totals });
+    if (Object.keys(up).length > 0) setGains(up);
+  }
+  useEffect(() => {
+    if (Object.keys(gains).length === 0) return;
+    const t = setTimeout(() => setGains({}), 2800);
+    return () => clearTimeout(t);
+  }, [gains]);
   const counted = points.players.filter((p) => p.multiplier > 0);
   const bench = points.players.filter((p) => p.multiplier === 0);
   const sheet = open ? points.players.find((p) => p.playerId === open) : undefined;
 
   const chip = (p: PlayerPoints) => (
+    <div key={p.playerId} className="relative">
+      <AnimatePresence>
+        {gains[p.playerId] && (
+          <motion.span
+            key={`gain-${p.playerId}-${totals[p.playerId]}`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: -6 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.5 }}
+            className="pointer-events-none absolute -top-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-brand-light px-1.5 text-[0.7rem] leading-4 font-bold text-brand shadow-sm"
+            aria-hidden
+          >
+            +{gains[p.playerId]}
+          </motion.span>
+        )}
+      </AnimatePresence>
     <PlayerChip
-      key={p.playerId}
-      player={{ displayName: p.displayName, position: p.position, teamYear: yearOf[p.playerId] ?? 0 }}
+      player={{ displayName: p.displayName, position: p.position, teamYear: yearOf[p.playerId] ?? 0, photoUrl: photoOf[p.playerId] ?? null }}
       tag={String(p.multiplier === 0 ? p.basePoints : p.totalPoints)}
       tagLabel={formatPoints(p.multiplier === 0 ? p.basePoints : p.totalPoints)}
       captain={p.isCaptain}
       vice={p.isViceCaptain}
       autoSub={p.autoSubIn}
       dimmed={p.multiplier === 0}
+      live={liveIds.includes(p.playerId)}
       onClick={() => setOpen(p.playerId)}
     />
+    </div>
   );
 
   return (

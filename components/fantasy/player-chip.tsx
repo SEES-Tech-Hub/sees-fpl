@@ -1,17 +1,24 @@
+import Image from "next/image";
 import { ArrowLeftRight, Plus } from "lucide-react";
 import { Kit } from "@/components/fantasy/team-badge";
+import { teamColour } from "@/lib/design/team-colour";
 import { POSITION_LABEL } from "@/lib/fantasy/format";
 import type { PlayerStatus, Position } from "@/lib/fantasy/types";
 import { cn } from "@/lib/utils";
 
-// Design system §11.3 PlayerChip: a shirt in the team colour, the name on a
-// label, and the price or points on a dark tag.
+// Design system §11.3 PlayerChip: the player's face in a ring of their year's
+// colour (the shirt in that colour when there's no photo yet), the name on a
+// label, and the price, next match or points on a dark tag. A small year tag
+// sits on the face's corner. Players with no match this matchday are greyed
+// (resting); players in a match right now get a pulsing live dot.
 
 export type ChipPlayer = {
   displayName: string;
   position: Position;
   teamYear: number;
   status?: PlayerStatus;
+  /** public/players/<id>.webp, or null for the shirt. */
+  photoUrl?: string | null;
 };
 
 const FLAG: Record<Exclude<PlayerStatus, "available">, { cls: string; label: string }> = {
@@ -30,6 +37,9 @@ export function PlayerChip({
   target,
   dimmed,
   autoSub,
+  resting,
+  live,
+  fresh,
   onClick,
 }: {
   player: ChipPlayer;
@@ -44,6 +54,12 @@ export function PlayerChip({
   target?: boolean;
   dimmed?: boolean;
   autoSub?: boolean;
+  /** No match this matchday: greyed out. */
+  resting?: boolean;
+  /** Playing right now: a pulsing live dot. */
+  live?: boolean;
+  /** Just came off the bench (formation change): a mint "IN" tag for a moment. */
+  fresh?: boolean;
   onClick?: () => void;
 }) {
   const status = player.status ?? "available";
@@ -56,6 +72,8 @@ export function PlayerChip({
     captain ? "captain" : vice ? "vice-captain" : null,
     flag ? flag.label : null,
     autoSub ? "auto-sub" : null,
+    resting ? "no match this matchday" : null,
+    live ? "playing now" : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -63,7 +81,39 @@ export function PlayerChip({
   const body = (
     <>
       <span className="relative">
-        <Kit year={player.teamYear} className={cn(status === "left" && "opacity-50")} />
+        {player.photoUrl ? (
+          <span className="relative block size-11">
+            <Image
+              src={player.photoUrl}
+              alt=""
+              width={44}
+              height={44}
+              sizes="44px"
+              className={cn("size-11 rounded-full bg-muted object-cover", (status === "left" || resting) && "grayscale", status === "left" && "opacity-50")}
+              style={{ boxShadow: `0 0 0 2px var(--pitch), 0 0 0 4px ${resting ? "var(--highlight)" : teamColour(player.teamYear)}` }}
+            />
+            <span
+              className="absolute -right-2 -bottom-1 rounded-full px-1 text-[0.55rem] leading-3.5 font-bold text-highlight-foreground shadow-sm"
+              style={{ background: teamColour(player.teamYear) }}
+              aria-hidden
+            >
+              Y{player.teamYear}
+            </span>
+          </span>
+        ) : (
+          <Kit year={player.teamYear} className={cn((status === "left" || resting) && "opacity-50")} />
+        )}
+        {live && (
+          <span className="absolute -top-0.5 -left-1 flex size-3 items-center justify-center" aria-hidden>
+            <span className="absolute size-3 rounded-full bg-live opacity-60 motion-safe:animate-ping" />
+            <span className="relative size-2.5 rounded-full border-2 border-pitch bg-live" />
+          </span>
+        )}
+        {fresh && (
+          <span className="absolute -top-1.5 -left-2.5 rounded-full bg-brand-light px-1 text-[0.55rem] leading-3.5 font-bold text-brand motion-safe:animate-in motion-safe:zoom-in-50" aria-hidden>
+            IN
+          </span>
+        )}
         {captain && (
           <span className="absolute -top-1 -right-2.5 flex size-5 -rotate-8 items-center justify-center rounded-full bg-highlight font-heading text-[0.65rem] font-bold text-highlight-foreground shadow-sm">
             C
@@ -92,14 +142,19 @@ export function PlayerChip({
       </span>
       <span
         className={cn(
-          "-mt-0.5 w-full truncate rounded-t-sm bg-card px-0.5 text-[0.65rem] leading-4 font-semibold text-card-foreground",
+          "mt-1 w-full truncate rounded-t-sm bg-card px-0.5 text-[0.65rem] leading-4 font-semibold text-card-foreground",
           status === "left" && "line-through",
         )}
       >
         {player.displayName}
       </span>
       {tag !== undefined && (
-        <span className="w-full rounded-b-sm bg-foreground px-0.5 text-[0.65rem] leading-4 font-semibold text-background tabular-nums">
+        <span
+          className={cn(
+            "w-full rounded-b-sm px-0.5 text-[0.65rem] leading-4 font-semibold tabular-nums",
+            resting ? "bg-highlight text-highlight-foreground" : "bg-foreground text-background",
+          )}
+        >
           {tag}
         </span>
       )}
