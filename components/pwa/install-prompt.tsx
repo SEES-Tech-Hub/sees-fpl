@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EARLY_INSTALL_EVENT_KEY } from "./early-install-capture";
+import { promptSlotTaken, takePromptSlot } from "@/components/push/prompt-slot";
 
 // Owner: Samuel (PWA). Asks people to install the app to their home screen.
 // - Android and desktop Chrome: an Install button that opens the browser's
@@ -22,13 +23,14 @@ import { EARLY_INSTALL_EVENT_KEY } from "./early-install-capture";
 // - iPhone and iPad: there is no install button on iOS, so the card explains
 //   the Share > Add to Home Screen steps, and that push alerts on iPhone only
 //   work once the app is on the home screen (iOS 16.4 or later).
-// Hidden when the app is already installed and after "Not now" for a week.
+// Hidden when the app is already installed and after "Not now" for three
+// days. Shares one pop-up slot per visit with the match alerts card.
 // Shown only on browsing pages: the fantasy squad, lineup and transfer screens
 // (and the pinned row on rankings) have their own bars fixed to the bottom,
 // which this card would cover, and the console and admin need the screen.
 
 const DISMISSED_KEY = "sees:install-prompt-dismissed-at";
-const DISMISS_FOR_MS = 7 * 24 * 60 * 60 * 1000;
+const DISMISS_FOR_MS = 3 * 24 * 60 * 60 * 1000;
 const SHOW_AFTER_MS = 4000;
 const SHOW_ON_EXACT = ["/", "/fantasy", "/fantasy/points", "/fantasy/rules"];
 const SHOW_ON_SECTIONS = ["/matches", "/sports"];
@@ -56,12 +58,15 @@ export function InstallPrompt() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (isInstalled() || recentlyDismissed()) return;
+    if (isInstalled() || recentlyDismissed() || promptSlotTaken()) return;
+    const show = (m: Mode) => {
+      if (takePromptSlot("install")) setMode(m);
+    };
 
     let timer: number | undefined;
 
     if (isIos()) {
-      timer = window.setTimeout(() => setMode({ kind: "ios", inSafari: isIosSafari() }), SHOW_AFTER_MS);
+      timer = window.setTimeout(() => show({ kind: "ios", inSafari: isIosSafari() }), SHOW_AFTER_MS);
       return () => window.clearTimeout(timer);
     }
 
@@ -69,7 +74,7 @@ export function InstallPrompt() {
       event.preventDefault(); // Keep Chrome's mini-bar away; we show our own card.
       const installEvent = event as BeforeInstallPromptEvent;
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => setMode({ kind: "native", event: installEvent }), SHOW_AFTER_MS);
+      timer = window.setTimeout(() => show({ kind: "native", event: installEvent }), SHOW_AFTER_MS);
     };
     const onInstalled = () => setDone(true);
 

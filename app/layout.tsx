@@ -4,6 +4,7 @@ import { preload } from "react-dom";
 import { AnalyticsTracker } from "@/components/analytics/tracker";
 import { EarlyInstallCapture } from "@/components/pwa/early-install-capture";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { AlertsPrompt } from "@/components/push/alerts-prompt";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -62,6 +63,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {/* InstallPrompt reads the pathname, which suspends on dynamic routes. */}
           <Suspense fallback={null}>
             <InstallPrompt />
+          </Suspense>
+          <Suspense fallback={null}>
+            <AlertsPrompt />
           </Suspense>
           {/* Reads the pathname too. First-party page views and "online now" (Admin → Analytics). */}
           <Suspense fallback={null}>
