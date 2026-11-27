@@ -34,6 +34,7 @@ export const PLAYER_PHOTO_IDS: ReadonlySet<string> = new Set([
   "7598e123-eb6d-4c6a-a2da-cffdf25881c6",
   "78a93f6b-579d-4f87-b011-7f656629ec30",
   "79664f2b-13b4-4b9c-a0c4-2ae794ca95c9",
+  "7be5789a-2d21-48c5-9ef7-9606bedbc91a",
   "7ff1ffb9-f2a2-44bc-b2a9-ff549e314ad4",
   "882f9aca-865b-4246-b4e9-b917bc87bb0c",
   "8baba44b-69a1-4780-b41c-52c23e05b31d",
