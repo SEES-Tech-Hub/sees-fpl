@@ -59,22 +59,31 @@ export function PitchRow({ count, children, label }: { count: number; children: 
   );
 }
 
-/** The bench tray under the pitch, with order numbers 1 to 4. */
+/**
+ * The bench as a dugout under the pitch: a darker strip of the pitch green
+ * with numbered seats, in the order auto-subs come on.
+ */
 export function BenchTray({ items, note }: { items: { key: string; node: ReactNode; label?: string }[]; note?: string }) {
   return (
-    <section aria-label="Bench" className="w-full rounded-xl bg-muted px-2 pt-2 pb-3 lg:mx-auto lg:max-w-xl">
-      <p className="px-1 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Bench</p>
-      {note && <p className="px-1 text-xs text-muted-foreground">{note}</p>}
-      <div className="mt-2 grid grid-cols-4 gap-1.5">
-        {items.map((item, i) => (
-          <div key={item.key} className="flex min-w-0 flex-col items-center gap-1">
-            <span className="text-xs font-semibold text-muted-foreground tabular-nums">
-              {i + 1}
-              {item.label ? ` · ${item.label}` : ""}
-            </span>
-            <div className="w-full max-w-16">{item.node}</div>
-          </div>
-        ))}
+    <section
+      aria-label="Bench"
+      className="relative w-full overflow-hidden rounded-xl bg-pitch px-2 pt-2.5 pb-3 text-brand-foreground lg:mx-auto lg:max-w-xl"
+    >
+      <div aria-hidden className="absolute inset-0 bg-pitch brightness-[0.68]" />
+      <div aria-hidden className="absolute inset-x-0 top-0 h-3 bg-gradient-to-b from-foreground/25 to-transparent dark:from-background/40" />
+      <div className="relative flex flex-col gap-2">
+        <p className="px-1 font-heading text-sm font-semibold tracking-[0.08em] text-brand-light uppercase">Bench</p>
+        <div className="grid grid-cols-4 gap-1.5">
+          {items.map((item, i) => (
+            <div key={item.key} className="flex min-w-0 flex-col items-center gap-1 rounded-lg bg-brand-foreground/6 px-0.5 pt-1.5 pb-1">
+              <span className="rounded-full bg-brand-light px-1.5 text-[0.65rem] leading-4 font-bold text-brand tabular-nums">
+                {item.label ?? i + 1}
+              </span>
+              <div className="w-full max-w-16">{item.node}</div>
+            </div>
+          ))}
+        </div>
+        {note && <p className="px-1 text-xs text-brand-foreground/75">{note}</p>}
       </div>
     </section>
   );

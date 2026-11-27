@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { CountUp } from "@/components/fantasy/count-up";
+import { LiveRefresh } from "@/components/fantasy/live-refresh";
 import { CircuitPattern } from "@/components/fantasy/patterns";
 import { PointsView } from "@/components/fantasy/points-view";
 import { EmptyState, LoadingPitch, PageHeader } from "@/components/fantasy/states";
@@ -56,6 +57,18 @@ async function Points({ searchParams }: { searchParams: PageProps<"/fantasy/poin
   const has = new Set(history.map((h) => h.matchdayNumber));
   const href = (n: number) => `/fantasy/points?md=${n}${mine ? "" : `&manager=${managerId}`}`;
   const yearOf = Object.fromEntries(players.map((p) => [p.id, p.teamYear]));
+  const photoOf = Object.fromEntries(players.map((p) => [p.id, p.photoUrl]));
+  // The selected matchday's matches: which years are playing right now, and
+  // whether any are still to finish (then the points keep themselves fresh).
+  const fixtures = md.matchdays.find((m) => m.number === selected.matchdayNumber)?.fixtures ?? [];
+  const liveTeams = new Set(
+    fixtures
+      .filter((f) => f.status === "live" || f.status === "half_time")
+      .flatMap((f) => [f.homeTeamId, f.awayTeamId])
+      .filter(Boolean),
+  );
+  const liveIds = players.filter((p) => liveTeams.has(p.teamId)).map((p) => p.id);
+  const unfinished = fixtures.some((f) => f.status === "scheduled" || f.status === "live" || f.status === "half_time");
 
   return (
     <>
@@ -99,15 +112,16 @@ async function Points({ searchParams }: { searchParams: PageProps<"/fantasy/poin
         <EmptyState art="ball" title="No team that matchday" description="This manager hadn't picked a team by that deadline." />
       ) : (
         <>
-          <PointsHero points={points} />
-          <PointsView points={points} yearOf={yearOf} />
+          {unfinished && <LiveRefresh />}
+          <PointsHero points={points} live={liveIds.length > 0} />
+          <PointsView points={points} yearOf={yearOf} photoOf={photoOf} liveIds={liveIds} />
         </>
       )}
     </>
   );
 }
 
-function PointsHero({ points }: { points: ManagerMatchdayPoints }) {
+function PointsHero({ points, live }: { points: ManagerMatchdayPoints; live: boolean }) {
   const { overallRank: now, previousOverallRank: before } = points;
   const up = now !== null && before !== null && now < before;
   const down = now !== null && before !== null && now > before;
@@ -118,7 +132,13 @@ function PointsHero({ points }: { points: ManagerMatchdayPoints }) {
     >
       <CircuitPattern />
       <div className="relative">
-        <p className="text-xs font-semibold tracking-[0.06em] text-brand-light uppercase">
+        <p className="flex items-center justify-center gap-2 text-xs font-semibold tracking-[0.06em] text-brand-light uppercase">
+          {live && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-live px-2 py-0.5 text-[0.6875rem] text-background">
+              <span className="size-1.5 rounded-full bg-background motion-safe:animate-pulse" aria-hidden />
+              Live
+            </span>
+          )}
           Matchday {points.matchdayNumber} points
         </p>
         <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
