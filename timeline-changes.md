@@ -100,3 +100,4 @@
 - 2026-11-27: Rankings show only the fantasy team name and year (no account names); animated tabs, year chips and staggered rows.
 - 2026-11-27: Server reads no longer retry timeouts, 503s or 504s (only 25P02, once), to stop adding load when the database is short of disk IO.
 - 2026-11-27: Analytics heartbeat (online now) switched off to save Supabase disk IO.
+- 2026-11-27: Transfers: year, price and sort filters work in the replacement picker, blocked players show greyed out with the reason, and the screen animates like Pick Team (celebration on confirm).
