@@ -15,8 +15,8 @@ import { playerPhotoUrl } from "./player-photos";
 import { cache } from "react";
 import { connection } from "next/server";
 import { getCurrentUser, requireSignedIn } from "@/lib/auth";
-import { getPlayerMatchStats } from "@/lib/live/stats";
 import { createClient } from "@/lib/supabase/server";
+import { sharedDeadlineMinutes, sharedMatchdayRows, sharedMatchdayStats, sharedPlayerRows, sharedRulesRow } from "./shared";
 import type { Database } from "@/lib/supabase/types";
 import type {
   FantasyPlayer as EnginePlayer,
@@ -86,18 +86,10 @@ export async function getOptionalFantasyUser(): Promise<FantasyUser | null> {
 // Rules
 // ===========================================================================
 
-const getRulesRow = cache(async (): Promise<RulesRow> => {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("fantasy_rules").select("*").eq("id", 1).single();
-  if (error) fail(error.message, "the fantasy rules");
-  return data;
-});
+// Shared with every manager for a short while (lib/fantasy/shared.ts).
+const getRulesRow = cache(async (): Promise<RulesRow> => sharedRulesRow());
 
-const getDeadlineMinutes = cache(async (): Promise<number> => {
-  const supabase = await createClient();
-  const { data } = await supabase.rpc("admin_deadline_rules");
-  return data?.[0]?.minutes_before_kickoff ?? 30;
-});
+const getDeadlineMinutes = cache(async (): Promise<number> => sharedDeadlineMinutes());
 
 const same = (n: number): Record<Position, number> => ({ GK: n, DEF: n, MID: n, FWD: n });
 
@@ -182,29 +174,15 @@ export const getTeams = cache(async (): Promise<Team[]> => {
 /** Every finished-or-live stat row that belongs to a matchday. */
 const getMatchdayStats = cache(async (): Promise<Map<string, PlayerMatchStats[]>> => {
   const md = await getMatchdayState();
-  const byMatchday = new Map<string, PlayerMatchStats[]>();
   const played = md.matchdays.filter((m) => m.fixtures.some((f) => f.status !== "scheduled" && f.status !== "postponed" && f.status !== "cancelled"));
-  await Promise.all(
-    played.map(async (m) => {
-      byMatchday.set(m.id, await getPlayerMatchStats({ matchdayId: m.id }));
-    }),
-  );
-  return byMatchday;
+  if (played.length === 0) return new Map();
+  return new Map(await sharedMatchdayStats(played.map((m) => m.id)));
 });
 
 export const getPlayers = cache(async (): Promise<Player[]> => {
-  const supabase = await createClient();
-  const [players, selection, rules, stats, md] = await Promise.all([
-    supabase
-      .from("players")
-      .select("id, team_id, full_name, display_name, position, price_tenths, status, shirt_number, teams(year, short_name)")
-      .order("display_name"),
-    supabase.rpc("fantasy_player_selection"),
-    getRulesRow(),
-    getMatchdayStats(),
-    getMatchdayState(),
-  ]);
-  if (players.error) fail(players.error.message, "players");
+  const [shared, rules, stats, md] = await Promise.all([sharedPlayerRows(), getRulesRow(), getMatchdayStats(), getMatchdayState()]);
+  const players = { data: shared.players };
+  const selection = { data: shared.selection };
 
   // Each team's next match that hasn't kicked off (fantasy matchdays only).
   const nextByTeam = new Map<string, NonNullable<Player["nextMatch"]>>();
@@ -249,19 +227,9 @@ export const getPlayers = cache(async (): Promise<Player[]> => {
 
 export const getMatchdayState = cache(async (): Promise<MatchdayState> => {
   await connection();
-  const supabase = await createClient();
-  const [mds, fx] = await Promise.all([
-    supabase.from("matchdays").select("id, number, name, deadline_at, status").order("number"),
-    supabase
-      .from("fixtures")
-      .select(
-        "id, matchday_id, stage, kickoff_at, status, venue, home_team_id, away_team_id, home_score, away_score, home:teams!fixtures_home_team_id_fkey(short_name), away:teams!fixtures_away_team_id_fkey(short_name)",
-      )
-      .not("matchday_id", "is", null)
-      .order("kickoff_at"),
-  ]);
-  if (mds.error) fail(mds.error.message, "matchdays");
-  if (fx.error) fail(fx.error.message, "fixtures");
+  const rows = await sharedMatchdayRows();
+  const mds = { data: rows.matchdays };
+  const fx = { data: rows.fixtures };
   const matchdays: Matchday[] = mds.data.map((m) => ({
     id: m.id,
     number: m.number,
