@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Bell, BellRing } from "lucide-react";
 import { toast } from "sonner";
-import { followedTopics, followTopics, unfollowTopics } from "@/app/push/actions";
+import { currentTopics, followTopic, pushSupport, unfollowTopic, type PushSupport } from "@/lib/push/client";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import type { TeamSummary } from "@/lib/live/types";
@@ -13,41 +13,11 @@ import { cn } from "@/lib/utils";
 // a team's matches, or every match. Works without signing in. On iPhone, push
 // only works once the app is added to the Home Screen (iOS 16.4+).
 
-const KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
-
-function keyBytes(base64: string) {
-  const padded = (base64 + "=".repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(padded);
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
-}
-
-type Support = "ok" | "unsupported" | "ios-install" | "dev" | "no-key";
-
-function support(): Support {
-  if (typeof window === "undefined") return "unsupported";
-  if (!KEY) return "no-key";
-  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const standalone = window.matchMedia("(display-mode: standalone)").matches;
-  if (ios && !standalone) return "ios-install";
-  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return "unsupported";
-  if (process.env.NODE_ENV !== "production") return "dev";
-  return "ok";
-}
-
-async function subscription(create: boolean) {
-  const reg = (await navigator.serviceWorker.getRegistration()) ?? (create ? await navigator.serviceWorker.register("/sw.js") : undefined);
-  if (!reg) return null;
-  await navigator.serviceWorker.ready;
-  const existing = await reg.pushManager.getSubscription();
-  if (existing || !create) return existing;
-  return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(KEY) });
-}
-
 export function NotifyBell({ fixtureId, home, away }: { fixtureId: string; home: TeamSummary | null; away: TeamSummary | null }) {
   const [open, setOpen] = useState(false);
   const [topics, setTopics] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const [why, setWhy] = useState<Support>("ok");
+  const [why, setWhy] = useState<PushSupport>("ok");
   const options = [
     { topic: `fixture:${fixtureId}`, label: "This match" },
     ...(home ? [{ topic: `team:${home.id}`, label: `Every ${home.name} match` }] : []),
@@ -57,47 +27,19 @@ export function NotifyBell({ fixtureId, home, away }: { fixtureId: string; home:
   const on = topics.some((t) => options.some((o) => o.topic === t));
 
   async function openSheet() {
-    const s = support();
+    const s = pushSupport();
     setWhy(s);
     setOpen(true);
-    if (s !== "ok") return;
-    try {
-      const sub = await subscription(false);
-      if (sub) setTopics(await followedTopics(sub.endpoint));
-    } catch {
-      // Not subscribed yet.
-    }
+    if (s === "ok") setTopics(await currentTopics());
   }
 
   async function toggle(topic: string) {
     setBusy(true);
-    try {
-      if (topics.includes(topic)) {
-        const sub = await subscription(false);
-        if (!sub) return;
-        const r = await unfollowTopics(sub.endpoint, [topic]);
-        if (r.ok) setTopics(r.topics);
-        else toast.error(r.message);
-        return;
-      }
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        toast.error("Notifications are blocked. Allow them for this site in your browser settings.");
-        return;
-      }
-      const sub = await subscription(true);
-      if (!sub) return;
-      const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
-      const r = await followTopics(json, [topic]);
-      if (r.ok) {
-        setTopics(r.topics);
-        toast.success("Alerts on. We'll tell you when it starts, the big moments and the result.");
-      } else toast.error(r.message);
-    } catch {
-      toast.error("Couldn't turn on notifications on this device.");
-    } finally {
-      setBusy(false);
-    }
+    const r = topics.includes(topic) ? await unfollowTopic(topic) : await followTopic(topic);
+    setBusy(false);
+    if (!r.ok) return toast.error(r.message);
+    setTopics(r.topics);
+    if (r.topics.includes(topic)) toast.success("Alerts on. We'll tell you when it starts, the big moments and the result.");
   }
 
   return (

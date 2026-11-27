@@ -16,6 +16,7 @@ import { signOut } from "@/app/login/actions";
 import { AnnouncementStrip } from "./announcement-strip";
 import { showsHeader } from "./routes";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { MatchAlertsButton } from "@/components/push/match-alerts";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -122,6 +123,7 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
         </nav>
 
         <div className="flex items-center gap-1.5">
+          <MatchAlertsButton />
           <ThemeToggle />
           {user ? (
             <Link

@@ -24,6 +24,8 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/compone
 import { cn } from "@/lib/utils";
 import { showsTabBar } from "./routes";
 import { ThemePicker } from "@/components/theme/theme-toggle";
+import { MatchAlertsRow } from "@/components/push/match-alerts";
+import { InstallRow } from "@/components/pwa/install-row";
 
 // The phone navigation: a floating dock. The active tab is a mint pill that
 // slides between tabs and opens out to show its name; the rest are icons.
@@ -236,6 +238,11 @@ function MoreSheet({
           animate={{ opacity: open ? 1 : 0 }}
           transition={{ duration: 0.2, delay: open ? 0.06 + links.length * 0.04 : 0 }}
         >
+          <p className="px-1 pb-2 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">This device</p>
+          <div className="flex flex-col gap-2 pb-4">
+            <MatchAlertsRow />
+            <InstallRow />
+          </div>
           <p className="px-1 pb-2 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Appearance</p>
           <ThemePicker />
         </motion.div>
