@@ -4,11 +4,10 @@
 /* Inter, Oswald and Playfair Display, served from public/fonts. */
 @import "./fonts.css";
 
-/* Dark mode is the reader's choice: a toggle in the header and Appearance in
-   the More sheet (components/theme). next-themes puts a `dark` class on
-   <html>; everyone starts on the light theme. To start people on their
-   phone's own setting instead, change defaultTheme to "system" in
-   components/theme/theme-provider.tsx. */
+/* Dark mode follows the device's own light/dark setting until the reader
+   picks one: a toggle in the header and Appearance in the More sheet
+   (components/theme). next-themes puts a `dark` class on <html> before the
+   first paint. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
