@@ -34,10 +34,11 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#013f31",
-  // The page starts light. Dark mode is the reader's own choice (the moon in
-  // the header, or Appearance in More), applied by next-themes. "only light"
-  // stops phone browsers (Chrome's auto-dark, Samsung Internet) from forcing
-  // their own dark version onto the light pages.
+  // Light or dark follows the device until the reader picks one (the toggle
+  // in the header, or Appearance in More), applied by next-themes with a
+  // `dark` class. "only light" (overridden to dark under that class in
+  // globals.css) stops phone browsers (Chrome's auto-dark, Samsung Internet)
+  // from forcing their own dark version onto the light pages.
   colorScheme: "only light",
   width: "device-width",
   initialScale: 1,
