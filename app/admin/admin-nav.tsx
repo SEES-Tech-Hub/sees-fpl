@@ -16,6 +16,8 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { BackToHub } from "@/components/brand/back-to-hub";
+import { SeesMark } from "@/components/brand/sees-mark";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -87,9 +89,14 @@ export function AdminNav({ adminName }: { adminName: string }) {
     <>
       {/* Phones: top bar with a menu sheet */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-sidebar-border bg-sidebar px-4 md:hidden">
-        <Link href="/admin" className="font-heading text-lg font-semibold text-sidebar-primary">
-          SEES Admin
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/" aria-label="Back to the SEES Games Hub" className="flex size-11 items-center justify-center rounded-lg text-sidebar-primary">
+            <SeesMark className="size-7" />
+          </Link>
+          <Link href="/admin" className="font-heading text-lg font-semibold text-sidebar-primary">
+            SEES Admin
+          </Link>
+        </div>
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon-lg" aria-label="Open admin menu">
@@ -102,6 +109,7 @@ export function AdminNav({ adminName }: { adminName: string }) {
               <SheetDescription>Signed in as {adminName}</SheetDescription>
             </SheetHeader>
             <NavLinks onNavigate />
+            <BackToHub className="mt-2 px-3 text-sidebar-foreground" label="Back to the Games Hub" />
           </SheetContent>
         </Sheet>
       </header>
@@ -109,12 +117,18 @@ export function AdminNav({ adminName }: { adminName: string }) {
       {/* Desktop: fixed sidebar */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border bg-sidebar p-4 md:flex">
         <div>
-          <Link href="/admin" className="font-heading text-xl font-semibold text-sidebar-primary">
-            SEES Admin
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/" aria-label="Back to the SEES Games Hub" className="text-sidebar-primary">
+              <SeesMark className="size-7" />
+            </Link>
+            <Link href="/admin" className="font-heading text-xl font-semibold text-sidebar-primary">
+              SEES Admin
+            </Link>
+          </div>
           <p className="mt-1 truncate text-xs text-muted-foreground">Signed in as {adminName}</p>
         </div>
         <NavLinks />
+        <BackToHub className="mt-auto px-3 text-sidebar-foreground" label="Back to the Games Hub" />
       </aside>
     </>
   );
