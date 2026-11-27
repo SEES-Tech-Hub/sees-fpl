@@ -17,7 +17,8 @@ import { useLiveFixture } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
 import { MatchStatus, ReconnectingPill, RollingScore, useClock, useFullTimeConfetti, useGoalFlash } from "./live-bits";
 import { NotifyBell } from "./notify-bell";
-import { ShareButton } from "./share-button";
+import { MatchShare } from "./match-share";
+import { shareCards } from "@/lib/live/match-share";
 import { RaceView } from "./race-view";
 import { CheerBar, CheerCrest, ReactionDock, useReactions, type Reactions } from "./reactions";
 import { EmptyIllustration } from "@/components/brand/empty-art";
@@ -178,7 +179,10 @@ function MatchHeader({ data, state, rx }: { data: MatchPageData; state: FixtureS
 
       <div className="relative mx-auto flex max-w-xl flex-col items-center gap-4">
         <div className="flex w-full items-center justify-between gap-2">
-          <ShareButton
+          <MatchShare
+            fixtureId={fixture.id}
+            cards={shareCards({ fixture, state, timeline })}
+            stamp={state.updatedAt}
             title={`${sideName(fixture, "home")} v ${sideName(fixture, "away")}`}
             text={
               notStarted
