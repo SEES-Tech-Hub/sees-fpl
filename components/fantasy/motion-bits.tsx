@@ -145,6 +145,7 @@ export function AnimatedPlayerRow({
   reason?: ReactNode;
   action?: ReactNode;
   highlight?: boolean;
+  onShow?: () => void;
 }) {
   return (
     <motion.li

@@ -425,6 +425,11 @@ export function SquadBuilder({
                 players={players.filter((p) => p.position === pickFor && !selectedIds.includes(p.id))}
                 position={pickFor}
                 reasonFor={(p) => cannotAddReason(p, selected, rules)}
+                verb="Add"
+                onChoose={(p) => {
+                  add(p);
+                  setPickFor(null);
+                }}
                 renderAction={(p, reason) => (
                   <RoundButton
                     added={false}

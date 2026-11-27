@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { TeamDot } from "@/components/fantasy/team-badge";
+import { PlayerFace } from "@/components/fantasy/player-face";
 import { formatMoney } from "@/lib/fantasy/format";
 import type { Player, PlayerStatus, Position } from "@/lib/fantasy/types";
 import { cn } from "@/lib/utils";
@@ -46,6 +46,7 @@ export function PlayerRow({
   highlight,
   as: Tag = "li",
   bordered = true,
+  onShow,
 }: {
   player: Player;
   reason?: ReactNode;
@@ -54,6 +55,8 @@ export function PlayerRow({
   as?: "li" | "div";
   /** Draw the divider under the row (off when a wrapper draws it). */
   bordered?: boolean;
+  /** Tapping the face opens the player card. */
+  onShow?: () => void;
 }) {
   return (
     <Tag
@@ -63,7 +66,18 @@ export function PlayerRow({
         highlight && "bg-secondary",
       )}
     >
-      <TeamDot year={player.teamYear} className="size-7 text-xs" />
+      {onShow ? (
+        <button
+          type="button"
+          onClick={onShow}
+          aria-label={`See ${player.displayName}`}
+          className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring"
+        >
+          <PlayerFace player={player} size={40} />
+        </button>
+      ) : (
+        <PlayerFace player={player} size={40} />
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <p className={cn("truncate text-[0.9375rem] font-semibold", player.status === "left" && "line-through")}>
