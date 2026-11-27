@@ -5,6 +5,7 @@ import { FantasyNav, FantasyNavFallback } from "@/components/fantasy/fantasy-nav
 import { MotionProvider } from "@/components/fantasy/motion-provider";
 import { OfflineBanner } from "@/components/fantasy/offline-banner";
 import { AnnouncementBanner } from "@/components/shell/announcement-banner";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 // Owner: Henry (fantasy frontend). The fantasy section's own header and tabs.
 // The site-wide shell and bottom tab bar are Fortune's (design system §10).
@@ -15,12 +16,15 @@ export default function FantasyLayout({ children }: LayoutProps<"/fantasy">) {
         <div className="mx-auto w-full max-w-2xl px-4 lg:max-w-5xl">
           <div className="flex h-12 items-center justify-between gap-3">
             <Link href="/fantasy" className="flex items-center gap-2 font-heading text-lg font-semibold">
-              <SeesMark className="size-7 text-brand dark:text-brand-light" />
+              <SeesMark className="size-7 text-brand" />
               SEES Fantasy
             </Link>
-            <Link href="/" className="flex h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:underline">
-              Live scores
-            </Link>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <Link href="/" className="flex h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:underline">
+                Live scores
+              </Link>
+            </div>
           </div>
           <div className="pb-2">
             <Suspense fallback={<FantasyNavFallback />}>

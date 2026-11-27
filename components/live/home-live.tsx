@@ -14,11 +14,16 @@ import { cn, formatWAT } from "@/lib/utils";
 import { FixtureRow, LiveCard, gameName } from "./fixture-card";
 import { LivePulse, ReconnectingPill, teamColour } from "./live-bits";
 import { YearCrest } from "@/components/brand/year-crest";
+import { FixturePhoto, hasPhoto } from "./fixture-photo";
+import { useMagnetic, useTilt } from "./use-pointer-motion";
 
 // The home page's live parts: Live now, the next match, fixtures by date and
 // the latest results. All of it stays live through useLiveFixtures.
 
 const LIVE = new Set<FixtureState["status"]>(["live", "half_time"]);
+
+/** Fade and rise in once on load (stays still for reduced motion). */
+const ENTER = "motion-safe:animate-in motion-safe:fade-in motion-safe:fill-mode-backwards";
 const DONE = new Set<FixtureState["status"]>(["full_time", "walkover"]);
 
 const dayKey = (iso: string) =>
@@ -77,7 +82,7 @@ export function HomeLive({
       {championship}
 
       {days.length > 0 && (
-        <section aria-labelledby="fixtures" className="flex flex-col gap-3">
+        <section aria-labelledby="fixtures" className="sees-reveal flex flex-col gap-3">
           <h2 id="fixtures" className="px-4 font-heading text-xl font-bold uppercase lg:px-0">
             Fixtures
           </h2>
@@ -130,7 +135,7 @@ export function HomeLive({
       )}
 
       {results.length > 0 && (
-        <section aria-labelledby="results" className="flex flex-col gap-3 px-4 lg:px-0">
+        <section aria-labelledby="results" className="sees-reveal flex flex-col gap-3 px-4 lg:px-0">
           <h2 id="results" className="font-heading text-xl font-bold uppercase">
             Latest results
           </h2>
@@ -150,28 +155,45 @@ export function HomeLive({
  * action, fantasy on a tear-off stub with its own deadline.
  */
 function NextUp({ card, fantasy }: { card: FixtureCard; fantasy?: ReactNode }) {
+  const tilt = useTilt<HTMLElement>();
+  const magnet = useMagnetic<HTMLAnchorElement>();
+  const photo = hasPhoto(card.sport.slug);
   return (
-    <section aria-label="Next match" className="relative mx-4 overflow-hidden rounded-2xl bg-pitch text-brand-foreground shadow-raised lg:mx-0">
-      <CircuitPattern />
-      <span
-        aria-hidden
-        className="absolute inset-0 opacity-30"
-        style={{
-          background: `linear-gradient(110deg, ${teamColour(card.home?.year)} 0 18%, transparent 40% 60%, ${teamColour(card.away?.year)} 82% 100%)`,
-        }}
-      />
+    <section
+      ref={tilt}
+      aria-label="Next match"
+      className={cn(
+        "relative mx-4 overflow-hidden rounded-2xl bg-pitch text-brand-foreground shadow-raised transition-transform duration-300 ease-out lg:mx-0",
+        photo && "sees-on-photo",
+      )}
+    >
+      <FixturePhoto sport={card.sport.slug} homeYear={card.home?.year} awayYear={card.away?.year} priority />
+      {photo ? (
+        <span aria-hidden className="sees-glare" />
+      ) : (
+        <>
+          <CircuitPattern />
+          <span
+            aria-hidden
+            className="absolute inset-0 opacity-30"
+            style={{
+              background: `linear-gradient(110deg, ${teamColour(card.home?.year)} 0 18%, transparent 40% 60%, ${teamColour(card.away?.year)} 82% 100%)`,
+            }}
+          />
+        </>
+      )}
       <div className="relative flex flex-col items-center gap-4 px-5 pt-5 pb-5 text-center">
-        <p className="flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase">
+        <p className={cn("flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase", ENTER, "motion-safe:slide-in-from-top-2 motion-safe:duration-500")}>
           <SportIcon sport={card.sport.slug.replace(/-/g, "_")} size={14} />
           Next up · {gameName(card)}
           {card.matchdayNumber ? ` · Matchday ${card.matchdayNumber}` : ""}
         </p>
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <Side name={card.home?.name} short={card.home?.shortName} year={card.home?.year} />
-          <span className="font-heading text-2xl font-bold opacity-70">v</span>
-          <Side name={card.away?.name} short={card.away?.shortName} year={card.away?.year} />
+          <Side name={card.home?.name} short={card.home?.shortName} year={card.home?.year} from="left" />
+          <span className={cn("font-heading text-2xl font-bold opacity-70", ENTER, "motion-safe:zoom-in-50 motion-safe:duration-500 motion-safe:delay-300")}>v</span>
+          <Side name={card.away?.name} short={card.away?.shortName} year={card.away?.year} from="right" />
         </div>
-        <div className="flex flex-col items-center gap-1">
+        <div className={cn("flex flex-col items-center gap-1", ENTER, "motion-safe:slide-in-from-bottom-4 motion-safe:duration-700 motion-safe:delay-300")}>
           <span className="text-xs font-semibold tracking-[0.08em] text-brand-foreground/70 uppercase">{card.sport.resultFormat === "timed" ? "Kickoff in" : "Starts in"}</span>
           <Countdown
             targetAt={card.kickoffAt!}
@@ -179,14 +201,19 @@ function NextUp({ card, fantasy }: { card: FixtureCard; fantasy?: ReactNode }) {
             showDeadlineLabel={false}
             className="font-heading text-display text-brand-foreground!"
           />
-          <span className="text-sm text-brand-foreground/80">
+          <span className="text-sm text-brand-foreground/85">
             {formatWAT(card.kickoffAt!, "datetime")}
             {card.venue ? ` · ${card.venue}` : ""}
           </span>
         </div>
         <Link
+          ref={magnet}
           href={`/matches/${card.id}`}
-          className="inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-brand-foreground text-[0.9375rem] font-bold text-brand transition-transform outline-none focus-visible:ring-3 focus-visible:ring-brand-light active:scale-[0.98] sm:max-w-xs"
+          className={cn(
+            "inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-brand-foreground text-[0.9375rem] font-bold text-brand shadow-raised transition-[translate,scale] duration-200 ease-out outline-none focus-visible:ring-3 focus-visible:ring-brand-light active:scale-[0.98] sm:max-w-xs",
+            ENTER,
+            "motion-safe:slide-in-from-bottom-4 motion-safe:duration-700 motion-safe:delay-500",
+          )}
         >
           Open match centre <ChevronRight className="size-4" aria-hidden />
         </Link>
@@ -204,9 +231,16 @@ function NextUp({ card, fantasy }: { card: FixtureCard; fantasy?: ReactNode }) {
   );
 }
 
-function Side({ name, year }: { name?: string; short?: string; year?: number }) {
+function Side({ name, year, from }: { name?: string; short?: string; year?: number; from: "left" | "right" }) {
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div
+      className={cn(
+        "flex flex-col items-center gap-2",
+        ENTER,
+        "motion-safe:duration-700 motion-safe:delay-150",
+        from === "left" ? "motion-safe:slide-in-from-left-6" : "motion-safe:slide-in-from-right-6",
+      )}
+    >
       <span className="motion-safe:animate-in motion-safe:zoom-in-75 motion-safe:duration-500">
         <YearCrest year={year} variant="crest" tone="dark" size={84} label="" />
       </span>

@@ -71,7 +71,7 @@ async function Home() {
         )}
         <div className="grid grid-cols-2 gap-3">
           <Link href="/fantasy/points" className="rounded-xl bg-pitch p-4 text-brand-foreground shadow-card dark:text-foreground">
-            <p className="text-xs font-semibold tracking-[0.06em] text-brand-light uppercase dark:text-brand">
+            <p className="text-xs font-semibold tracking-[0.06em] text-brand-light uppercase">
               {latest ? `Matchday ${latest.matchdayNumber}` : "Points"}
             </p>
             <p className="font-heading text-display font-bold tabular-nums">{latest ? latest.points : "–"}</p>
@@ -124,7 +124,7 @@ async function SignedOutHero() {
         FREE
       </span>
       <div className="relative mx-auto max-w-2xl">
-        <p className="text-xs font-semibold tracking-[0.06em] text-brand-light uppercase dark:text-brand">SEES Fantasy 2026</p>
+        <p className="text-xs font-semibold tracking-[0.06em] text-brand-light uppercase">SEES Fantasy 2026</p>
         <h1 className="mt-2 font-heading text-display font-bold uppercase">Pick your SEES XI</h1>
         <ol className="mt-6 flex flex-col gap-3">
           {steps.map((s, i) => (

@@ -130,7 +130,7 @@ export function EmptyIllustration({ art, className }: { art: EmptyArt; className
     <svg
       aria-hidden
       viewBox="0 0 160 120"
-      className={cn("h-28 w-auto text-brand motion-safe:animate-[sees-float_4s_ease-in-out_infinite] dark:text-brand-light", className)}
+      className={cn("h-28 w-auto text-brand motion-safe:animate-[sees-float_4s_ease-in-out_infinite]", className)}
     >
       {ART[art]}
     </svg>
