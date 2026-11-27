@@ -15,6 +15,7 @@ import {
 import { signOut } from "@/app/login/actions";
 import { AnnouncementStrip } from "./announcement-strip";
 import { showsHeader } from "./routes";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -51,7 +52,7 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <SeesMark className="size-7 text-brand dark:text-brand-light" />
+          <SeesMark className="size-7 text-brand" />
           <span className="font-heading text-lg font-semibold tracking-tight text-foreground">
             SEES Games
           </span>
@@ -120,7 +121,8 @@ export function TopHeader({ user, announcement, role = "user" }: TopHeaderProps)
           </DropdownMenu>
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <ThemeToggle />
           {user ? (
             <Link
               href="/fantasy"

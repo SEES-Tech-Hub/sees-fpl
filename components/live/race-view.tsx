@@ -11,6 +11,7 @@ import { cn, formatWAT } from "@/lib/utils";
 import { EmptyState } from "@/components/brand/empty-state";
 import { Medal } from "./medal-table";
 import { YearCrest } from "@/components/brand/year-crest";
+import { FixturePhoto, hasPhoto } from "./fixture-photo";
 
 // Ranked events (athletics, swimming): a podium that rises gold, silver,
 // bronze, then the full finishing order with times or marks.
@@ -34,6 +35,7 @@ const stageText = (stage: string) => stage.replace(/[_-]+/g, " ");
 
 export function RaceView({ data, state }: { data: MatchPageData; state: FixtureState }) {
   const { fixture, race } = data;
+  const photo = hasPhoto(fixture.sport.slug);
   const published = race.some((r) => r.position !== null || r.outcome);
   const podium = [2, 1, 3]
     .map((p) => race.find((r) => r.position === p))
@@ -42,8 +44,9 @@ export function RaceView({ data, state }: { data: MatchPageData; state: FixtureS
 
   return (
     <>
-      <section className="relative overflow-hidden bg-pitch px-4 pt-5 pb-6 text-brand-foreground lg:rounded-2xl">
-        <CircuitPattern />
+      <section className={cn("relative overflow-hidden bg-pitch px-4 pt-5 pb-6 text-brand-foreground lg:rounded-2xl", photo && "sees-on-photo")}>
+        <FixturePhoto sport={fixture.sport.slug} priority />
+        {!photo && <CircuitPattern />}
         <div className="relative flex flex-col items-center gap-2 text-center">
           <p className="flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase">
             <SportIcon sport={fixture.sport.slug.replace(/-/g, "_")} size={14} /> {fixture.sport.name}

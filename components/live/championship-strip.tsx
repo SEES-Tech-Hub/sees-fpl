@@ -39,7 +39,7 @@ export function ChampionshipStrip({
   const sub = raceHeadline(rows, progress);
 
   return (
-    <section aria-labelledby="championship" className={cn("mx-4 flex flex-col gap-4 rounded-2xl bg-card p-4 shadow-card lg:mx-0", className)}>
+    <section aria-labelledby="championship" className={cn("sees-reveal mx-4 flex flex-col gap-4 rounded-2xl bg-card p-4 shadow-card lg:mx-0", className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <h2 id="championship" className="font-heading text-lg leading-tight font-bold uppercase sm:text-xl">

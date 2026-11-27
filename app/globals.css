@@ -4,13 +4,11 @@
 /* Inter, Oswald and Playfair Display, served from public/fonts. */
 @import "./fonts.css";
 
-/* Dark mode is OFF for launch. Dark styles apply only under a `dark` class on
-   <html>, which nothing sets, so everyone gets the light theme; the dark
-   tokens below are kept. To bring it back, either:
-   - follow the device setting again: change this line back to
-     `@custom-variant dark (@media (prefers-color-scheme: dark));` and wrap the
-     two `:root.dark` blocks in `@media (prefers-color-scheme: dark) { :root { … } }`;
-   - or add a manual toggle with next-themes (attribute="class"). */
+/* Dark mode is the reader's choice: a toggle in the header and Appearance in
+   the More sheet (components/theme). next-themes puts a `dark` class on
+   <html>; everyone starts on the light theme. To start people on their
+   phone's own setting instead, change defaultTheme to "system" in
+   components/theme/theme-provider.tsx. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
@@ -313,10 +311,27 @@
   50% { transform: translateY(-4px); }
 }
 
-/* Light only for now (see the dark-mode note at the top): native controls,
-   scrollbars and form fields stay light too. */
+/* Native controls, scrollbars and form fields follow the chosen theme.
+   "only light" also stops phone browsers forcing their own dark version onto
+   the light theme. */
 :root {
   color-scheme: only light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+
+/* Dark green surfaces (the pitch: match heroes, live cards, the next-match
+   ticket, the dock, sign-in) are dark in both themes, so the text and accents
+   on them keep the light theme's brand colours: white text, mint accents,
+   SEES green on mint. Without this, dark mode's brand tokens (mint brand,
+   green brand-light) would put green text on the green surface. Add
+   `on-pitch` to an element whose pitch background comes from elsewhere (a
+   sliding pill behind it, say). */
+:root.dark :is(.bg-pitch, .bg-pitch\/95, .on-pitch) {
+  --brand: #013f31;
+  --brand-foreground: #ffffff;
+  --brand-light: #95fde2;
 }
 
 /* Announcement ticker (components/shell/announcement-strip.tsx): two copies
@@ -340,4 +355,83 @@
   .sees-ticker-track { animation: none; display: block; overflow: hidden; text-overflow: ellipsis; }
   .sees-ticker-track > span { padding: 0; }
   .sees-ticker-track > span + span { display: none; }
+}
+
+/* Photo cards (components/live/fixture-photo.tsx). The shade under the photo
+   is the same near-black green in both themes, and text on a photo gets a
+   soft shadow so it stays crisp over bright patches. Pills and buttons (any
+   element with its own background) keep their text flat. */
+:root {
+  --photo-shade: #020c09;
+}
+@theme inline {
+  --color-photo-shade: var(--photo-shade);
+}
+.sees-on-photo {
+  text-shadow: 0 1px 2px rgb(2 12 9 / 0.55), 0 0 18px rgb(2 12 9 / 0.35);
+}
+.sees-on-photo :where([class*="bg-"]) {
+  text-shadow: none;
+}
+/* The light that follows the mouse across a tilting card (useTilt). */
+.sees-glare {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(36rem circle at var(--gx, 50%) var(--gy, 0%), color-mix(in oklab, var(--brand-foreground) 14%, transparent), transparent 45%);
+  transition: opacity 400ms var(--ease-out);
+}
+[data-tilting] > .sees-glare {
+  opacity: 1;
+}
+
+/* Motion touches (photos, sections, cards). Everything here stays still for
+   anyone who asked for less motion, and browsers without scroll-driven
+   animations simply show everything in place. */
+@keyframes sees-settle {
+  from { scale: 1.18; opacity: 0.4; }
+  to   { scale: 1.06; opacity: 1; }
+}
+@keyframes sees-drift {
+  from { translate: 0 -2.5%; }
+  to   { translate: 0 2.5%; }
+}
+@keyframes sees-rise {
+  from { opacity: 0; translate: 0 2.5rem; scale: 0.97; }
+  to   { opacity: 1; translate: none; scale: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Photos are a touch larger than their card, so they can settle, drift and
+     zoom without showing an edge. They settle in with a slow zoom on load. */
+  .sees-photo {
+    scale: 1.06;
+    animation: sees-settle 1600ms var(--ease-out) backwards;
+    transition: scale 900ms var(--ease-out);
+  }
+  @media (hover: hover) {
+    .group:hover .sees-photo,
+    [data-tilting] .sees-photo { scale: 1.12; }
+    /* Cards that lift a little under the pointer. */
+    .sees-lift {
+      transition: translate var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+    }
+    .sees-lift:hover {
+      translate: 0 -4px;
+      box-shadow: var(--shadow-raised);
+    }
+  }
+  @supports (animation-timeline: view()) {
+    /* After settling, the photo moves a little slower than the page. */
+    .sees-photo {
+      animation: sees-settle 1600ms var(--ease-out) backwards, sees-drift linear both;
+      animation-timeline: auto, view();
+    }
+    /* Sections rise in as they scroll into view. */
+    .sees-reveal {
+      animation: sees-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+  }
 }

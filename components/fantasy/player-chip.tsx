@@ -70,7 +70,7 @@ export function PlayerChip({
           </span>
         )}
         {vice && (
-          <span className="absolute -top-1 -right-2.5 flex size-5 items-center justify-center rounded-full border-2 border-brand-light bg-background font-heading text-[0.65rem] font-bold text-brand dark:border-brand">
+          <span className="absolute -top-1 -right-2.5 flex size-5 items-center justify-center rounded-full border-2 border-brand-light bg-brand-foreground font-heading text-[0.65rem] font-bold text-brand">
             V
           </span>
         )}

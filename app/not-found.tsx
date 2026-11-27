@@ -11,9 +11,9 @@ export default function NotFound() {
   return (
     <main className="relative flex min-h-dvh flex-1 flex-col items-center justify-center overflow-hidden px-6 py-16 text-center">
       <Link href="/" className="absolute top-4 left-4 flex items-center gap-2 font-heading text-lg font-semibold">
-        <SeesMark className="size-7 text-brand dark:text-brand-light" /> SEES Games
+        <SeesMark className="size-7 text-brand" /> SEES Games
       </Link>
-      <p className="font-heading text-[7rem] leading-none font-bold text-brand/15 select-none dark:text-brand-light/15 sm:text-[10rem]">
+      <p className="font-heading text-[7rem] leading-none font-bold text-brand/15 select-none sm:text-[10rem]">
         404
       </p>
       <EmptyIllustration art="lost" className="-mt-10 h-36 sm:-mt-14 sm:h-44" />

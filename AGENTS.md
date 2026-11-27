@@ -35,7 +35,8 @@ Product spec: `docs/PRD.md` (live version: https://claude.ai/artifact/5vxb7y7RGN
 
 - Colours exist only as tokens in `app/globals.css`. Use the utilities (`bg-primary`, `bg-brand`, `text-muted-foreground`, `border-border`, `text-live`, `bg-highlight`). No hex values or raw Tailwind palette colours (`bg-green-600`) anywhere else.
 - UI components come from shadcn (Radix base, Nova style; see `components.json`). Add more with `pnpm dlx shadcn@latest add <name>`. Treat `components/ui/*` as vendored: change it only for SEES-wide fixes, and build app-specific pieces in `components/` instead. shadcn's names (`primary`, `secondary`, `accent`) are mapped to the SEES palette, so its components are branded automatically.
-- Dark mode follows the device setting through `prefers-color-scheme`. A manual toggle would need next-themes and a class-based `dark` variant.
+- Dark mode is the reader's choice: next-themes puts a `dark` class on `<html>` (the moon in the header, Appearance in the More sheet). Everyone starts on light. Check new screens in both themes. On pitch-green surfaces (`bg-pitch`) the brand tokens keep their light values in dark mode, so `text-brand-foreground` stays white and `text-brand-light` stays mint; add `on-pitch` to an element whose green comes from something behind it (a sliding pill).
+- Sport photos behind match cards and heroes: `components/live/fixture-photo.tsx`, listed in `lib/design/sport-photos.ts` (files in `public/photos`).
 - Fonts: Oswald for headings (`font-heading`), Inter for body text (`font-sans`).
 - Phones first: everything must work at 360 px wide.
 
