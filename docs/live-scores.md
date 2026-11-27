@@ -55,6 +55,7 @@ console button
 | `lib/live/results.ts` | Set scores, group tables, race results, medals, medal table | Server |
 | `lib/live/commands.ts`, `errors.ts`, `stats-rows.ts`, `results-rows.ts` | Request checking, error mapping, row mapping (internal) | — |
 | `lib/live/*.test.ts` | Unit tests: `pnpm test` | — |
+| `lib/live/reactions.ts`, `components/live/reactions.tsx` | Live reactions on the match page: [Live reactions](#live-reactions-27-nov) | — |
 
 ---
 
@@ -456,6 +457,49 @@ Migration `20261125075848_live_boards_players_legs.sql`.
   - sets: `sets-console.tsx`: +1 per side, End set once the set is won under the event's rules (`lib/live/sets.ts` mirrors the database), and the admin's End early (a retirement);
   - races: `race-console.tsx`: entrants (year, name, lane), then places and times or DNF/DNS/DQ; Save keeps them private, Publish makes them final. The admin can fill a final from its heats.
 
+## Live reactions (27 Nov)
+
+Fans watching a match page tap a reaction (fire, shock, clap, laugh, heartbreak) or cheer for a side by tapping its crest. Everyone else sees the reactions float up and the cheer meter move within about 6 to 10 seconds. No sign-in, no names, no comments.
+
+**How it travels.** No Realtime (the free plan's 200 connections wouldn't survive a final). A tap floats at once and goes into the phone's tally. Every 5 seconds the tally is sent in one `add_reactions` call. The match page's existing poll of `/api/live/<id>` (every 6 s, cached 4 s) now also carries `reactions` (the totals) and `reactionsOpen`. Each phone floats the rise in the totals, minus its own taps, over the next 6 seconds. Reads stay at one cached query every 4 s; writes are at most one call per active fan every 5 s.
+
+| Piece | Where |
+| --- | --- |
+| Tables, limits, totals | `supabase/migrations/20261127004231_live_reactions.sql` |
+| Rules, limits and arithmetic (pure, tested) | `lib/live/reactions.ts` |
+| Totals for the API (cached 4 s, never throws) | `lib/live/reaction-state.ts` |
+| The poll | `app/api/live/[id]/route.ts`, `lib/live/use-live.ts` (`useLiveFixture` returns `reactions`) |
+| Button, tray, floating reactions, cheer meter | `components/live/reactions.tsx`, used in `components/live/match-centre.tsx` |
+| The phone's reaction id (separate from the analytics visit id, never linked to an account) | `lib/device-id.ts` |
+| Database tests (PGlite) | `supabase/tests/live-reactions.test.ts`, harness in `supabase/tests/db.ts` |
+
+**Database.**
+
+- `match_reactions(fixture_id, kind, shard, count)`: the totals, in 8 shards per kind so many phones adding at once don't queue on one row. Anyone can read; nobody writes directly.
+- `reaction_senders(session_id, fixture_id, last_at, sent, cheer_side)`: one row per phone per match, for the limits. RLS on with no policies, so only the function touches it.
+- `add_reactions(p_fixture_id, p_session, p_counts)`: security definer, for anon and signed-in users alike. Returns what it added.
+- `match_reaction_totals(p_fixture_id)`: one row per kind, 0 for none.
+- `live_reactions_open(p_fixture_id)`: the window rule.
+
+**Limits (the database refuses past these).**
+
+| Rule | Value | Refused with |
+| --- | --- | --- |
+| Open | Live or half time, then 15 minutes after the latest active event (races: after their results are published) | `reactions_closed` |
+| Per send | Up to 20 of one kind, 30 in all, known kinds only, cheers for one side | `invalid_input` |
+| Per phone | One send every 4 seconds (the app sends every 5) | `reactions_too_fast` |
+| Per phone per match | 1,000 taps | `reactions_limit` |
+| Cheering | The first cheer sets the phone's side; later cheers for the other side are dropped and the rest of the send still counts | (not refused) |
+
+**In the app.**
+
+- A refused tally is dropped quietly; one that couldn't be sent (no signal, or a moment too soon) waits for the next send.
+- The app also sends when the page is hidden and when the signal comes back.
+- No error toasts.
+- With reduced motion nothing floats, but the counts and the meter still update.
+- At most 40 reactions float at once, and at most 30 incoming per poll.
+- Before kick-off there's no button. After the window the button and crests stop taking taps, and the tray shows the final counts.
+
 ## Rules the database enforces
 
 These rules hold whatever the app does. They're tested in 290+ database scenarios:
@@ -473,6 +517,7 @@ These rules hold whatever the app does. They're tested in 290+ database scenario
 - Every sport only takes the events its format allows. A set closes only at a finished score; a sets match ends itself when a team wins enough sets.
 - Race results stay private until published, and published results change only through the admin. Every change is in the audit feed.
 - Group tables, knockouts, medals and the medal table are worked out from results; nothing is typed in.
+- Live reactions: only while a match is open, within each phone's limits, and never written directly (see [Live reactions](#live-reactions-27-nov)).
 
 ---
 

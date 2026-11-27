@@ -3,27 +3,15 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { visitId } from "@/lib/device-id";
 
 // First-party analytics for Admin → Analytics: a page view on each page, and
 // a heartbeat once a minute while the app is open (that's "online now").
 // The visit id is random and stays on this device; no cookies, no third
 // parties, no IP addresses. Admin pages aren't counted. See the privacy page.
+// The visit id lives in lib/device-id.ts.
 
-const KEY = "sees:visit-id";
 const HEARTBEAT_MS = 60_000;
-
-function visitId(): string {
-  try {
-    const existing = localStorage.getItem(KEY);
-    if (existing) return existing;
-    const id = crypto.randomUUID();
-    localStorage.setItem(KEY, id);
-    return id;
-  } catch {
-    // Private browsing: one id for this page load.
-    return (globalThis as { __seesVisit?: string }).__seesVisit ??= crypto.randomUUID();
-  }
-}
 
 function device(): "phone" | "tablet" | "computer" {
   const coarse = window.matchMedia("(pointer: coarse)").matches;
