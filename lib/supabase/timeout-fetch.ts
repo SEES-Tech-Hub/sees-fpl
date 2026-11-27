@@ -3,19 +3,19 @@
 // - A read (GET or HEAD) that takes longer than READ_TIMEOUT_MS is given up,
 //   so a stalled Supabase API fails the page fast (the error page then
 //   retries) instead of hanging for 30-50 s.
-// - A read that fails with a transient database error is tried again, up to
-//   READ_RETRIES times: 25P02 (the API's connection was left in a broken
-//   transaction, seen at launch), 57014 (statement timeout) and 503s. Each
-//   retry usually lands on a healthy connection.
+// - A read that hit a connection left in a broken transaction (25P02, seen
+//   at launch) is tried once more: the retry usually lands on a healthy
+//   connection. Timeouts, 503s and 504s are not retried: they mean the
+//   database is overloaded (on the free plan, out of disk IO budget), and
+//   asking again only adds to the load.
 // Writes are never cut off or repeated: that could leave the user unsure
 // whether it saved, or save it twice.
 
 export const READ_TIMEOUT_MS = 10_000;
-const READ_RETRIES = 2;
-const TRANSIENT = new Set(["25P02", "57014"]);
+const READ_RETRIES = 1;
+const TRANSIENT = new Set(["25P02"]);
 
 async function transient(res: Response) {
-  if (res.status === 503 || res.status === 504) return true;
   if (res.status < 500) return false;
   try {
     const body = (await res.clone().json()) as { code?: string };
