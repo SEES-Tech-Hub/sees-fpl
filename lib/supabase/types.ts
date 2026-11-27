@@ -1020,6 +1020,35 @@ export type Database = {
           },
         ]
       }
+      match_reactions: {
+        Row: {
+          count: number
+          fixture_id: string
+          kind: string
+          shard: number
+        }
+        Insert: {
+          count?: number
+          fixture_id: string
+          kind: string
+          shard: number
+        }
+        Update: {
+          count?: number
+          fixture_id?: string
+          kind?: string
+          shard?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_reactions_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matchdays: {
         Row: {
           deadline_at: string | null
@@ -1328,6 +1357,38 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reaction_senders: {
+        Row: {
+          cheer_side: string | null
+          fixture_id: string
+          last_at: string
+          sent: number
+          session_id: string
+        }
+        Insert: {
+          cheer_side?: string | null
+          fixture_id: string
+          last_at?: string
+          sent?: number
+          session_id: string
+        }
+        Update: {
+          cheer_side?: string | null
+          fixture_id?: string
+          last_at?: string
+          sent?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reaction_senders_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
             referencedColumns: ["id"]
           },
         ]
@@ -1895,6 +1956,19 @@ export type Database = {
       }
     }
     Functions: {
+      add_reactions: {
+        Args: { p_counts: Json; p_fixture_id: string; p_session: string }
+        Returns: Json
+      }
+      live_reaction_kinds: { Args: never; Returns: string[] }
+      live_reactions_open: { Args: { p_fixture_id: string }; Returns: boolean }
+      match_reaction_totals: {
+        Args: { p_fixture_id: string }
+        Returns: {
+          kind: string
+          total: number
+        }[]
+      }
       activate_wildcard: { Args: never; Returns: Json }
       admin_analytics: { Args: { p_days?: number }; Returns: Json }
       track_heartbeat: {

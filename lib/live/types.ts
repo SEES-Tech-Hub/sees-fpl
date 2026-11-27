@@ -210,6 +210,10 @@ export const LIVE_ERROR_CODES = [
   // Standings and knockouts (admin)
   "league_not_finished",
   "standings_tied",
+  // Live reactions (fans; the app drops a refused tally quietly)
+  "reactions_closed",
+  "reactions_too_fast",
+  "reactions_limit",
   // Requests
   "invalid_input",
   "duplicate_id",
@@ -538,3 +542,13 @@ export type MedalTableRow = {
   /** How the table is ranked (an admin setting). */
   rankBy: "medals" | "points";
 };
+
+// ---------------------------------------------------------------------------
+// Live reactions (match page). See lib/live/reactions.ts.
+// ---------------------------------------------------------------------------
+
+/** The five reactions fans can tap, then the two cheer sides. */
+export type ReactionKind = "fire" | "shock" | "clap" | "laugh" | "heartbreak" | "cheer_home" | "cheer_away";
+
+/** A count for every kind: a match's totals, or one phone's taps. */
+export type ReactionTotals = Record<ReactionKind, number>;

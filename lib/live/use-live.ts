@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FixtureState } from "./live-state-types";
+import { parseTotals, type ReactionTotals } from "./reactions";
 
 // Keeping public pages live by polling the cached endpoints in app/api/live
 // (why polling, not Realtime: lib/live/live-state.ts).
@@ -20,7 +21,7 @@ const MAX_BACKOFF_MS = 60_000;
 
 export type LiveStatus = "live" | "reconnecting";
 
-function usePoll<T>(url: string | null, onData: (data: T) => void): LiveStatus {
+function usePoll<T>(url: string | null, onData: (data: T) => void, { immediate = false }: { immediate?: boolean } = {}): LiveStatus {
   const [status, setStatus] = useState<LiveStatus>("live");
   const onDataRef = useRef(onData);
   useEffect(() => {
@@ -67,7 +68,8 @@ function usePoll<T>(url: string | null, onData: (data: T) => void): LiveStatus {
       else clearTimeout(timer);
     };
 
-    schedule(POLL_MS);
+    if (immediate) void tick();
+    else schedule(POLL_MS);
     document.addEventListener("visibilitychange", wake);
     window.addEventListener("online", wake);
     return () => {
@@ -77,7 +79,7 @@ function usePoll<T>(url: string | null, onData: (data: T) => void): LiveStatus {
       document.removeEventListener("visibilitychange", wake);
       window.removeEventListener("online", wake);
     };
-  }, [url]);
+  }, [url, immediate]);
 
   return status;
 }
@@ -105,20 +107,34 @@ export function useLiveFixtures(initial: FixtureState[]) {
   return { states, status };
 }
 
+/** What /api/live/<id> sends back. */
+type FixturePoll = {
+  state: FixtureState;
+  version: string;
+  /** The match's reaction totals, or null when reactions can't be read. */
+  reactions?: unknown;
+  /** Whether fans can react right now (kick-off to 15 minutes after full time). */
+  reactionsOpen?: boolean;
+};
+
 /**
  * One fixture (the match page). The score and clock update in place; when
  * anything else changes (a new event, a lineup, results) the page reloads its
- * server data with router.refresh().
+ * server data with router.refresh(). The same poll carries the live
+ * reactions (lib/live/reactions.ts), which never trigger a reload. The first
+ * poll goes straight away, so the reaction counts appear with the page.
  */
 export function useLiveFixture(fixtureId: string, initial: FixtureState, initialVersion: string) {
   const router = useRouter();
   const [state, setState] = useState(initial);
+  const [reactions, setReactions] = useState<{ totals: ReactionTotals | null; open: boolean } | null>(null);
   const versionRef = useRef(initialVersion);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const onData = useCallback(
-    (data: { state: FixtureState; version: string }) => {
+    (data: FixturePoll) => {
       setState(data.state);
+      setReactions({ totals: parseTotals(data.reactions), open: data.reactionsOpen === true });
       if (data.version !== versionRef.current) {
         versionRef.current = data.version;
         // Spread viewers' refreshes over 2 s so a goal doesn't hit the server
@@ -133,8 +149,8 @@ export function useLiveFixture(fixtureId: string, initial: FixtureState, initial
     },
     [router],
   );
-  const status = usePoll(`/api/live/${fixtureId}`, onData);
-  return { state, status };
+  const status = usePoll(`/api/live/${fixtureId}`, onData, { immediate: true });
+  return { state, status, reactions };
 }
 
 /**

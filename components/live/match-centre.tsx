@@ -19,6 +19,7 @@ import { MatchStatus, ReconnectingPill, RollingScore, useClock, useFullTimeConfe
 import { NotifyBell } from "./notify-bell";
 import { ShareButton } from "./share-button";
 import { RaceView } from "./race-view";
+import { CheerBar, CheerCrest, ReactionDock, useReactions, type Reactions } from "./reactions";
 import { EmptyIllustration } from "@/components/brand/empty-art";
 import { EmptyState } from "@/components/brand/empty-state";
 import { YearCrest } from "@/components/brand/year-crest";
@@ -37,7 +38,15 @@ const minuteLabel = (e: TimelineEntry) =>
 
 export function MatchCentre({ data }: { data: MatchPageData }) {
   const { fixture, timeline, lineups, setScores } = data;
-  const { state, status } = useLiveFixture(fixture.id, data.state, data.version);
+  const { state, status, reactions: reactionPoll } = useLiveFixture(fixture.id, data.state, data.version);
+  // Live reactions: the floating button for every match, and the cheer meter
+  // in the header for matches with two sides (not races).
+  const rx = useReactions({
+    fixtureId: fixture.id,
+    status: state.status,
+    poll: reactionPoll,
+    twoSided: fixture.sport.resultFormat !== "ranked",
+  });
   const [savedTab, setTab] = useLocalStorageState<Tab>("sees-live:match-tab", "timeline");
   // Only timed sports (football, handball, basketball) have lineups.
   const timed = fixture.sport.resultFormat === "timed";
@@ -48,6 +57,7 @@ export function MatchCentre({ data }: { data: MatchPageData }) {
       <MotionProvider>
         <ReconnectingPill show={status === "reconnecting"} />
         <RaceView data={data} state={state} />
+        <ReactionDock rx={rx} />
       </MotionProvider>
     );
   }
@@ -55,7 +65,8 @@ export function MatchCentre({ data }: { data: MatchPageData }) {
   return (
     <MotionProvider>
       <ReconnectingPill show={status === "reconnecting"} />
-      <MatchHeader data={data} state={state} />
+      <MatchHeader data={data} state={state} rx={rx} />
+      <ReactionDock rx={rx} />
 
       {fixture.sport.resultFormat === "sets" && setScores.length > 0 && <SetBoard data={data} />}
       {fixture.event.boards && data.boardEvents.length > 0 && <BoardResults data={data} />}
@@ -104,7 +115,7 @@ export function MatchCentre({ data }: { data: MatchPageData }) {
 // Score header
 // ---------------------------------------------------------------------------
 
-function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState }) {
+function MatchHeader({ data, state, rx }: { data: MatchPageData; state: FixtureState; rx: Reactions }) {
   const { fixture, timeline } = data;
   const clock = useClock({
     state,
@@ -187,7 +198,7 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
         </div>
 
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-start gap-2">
-          <HeaderTeam team={fixture.home} name={sideName(fixture, "home")} sub={sideYear(fixture, "home")} lines={scorers(fixture.home)} align="end" />
+          <HeaderTeam team={fixture.home} name={sideName(fixture, "home")} sub={sideYear(fixture, "home")} lines={scorers(fixture.home)} align="end" cheer={{ rx, side: "home" }} />
           <div className="flex flex-col items-center gap-2 pt-2">
             {notStarted ? (
               <span className="font-heading text-3xl font-bold opacity-80">v</span>
@@ -210,8 +221,16 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
             )}
             {!notStarted && <MatchStatus clock={clock} kickoffAt={fixture.kickoffAt} className="bg-background/90" />}
           </div>
-          <HeaderTeam team={fixture.away} name={sideName(fixture, "away")} sub={sideYear(fixture, "away")} lines={scorers(fixture.away)} align="start" />
+          <HeaderTeam team={fixture.away} name={sideName(fixture, "away")} sub={sideYear(fixture, "away")} lines={scorers(fixture.away)} align="start" cheer={{ rx, side: "away" }} />
         </div>
+
+        <CheerBar
+          rx={rx}
+          homeYear={fixture.home?.year}
+          awayYear={fixture.away?.year}
+          homeName={fixture.homeEntrant ? `${fixture.homeEntrant}'s fans` : sideName(fixture, "home")}
+          awayName={fixture.awayEntrant ? `${fixture.awayEntrant}'s fans` : sideName(fixture, "away")}
+        />
 
         <AnimatePresence>
           {flashTeam && (
@@ -250,16 +269,21 @@ function HeaderTeam({
   sub,
   lines,
   align,
+  cheer,
 }: {
   team: TeamSummary | null;
   name: string;
   sub: string | null;
   lines: string[];
   align: "start" | "end";
+  /** While reactions are open, the crest is this side's cheer button. */
+  cheer?: { rx: Reactions; side: "home" | "away" };
 }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
-      <YearCrest year={team?.year} variant="crest" tone="dark" size={96} label="" className="sm:h-28 sm:w-[108px]" />
+      <CheerCrest rx={cheer?.rx ?? null} side={cheer?.side ?? "home"} name={name}>
+        <YearCrest year={team?.year} variant="crest" tone="dark" size={96} label="" className="sm:h-28 sm:w-[108px]" />
+      </CheerCrest>
       <span className="text-sm leading-tight font-semibold sm:text-base">
         {name}
         {sub && <span className="block text-xs font-medium text-brand-foreground/75">{sub}</span>}

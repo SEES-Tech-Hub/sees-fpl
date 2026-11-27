@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "What the SEES Games Hub collects, why, who can see it, and how to have it removed.",
 };
 
-const UPDATED = "23 November 2026";
+const UPDATED = "27 November 2026";
 
 export default function PrivacyPage() {
   return (
@@ -56,6 +56,11 @@ export default function PrivacyPage() {
           WhatsApp). While the app is open it says it&apos;s still there once a minute, so we can show how many people are online. If you&apos;re
           signed in, the visit is linked to your account. No cookies, no IP addresses and no outside analytics companies. Page views are deleted
           after 120 days.
+        </Item>
+        <Item name="Reactions during a match">
+          If you tap a reaction or cheer during a live match, we add it to that match&apos;s totals. To stop one phone flooding a match, we also
+          keep how many reactions it sent and which side it cheers for, under a random number kept on your device just for reactions. That
+          number isn&apos;t linked to your account or your visits, and reactions never carry your name.
         </Item>
         <Item name="Officials and organisers">
           If you&apos;re an official or admin, the events you record (goals, cards, substitutions) and changes you make are saved with your account
