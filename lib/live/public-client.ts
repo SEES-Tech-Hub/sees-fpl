@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
+import { timeoutFetch } from "@/lib/supabase/timeout-fetch";
 import type { Database } from "@/lib/supabase/types";
 
 // A Supabase client with no session: it reads as an anonymous visitor, so
@@ -17,5 +18,6 @@ export function createPublicClient() {
   }
   return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { fetch: timeoutFetch },
   });
 }

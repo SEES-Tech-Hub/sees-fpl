@@ -21,7 +21,10 @@ export async function proxy(request: NextRequest) {
       },
     },
   );
-  await supabase.auth.getUser();
+  // getClaims checks the session token locally against the project's public
+  // signing key (ES256), refreshing it when it has expired; getUser asked
+  // Supabase over the network on every page, which stalls when it's busy.
+  await supabase.auth.getClaims();
   return response;
 }
 
