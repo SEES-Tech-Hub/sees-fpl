@@ -17,7 +17,7 @@ export function BrandLoader({ label = "Loading", className }: { label?: string; 
       )}
     >
       <SeesMark
-        className="size-16 text-brand dark:text-brand-light"
+        className="size-16 text-brand"
         tracesClassName="sees-traces-animate"
         ballClassName="motion-safe:animate-sees-ball"
       />

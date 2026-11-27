@@ -8,6 +8,7 @@ import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register"
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/components/shell/AppShell";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 import "./globals.css";
 import { SITE_DESCRIPTION } from "@/lib/seo";
 
@@ -33,8 +34,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#013f31",
-  // Light theme only, and stop phone browsers (Chrome's auto-dark, Samsung
-  // Internet) from forcing their own dark version onto the pages.
+  // The page starts light. Dark mode is the reader's own choice (the moon in
+  // the header, or Appearance in More), applied by next-themes. "only light"
+  // stops phone browsers (Chrome's auto-dark, Samsung Internet) from forcing
+  // their own dark version onto the light pages.
   colorScheme: "only light",
   width: "device-width",
   initialScale: 1,
@@ -43,23 +46,27 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   for (const href of PRELOAD_FONTS) preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   return (
-    <html lang="en" className="h-full antialiased">
+    // suppressHydrationWarning: the theme script sets the `dark` class on
+    // <html> before React loads, so the class can differ from the server's.
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="flex min-h-full flex-col font-sans">
-        <EarlyInstallCapture />
-        <TooltipProvider>
-          <AppShell>{children}</AppShell>
-        </TooltipProvider>
-        <Toaster />
-        <ServiceWorkerRegister />
+        <ThemeProvider>
+          <EarlyInstallCapture />
+          <TooltipProvider>
+            <AppShell>{children}</AppShell>
+          </TooltipProvider>
+          <Toaster />
+          <ServiceWorkerRegister />
 
-        {/* InstallPrompt reads the pathname, which suspends on dynamic routes. */}
-        <Suspense fallback={null}>
-          <InstallPrompt />
-        </Suspense>
-        {/* Reads the pathname too. First-party page views and "online now" (Admin → Analytics). */}
-        <Suspense fallback={null}>
-          <AnalyticsTracker />
-        </Suspense>
+          {/* InstallPrompt reads the pathname, which suspends on dynamic routes. */}
+          <Suspense fallback={null}>
+            <InstallPrompt />
+          </Suspense>
+          {/* Reads the pathname too. First-party page views and "online now" (Admin → Analytics). */}
+          <Suspense fallback={null}>
+            <AnalyticsTracker />
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   );

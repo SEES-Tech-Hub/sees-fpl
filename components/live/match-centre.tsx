@@ -22,6 +22,7 @@ import { RaceView } from "./race-view";
 import { EmptyIllustration } from "@/components/brand/empty-art";
 import { EmptyState } from "@/components/brand/empty-state";
 import { YearCrest } from "@/components/brand/year-crest";
+import { FixturePhoto, hasPhoto } from "./fixture-photo";
 
 type Tab = "timeline" | "lineups";
 
@@ -129,6 +130,7 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
   const flashTeam = flash === "home" ? fixture.home : flash === "away" ? fixture.away : null;
   const boards = fixture.event.boards;
   const what = fixture.sport.slug === "football" || fixture.event.name === fixture.sport.name ? fixture.sport.name : fixture.event.name;
+  const photo = hasPhoto(fixture.sport.slug);
   const aggregate = aggregateScore(
     { homeScore: state.homeScore, awayScore: state.awayScore, home: fixture.home, homeEntrant: fixture.homeEntrant },
     data.firstLeg,
@@ -137,16 +139,21 @@ function MatchHeader({ data, state }: { data: MatchPageData; state: FixtureState
   return (
     <section
       aria-label="Score"
-      className="relative overflow-hidden bg-pitch px-4 pt-4 pb-6 text-brand-foreground lg:rounded-2xl"
+      className={cn("relative overflow-hidden bg-pitch px-4 pt-4 pb-6 text-brand-foreground lg:rounded-2xl", photo && "sees-on-photo")}
     >
-      <span
-        aria-hidden
-        className="absolute inset-0 opacity-40"
-        style={{
-          background: `linear-gradient(115deg, ${teamColour(fixture.home?.year)} 0 30%, transparent 46% 54%, ${teamColour(fixture.away?.year)} 70% 100%)`,
-        }}
-      />
-      <CircuitPattern />
+      <FixturePhoto sport={fixture.sport.slug} homeYear={fixture.home?.year} awayYear={fixture.away?.year} priority />
+      {!photo && (
+        <>
+          <span
+            aria-hidden
+            className="absolute inset-0 opacity-40"
+            style={{
+              background: `linear-gradient(115deg, ${teamColour(fixture.home?.year)} 0 30%, transparent 46% 54%, ${teamColour(fixture.away?.year)} 70% 100%)`,
+            }}
+          />
+          <CircuitPattern />
+        </>
+      )}
       {flashTeam && (
         <motion.span
           aria-hidden

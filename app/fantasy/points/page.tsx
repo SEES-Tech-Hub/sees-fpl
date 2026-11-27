@@ -118,7 +118,7 @@ function PointsHero({ points }: { points: ManagerMatchdayPoints }) {
     >
       <CircuitPattern />
       <div className="relative">
-        <p className="text-xs font-semibold tracking-[0.06em] text-brand-light uppercase dark:text-brand">
+        <p className="text-xs font-semibold tracking-[0.06em] text-brand-light uppercase">
           Matchday {points.matchdayNumber} points
         </p>
         <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-end gap-2">

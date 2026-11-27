@@ -9,6 +9,7 @@ import { formatScore, sideName, sideWon, sideYear, tieLabel } from "@/lib/live/d
 import { cn } from "@/lib/utils";
 import { MatchStatus, RollingScore, teamColour, useClock, useGoalFlash } from "./live-bits";
 import { YearCrest } from "@/components/brand/year-crest";
+import { FixturePhoto, hasPhoto } from "./fixture-photo";
 
 const sportSlug = (slug: string) => slug.replace(/-/g, "_");
 
@@ -45,19 +46,27 @@ export function LiveCard({ card, state }: { card: FixtureCard; state: FixtureSta
   const flash = useGoalFlash(state.homeScore, state.awayScore);
   const flashTeam = flash === "home" ? card.home : flash === "away" ? card.away : null;
 
+  const photo = hasPhoto(card.sport.slug);
+
   return (
     <Link
       href={`/matches/${card.id}`}
-      className="group relative block w-[85%] shrink-0 snap-center overflow-hidden rounded-2xl bg-pitch p-4 text-brand-foreground shadow-raised outline-none focus-visible:ring-3 focus-visible:ring-ring sm:w-auto"
+      className={cn(
+        "group sees-lift relative block w-[85%] shrink-0 snap-center overflow-hidden rounded-2xl bg-pitch p-4 text-brand-foreground shadow-raised outline-none focus-visible:ring-3 focus-visible:ring-ring sm:w-auto",
+        photo && "sees-on-photo",
+      )}
     >
-      {/* Team colour wedges from each side */}
-      <span
-        aria-hidden
-        className="absolute inset-0 opacity-35"
-        style={{
-          background: `linear-gradient(110deg, ${teamColour(card.home?.year)} 0 22%, transparent 42% 58%, ${teamColour(card.away?.year)} 78% 100%)`,
-        }}
-      />
+      <FixturePhoto sport={card.sport.slug} homeYear={card.home?.year} awayYear={card.away?.year} sizes="(min-width: 640px) 28rem, 85vw" />
+      {/* Team colour wedges from each side (cards with a photo have a colour stripe instead) */}
+      {!photo && (
+        <span
+          aria-hidden
+          className="absolute inset-0 opacity-35"
+          style={{
+            background: `linear-gradient(110deg, ${teamColour(card.home?.year)} 0 22%, transparent 42% 58%, ${teamColour(card.away?.year)} 78% 100%)`,
+          }}
+        />
+      )}
       {flashTeam && (
         <span
           aria-hidden

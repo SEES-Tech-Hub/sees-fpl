@@ -185,7 +185,7 @@ function GameFilter({ games, value, onChange }: { games: SportSummary["events"];
             onClick={() => onChange(g.id)}
             className={cn(
               "relative h-9 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors",
-              on ? "text-brand-light" : "bg-card text-muted-foreground shadow-card hover:text-foreground",
+              on ? "on-pitch text-brand-light" : "bg-card text-muted-foreground shadow-card hover:text-foreground",
             )}
           >
             {on && <motion.span layoutId="game-filter" className="absolute inset-0 rounded-full bg-pitch" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}

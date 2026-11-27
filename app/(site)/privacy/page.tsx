@@ -17,7 +17,7 @@ export default function PrivacyPage() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 py-8 pb-16 lg:px-6">
       <header className="flex flex-col gap-3">
-        <SeesMark className="size-12 text-brand dark:text-brand-light" />
+        <SeesMark className="size-12 text-brand" />
         <p className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">SEES Games 2026</p>
         <h1 className="font-heading text-display font-bold text-brand uppercase dark:text-foreground">Privacy</h1>
         <p className="text-muted-foreground">
