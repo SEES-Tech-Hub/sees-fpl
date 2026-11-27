@@ -98,3 +98,4 @@
 - [2026-11-27] Server reads retry up to twice on transient database errors (25P02 broken connection, 57014 statement timeout, 503), so one bad Supabase connection no longer fails a page; writes are never repeated. Reset the API's stuck database connections (Tayo).
 - 2026-11-27: Match alerts switch in the More sheet and header, an alerts prompt, an Install the app row; install card can return after 3 days; one pop-up per visit.
 - 2026-11-27: Rankings show only the fantasy team name and year (no account names); animated tabs, year chips and staggered rows.
+- 2026-11-27: Analytics heartbeat (online now) switched off to save Supabase disk IO.

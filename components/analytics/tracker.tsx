@@ -6,12 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { visitId } from "@/lib/device-id";
 
 // First-party analytics for Admin → Analytics: a page view on each page, and
-// a heartbeat once a minute while the app is open (that's "online now").
+// (the "online now" heartbeat is switched off for now; see below).
 // The visit id is random and stays on this device; no cookies, no third
 // parties, no IP addresses. Admin pages aren't counted. See the privacy page.
 // The visit id lives in lib/device-id.ts.
-
-const HEARTBEAT_MS = 60_000;
 
 function device(): "phone" | "tablet" | "computer" {
   const coarse = window.matchMedia("(pointer: coarse)").matches;
@@ -62,25 +60,9 @@ export function AnalyticsTracker() {
       );
   }, [pathname]);
 
-  // Still here: a heartbeat each minute while the page is visible.
-  useEffect(() => {
-    if (!pathname || pathname.startsWith("/admin")) return;
-    const beat = () => {
-      if (document.visibilityState !== "visible") return;
-      createClient()
-        .rpc("track_heartbeat", { p_session: visitId(), p_path: pathname, p_device: device(), p_standalone: standalone() })
-        .then(
-          () => {},
-          () => {},
-        );
-    };
-    const timer = window.setInterval(beat, HEARTBEAT_MS);
-    document.addEventListener("visibilitychange", beat);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", beat);
-    };
-  }, [pathname]);
+  // The once-a-minute "still here" heartbeat ("online now") is off: on the
+  // free Supabase plan its writes used up the disk budget during the games.
+  // To bring it back, call track_heartbeat once a minute while visible.
 
   return null;
 }
