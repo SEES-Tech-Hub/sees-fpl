@@ -16,6 +16,7 @@ import type {
 } from "./engine-types";
 import { normalizeInviteCode } from "./leagues";
 import { calculateManagerMatchdayScore } from "./scoring";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 type RpcResult = Promise<{
   data: unknown;
@@ -39,6 +40,8 @@ type UntypedFilter = PromiseLike<{
   eq: (column: string, value: unknown) => UntypedFilter;
   in: (column: string, values: unknown[]) => UntypedFilter;
   is: (column: string, value: null) => UntypedFilter;
+  order: (column: string, options?: { ascending?: boolean }) => UntypedFilter;
+  range: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>;
   single: () => RpcResult;
   maybeSingle: () => RpcResult;
 };
@@ -256,16 +259,39 @@ export async function recalculateMatchdayAndRankings(input: {
   ] = await Promise.all([
     db(admin).from("fantasy_rules").select("*").eq("id", 1).single(),
     db(admin).from("matchdays").select("*").eq("id", input.matchdayId).single(),
-    db(admin).from("managers").select("*"),
-    db(admin)
-      .from("players")
-      .select("id, team_id, display_name, position, price_tenths, status"),
-    db(admin).from("picks").select("*").eq("matchday_id", input.matchdayId),
-    db(admin)
-      .from("transfers")
-      .select("manager_id, points_cost")
-      .eq("matchday_id", input.matchdayId),
+    // Paged: the API returns at most 1,000 rows a request, and 142
+    // managers × 15 picks is already over 2,000 (lib/supabase/fetch-all.ts).
+    fetchAll((from, to) => db(admin).from("managers").select("*").order("id").range(from, to)),
+    fetchAll((from, to) =>
+      db(admin)
+        .from("players")
+        .select("id, team_id, display_name, position, price_tenths, status")
+        .order("id")
+        .range(from, to),
+    ),
+    fetchAll((from, to) =>
+      db(admin).from("picks").select("*").eq("matchday_id", input.matchdayId).order("id").range(from, to),
+    ),
+    fetchAll((from, to) =>
+      db(admin)
+        .from("transfers")
+        .select("manager_id, points_cost")
+        .eq("matchday_id", input.matchdayId)
+        .order("id")
+        .range(from, to),
+    ),
   ]);
+  for (const [what, res] of [
+    ["managers", managersRes],
+    ["players", playersRes],
+    ["picks", picksRes],
+    ["transfers", transfersRes],
+  ] as const) {
+    if (res.error) {
+      console.error(`[fantasy] loading ${what} failed:`, res.error.message);
+      return fail("DB_ERROR", `Could not load ${what}. Please try again.`);
+    }
+  }
 
   if (rulesRes.error || !rulesRes.data) {
     return fail("RULES_NOT_FOUND", "Fantasy rules not found.");
@@ -367,9 +393,18 @@ export async function recalculateMatchdayAndRankings(input: {
       .eq("id", matchday.id);
   }
 
-  const { data: allMdPoints } = await db(admin)
-    .from("manager_matchday_points")
-    .select("manager_id, net_points");
+  const { data: allMdPoints, error: totalsErr } = await fetchAll((from, to) =>
+    db(admin)
+      .from("manager_matchday_points")
+      .select("manager_id, net_points")
+      .order("manager_id")
+      .order("matchday_id")
+      .range(from, to),
+  );
+  if (totalsErr) {
+    console.error("[fantasy] loading matchday points failed:", totalsErr.message);
+    return fail("DB_ERROR", "Could not total the points. Please try again.");
+  }
 
   const totalsByManager = new Map<string, number>();
   for (const row of (allMdPoints ?? []) as {
