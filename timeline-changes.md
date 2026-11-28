@@ -110,3 +110,4 @@
 - 2026-11-28: Shared reads (fantasy stats/players/matchdays, tables, sport and match pages, fixture states, home cards, medals, announcement) moved to the shared remote cache (use cache: remote), so each slow query runs once for the whole site, not once per server.
 - 2026-11-28: Fix: recalculating points read only the first 1,000 picks (the API's row cap), so ~72 managers scored 0. Recalculation and rankings now page through every row (lib/supabase/fetch-all.ts).
 - 2026-11-28: Keeper saves (console Save buttons, 'save' event, saves in player_match_stats incl. penalty saves, 1 fantasy point per 3 saves), display-only match ratings on lineups, late-joiner note on the points page.
+- 2026-11-28: Chess becomes one departmental round robin on 2 boards (organisers' schedule, White first); Chess (women) removed.
