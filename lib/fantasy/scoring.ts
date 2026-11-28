@@ -135,6 +135,19 @@ export function calculatePlayerPoints(
     });
   }
 
+  // Saves: pts_saves for every pts_saves_step saves (penalty saves count too).
+  const saveStep = rules.pts_saves_step ?? 0;
+  const perSaves = rules.pts_saves ?? 0;
+  if (saveStep > 0 && perSaves !== 0 && stats.saves >= saveStep) {
+    const steps = Math.floor(stats.saves / saveStep);
+    items.push({
+      key: "saves",
+      label: `${stats.saves} saves`,
+      count: steps,
+      points: steps * perSaves,
+    });
+  }
+
   if (stats.penaltiesMissed > 0 && rules.pts_penalty_miss !== 0) {
     items.push({
       key: "penalty_missed",
@@ -204,6 +217,7 @@ export function aggregatePlayerStats(
       existing.redCards += row.redCards;
       existing.penaltiesMissed += row.penaltiesMissed;
       existing.penaltiesSaved += row.penaltiesSaved;
+      existing.saves += row.saves;
       existing.manOfTheMatch = existing.manOfTheMatch || row.manOfTheMatch;
       existing.fixtureFinished = existing.fixtureFinished && row.fixtureFinished;
     }

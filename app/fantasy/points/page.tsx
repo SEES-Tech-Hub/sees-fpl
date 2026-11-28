@@ -33,15 +33,19 @@ async function Points({ searchParams }: { searchParams: PageProps<"/fantasy/poin
   const [history, md, players] = await Promise.all([getMatchdayHistory(user, managerId), getMatchdayState(), getPlayers()]);
   if (history.length === 0) {
     const first = md.next ?? md.matchdays[0];
+    // A matchday's deadline has passed without this team in it: they joined late.
+    const missed = md.current;
     return (
       <>
         <PageHeader caption="Points" title={mine ? manager.teamName : "Points"} />
         <EmptyState
           art="whistle"
-          title="No points yet"
+          title={mine && missed ? `Your team starts on Matchday ${first?.number ?? missed.number + 1}` : "No points yet"}
           description={
             mine
-              ? `Points start once the Matchday ${first?.number ?? 1} deadline passes (${formatWAT(first?.deadlineAt)}).`
+              ? missed
+                ? `You joined after the Matchday ${missed.number} deadline, so Matchday ${missed.number} doesn't count for you. Your points start once the Matchday ${first?.number ?? missed.number + 1} deadline passes (${formatWAT(first?.deadlineAt)}).`
+                : `Points start once the Matchday ${first?.number ?? 1} deadline passes (${formatWAT(first?.deadlineAt)}).`
               : "This manager's points show after the deadline."
           }
           href={mine ? "/fantasy/team" : "/fantasy/rankings"}

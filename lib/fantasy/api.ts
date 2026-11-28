@@ -123,6 +123,16 @@ function scoringRules(r: RulesRow): ScoringRule[] {
       note: "Only while on the pitch",
     },
     { key: "penalty_saved", label: "Penalty saved", points: same(r.pts_penalty_save), note: "Normal or extra time, not shootouts" },
+    ...(r.pts_saves_step
+      ? [
+          {
+            key: "saves" as const,
+            label: `Every ${r.pts_saves_step} saves`,
+            points: same(r.pts_saves ?? 0),
+            note: "Goalkeepers; penalty saves count",
+          },
+        ]
+      : []),
     { key: "penalty_missed", label: "Penalty missed", points: same(r.pts_penalty_miss), note: "Not shootouts" },
     { key: "yellow_card", label: "Yellow card", points: same(r.pts_yellow_card) },
     { key: "red_card", label: "Red card", points: same(r.pts_red_card) },

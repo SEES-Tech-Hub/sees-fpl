@@ -62,6 +62,8 @@ export function describeEvent(event: ConsoleEvent, names: Names): string {
       return other
         ? `Penalty saved: ${player ?? "taker"} (${team}), saved by ${other}`
         : `Penalty missed: ${player ?? "taker"} (${team})`;
+    case "save":
+      return `Save: ${player ?? "keeper"} (${team})`;
     case "shootout_kick":
       return `Shootout ${team}: ${event.scored ? "scored" : "missed"}${player ? ` (${player})` : ""}`;
     case "man_of_the_match":

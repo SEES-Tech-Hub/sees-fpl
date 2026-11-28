@@ -370,6 +370,39 @@ export function PenaltySheet({ ctx }: { ctx: SheetContext }) {
   );
 }
 
+/**
+ * The goalkeeper a Save button credits: the team's GK on the pitch, if there's
+ * exactly one. Otherwise null, and the console asks (SaveSheet).
+ */
+export function keeperOnPitch(ctx: Pick<SheetContext, "state" | "squads">, teamId: string): string | null {
+  const squad = ctx.squads.filter((p) => p.teamId === teamId);
+  const onPitch = new Set(eligiblePlayers(ctx.state, teamId, squad, "on_pitch"));
+  const keepers = squad.filter((p) => p.position === "GK" && onPitch.has(p.id));
+  return keepers.length === 1 ? keepers[0].id : null;
+}
+
+/** Who made the save, when the console can't tell (no GK on the pitch, or two). */
+export function SaveSheet({ ctx, teamId }: { ctx: SheetContext; teamId: string }) {
+  const { teamName, pick } = useTeamTools(ctx);
+  const [keeperId, setKeeperId] = useState<string | null>(null);
+  const players = pick(teamId, "on_pitch").sort((a, b) => Number(b.position === "GK") - Number(a.position === "GK"));
+  return (
+    <Sheet
+      title={`Save ${teamName(teamId)}`}
+      description="Who's in goal? Saves count for the keeper's fantasy points (1 point for every 3)."
+      submitLabel="Record save"
+      canSubmit={!!keeperId}
+      onSubmit={() => {
+        if (!keeperId) return;
+        ctx.record({ type: "save", teamId, playerId: keeperId });
+        ctx.close();
+      }}
+    >
+      <PlayerPicker label={`In goal (${teamName(teamId)})`} players={players} value={keeperId} onChange={setKeeperId} />
+    </Sheet>
+  );
+}
+
 export function MotmSheet({ ctx }: { ctx: SheetContext }) {
   const { pick } = useTeamTools(ctx);
   const [playerId, setPlayerId] = useState<string | null>(null);

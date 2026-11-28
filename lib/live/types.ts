@@ -64,6 +64,8 @@ export type RecordEventInput = RecordEventBase &
         savedById?: string | null;
       }
     | { type: "shootout_kick"; teamId: string; takerId?: string | null; scored: boolean }
+    /** A goalkeeper's save (timed sports). Not shown in the timeline; counts for stats and fantasy. */
+    | { type: "save"; teamId: string; playerId: string }
     | { type: "man_of_the_match"; playerId: string }
     | {
         type: "full_time";
@@ -409,6 +411,8 @@ export type PlayerMatchStats = {
   redFromSecondYellow: boolean;
   penaltiesMissed: number;
   penaltiesSaved: number;
+  /** Saves made, penalties saved included. */
+  saves: number;
   manOfTheMatch: boolean;
   /** The fixture was a walkover: no player points. */
   walkover: boolean;

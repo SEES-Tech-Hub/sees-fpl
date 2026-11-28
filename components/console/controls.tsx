@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeftRight, CircleSlash, Crown, Goal, ListChecks, RectangleVertical, TriangleAlert } from "lucide-react";
+import { ArrowLeftRight, CircleSlash, Crown, Goal, Hand, ListChecks, RectangleVertical, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import type { Controls, MatchState, PeriodButton } from "@/lib/console/match-state";
@@ -14,7 +14,9 @@ import {
   GoalSheet,
   MotmSheet,
   PenaltySheet,
+  SaveSheet,
   SubSheet,
+  keeperOnPitch,
   type EventCommand,
   type SheetContext,
 } from "./event-sheets";
@@ -28,6 +30,7 @@ type OpenSheet =
   | { kind: "card" }
   | { kind: "sub" }
   | { kind: "penalty" }
+  | { kind: "save"; teamId: string }
   | { kind: "motm" }
   | { kind: "lineup"; teamId: string };
 
@@ -189,6 +192,23 @@ export function ConsoleControls({
               Sub
             </Button>
           )}
+          {controls.canPenaltyMiss &&
+            [home, away].map((team) => (
+              <Button
+                key={`save-${team.id}`}
+                variant="outline"
+                className={BIG}
+                onClick={() => {
+                  // One tap: the keeper on the pitch gets the save. Ask only when it's unclear.
+                  const keeper = keeperOnPitch(ctx, team.id);
+                  if (keeper) record({ type: "save", teamId: team.id, playerId: keeper });
+                  else setSheet({ kind: "save", teamId: team.id });
+                }}
+              >
+                <Hand aria-hidden className="size-5" />
+                Save {team.shortName}
+              </Button>
+            ))}
           {controls.canPenaltyMiss && (
             <Button variant="outline" className={cn(BIG, "col-span-2")} onClick={() => setSheet({ kind: "penalty" })}>
               <CircleSlash aria-hidden className="size-5" />
@@ -272,6 +292,7 @@ export function ConsoleControls({
         {sheet?.kind === "card" && <CardSheet ctx={ctx} />}
         {sheet?.kind === "sub" && <SubSheet ctx={ctx} />}
         {sheet?.kind === "penalty" && <PenaltySheet ctx={ctx} />}
+        {sheet?.kind === "save" && <SaveSheet ctx={ctx} teamId={sheet.teamId} />}
         {sheet?.kind === "motm" && <MotmSheet ctx={ctx} />}
         {sheet?.kind === "lineup" && (
           <LineupSheet

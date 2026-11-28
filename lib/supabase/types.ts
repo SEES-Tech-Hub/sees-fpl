@@ -359,6 +359,8 @@ export type Database = {
           pts_penalty_miss: number
           pts_penalty_save: number
           pts_red_card: number
+          pts_saves: number
+          pts_saves_step: number
           pts_yellow_card: number
           squad_size: number
           starting_size: number
@@ -407,6 +409,8 @@ export type Database = {
           pts_penalty_miss?: number
           pts_penalty_save?: number
           pts_red_card?: number
+          pts_saves?: number
+          pts_saves_step?: number
           pts_yellow_card?: number
           squad_size?: number
           starting_size?: number
@@ -455,6 +459,8 @@ export type Database = {
           pts_penalty_miss?: number
           pts_penalty_save?: number
           pts_red_card?: number
+          pts_saves?: number
+          pts_saves_step?: number
           pts_yellow_card?: number
           squad_size?: number
           starting_size?: number
@@ -1831,6 +1837,7 @@ export type Database = {
           position: Database["public"]["Enums"]["player_position"] | null
           red_cards: number | null
           red_from_second_yellow: boolean | null
+          saves: number | null
           started: boolean | null
           team_id: string | null
           walkover: boolean | null
@@ -2656,6 +2663,7 @@ export type Database = {
         | "walkover"
         | "point"
         | "set_end"
+        | "save"
       match_period:
         | "first_half"
         | "second_half"
@@ -2825,6 +2833,7 @@ export const Constants = {
         "walkover",
         "point",
         "set_end",
+        "save",
       ],
       match_period: [
         "first_half",

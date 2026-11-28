@@ -53,6 +53,8 @@ const defaultRules: FantasyRules = {
   pts_goals_conceded_mid: 0,
   pts_goals_conceded_fwd: 0,
   pts_penalty_save: 5,
+  pts_saves: 1,
+  pts_saves_step: 3,
   pts_penalty_miss: -2,
   pts_yellow_card: -1,
   pts_red_card: -3,
@@ -73,6 +75,7 @@ function makeStats(
     goals: 0,
     assists: 0,
     ownGoals: 0,
+    saves: 0,
     goalsConcededOnPitch: 0,
     yellowCards: 0,
     redCards: 0,
@@ -749,5 +752,26 @@ it("E6c, E7, E8c, E8d: covers second-yellow red, own goal, shootout ignore, and 
         defaultRules,
       ).points,
     ).toBe(6);
+  });
+});
+describe("keeper saves", () => {
+  const keeper = (saves: number) => makeStats("gk1", { saves });
+  const savesPoints = (saves: number) =>
+    calculatePlayerPoints("GK", keeper(saves), defaultRules).items.find((i) => i.key === "saves")?.points ?? 0;
+
+  it("gives 1 point for every 3 saves", () => {
+    expect(savesPoints(2)).toBe(0);
+    expect(savesPoints(3)).toBe(1);
+    expect(savesPoints(10)).toBe(3);
+  });
+
+  it("names the saves in the breakdown", () => {
+    const item = calculatePlayerPoints("GK", keeper(7), defaultRules).items.find((i) => i.key === "saves");
+    expect(item).toMatchObject({ label: "7 saves", count: 2, points: 2 });
+  });
+
+  it("gives nothing when the rules predate saves", () => {
+    const oldRules = { ...defaultRules, pts_saves: undefined, pts_saves_step: undefined };
+    expect(calculatePlayerPoints("GK", keeper(9), oldRules).items.some((i) => i.key === "saves")).toBe(false);
   });
 });

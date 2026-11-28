@@ -27,6 +27,7 @@ const LABEL: Record<string, string> = {
   card: "Card",
   substitution: "Sub",
   penalty_miss: "Penalty missed",
+  save: "Save",
   shootout_kick: "Shootout kick",
   man_of_the_match: "Player of the match",
   period_start: "Period start",

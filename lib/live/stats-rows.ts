@@ -56,6 +56,7 @@ export function toPlayerMatchStats(row: PlayerMatchStatsView): PlayerMatchStats 
     redFromSecondYellow: yes(row.red_from_second_yellow),
     penaltiesMissed: n(row.penalties_missed),
     penaltiesSaved: n(row.penalties_saved),
+    saves: n(row.saves),
     manOfTheMatch: yes(row.man_of_the_match),
     walkover: yes(row.walkover),
     fixtureFinished: yes(row.fixture_finished),

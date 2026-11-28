@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { ArrowDown, ArrowUp, Star } from "lucide-react";
+import { ArrowDown, ArrowUp, Hand, Star } from "lucide-react";
 import { EmptyState } from "@/components/brand/empty-state";
 import { SlidingTabs } from "@/components/fantasy/motion-bits";
 import { Pitch } from "@/components/fantasy/pitch";
@@ -10,6 +10,7 @@ import { PlayerFace } from "@/components/fantasy/player-face";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { teamColour } from "@/lib/design/team-colour";
 import { playerPhotoUrl } from "@/lib/fantasy/player-photos";
+import { matchRatings, ratingBand } from "@/lib/live/ratings";
 import type { LineupPlayer, TeamSummary, TimelineEntry } from "@/lib/live/types";
 import { cn } from "@/lib/utils";
 
@@ -21,9 +22,12 @@ import { cn } from "@/lib/utils";
 //   underneath, with who came on and when.
 // - Other sports: the same players as a list, with the events as chips.
 // - Tap anyone: a sheet with that player's match so far.
+// - Everyone who has played carries a match rating (lib/live/ratings.ts;
+//   display only), and the best-rated player gets a star. Keepers show their
+//   saves; saves never appear as separate timeline moments.
 // Everything comes from the match timeline, so it updates live.
 
-type Kind = "goal" | "own_goal" | "assist" | "yellow" | "red" | "off" | "on" | "motm" | "pen_miss";
+type Kind = "goal" | "own_goal" | "assist" | "yellow" | "red" | "off" | "on" | "motm" | "pen_miss" | "save" | "pen_save";
 type PlayerEvent = { kind: Kind; minute: string; text: string };
 
 const ORDER = { GK: 0, DEF: 1, MID: 2, FWD: 3 } as const;
@@ -55,6 +59,9 @@ export function eventsByPlayer(timeline: TimelineEntry[]) {
       add(e.otherPlayerId, { kind: "on", minute: m, text: `Came on${e.playerName ? ` for ${e.playerName}` : ""}` });
     } else if (e.type === "penalty_miss") {
       add(e.playerId, { kind: "pen_miss", minute: m, text: e.otherPlayerName ? `Penalty saved by ${e.otherPlayerName}` : "Missed a penalty" });
+      add(e.otherPlayerId, { kind: "pen_save", minute: m, text: `Saved a penalty${e.playerName ? ` from ${e.playerName}` : ""}` });
+    } else if (e.type === "save") {
+      add(e.playerId, { kind: "save", minute: m, text: "Save" });
     } else if (e.type === "man_of_the_match") {
       add(e.playerId, { kind: "motm", minute: "", text: "Player of the match" });
     }
@@ -63,6 +70,11 @@ export function eventsByPlayer(timeline: TimelineEntry[]) {
 }
 
 const count = (evs: PlayerEvent[], ...kinds: Kind[]) => evs.filter((e) => kinds.includes(e.kind)).length;
+const savesOf = (evs: PlayerEvent[]) => count(evs, "save", "pen_save");
+/** The events worth listing one by one (saves are shown as a count instead). */
+const listed = (evs: PlayerEvent[]) => evs.filter((e) => e.kind !== "save");
+
+type Ratings = { of: Map<string, number>; best: string | null };
 
 export function Lineups({
   players,
@@ -83,6 +95,13 @@ export function Lineups({
   const [shown, setShown] = useState<LineupPlayer | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const events = useMemo(() => eventsByPlayer(timeline), [timeline]);
+  const ratings = useMemo<Ratings>(() => {
+    const of = matchRatings(players, timeline);
+    let best: string | null = null;
+    for (const [id, r] of of) if (best === null || r > (of.get(best) ?? 0)) best = id;
+    // A star only means something once someone has done something.
+    return { of, best: best !== null && (of.get(best) ?? 0) > 7 ? best : null };
+  }, [players, timeline]);
 
   if (players.length === 0 || teams.length === 0) {
     return (
@@ -130,7 +149,14 @@ export function Lineups({
             exit={{ opacity: 0, x: -16 }}
             transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
           >
-            <TeamSheet team={team} pitch={pitch} events={events} onOpen={open} players={players.filter((p) => p.teamId === team.id)} />
+            <TeamSheet
+              team={team}
+              pitch={pitch}
+              events={events}
+              ratings={ratings}
+              onOpen={open}
+              players={players.filter((p) => p.teamId === team.id)}
+            />
           </motion.div>
         </AnimatePresence>
         <Legend />
@@ -139,6 +165,8 @@ export function Lineups({
         player={shown}
         year={shown ? yearOf(shown) : team.year}
         events={shown ? (events.get(shown.playerId) ?? []) : []}
+        rating={shown ? (ratings.of.get(shown.playerId) ?? null) : null}
+        best={shown !== null && ratings.best === shown.playerId}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
       />
@@ -151,18 +179,21 @@ function TeamSheet({
   players,
   pitch,
   events,
+  ratings,
   onOpen,
 }: {
   team: TeamSummary;
   players: LineupPlayer[];
   pitch: boolean;
   events: Map<string, PlayerEvent[]>;
+  ratings: Ratings;
   onOpen: (p: LineupPlayer) => void;
 }) {
   const sorted = [...players].sort((a, b) => ORDER[a.position] - ORDER[b.position] || (a.shirtNumber ?? 99) - (b.shirtNumber ?? 99));
   const starters = sorted.filter((p) => p.role === "starter");
   const bench = sorted.filter((p) => p.role === "bench");
   const evs = (p: LineupPlayer) => events.get(p.playerId) ?? [];
+  const rate = (p: LineupPlayer) => ({ rating: ratings.of.get(p.playerId) ?? null, best: ratings.best === p.playerId });
   const formation = (["DEF", "MID", "FWD"] as const).map((pos) => starters.filter((p) => p.position === pos).length).filter(Boolean).join("-");
 
   if (!pitch) {
@@ -171,14 +202,14 @@ function TeamSheet({
         {starters.length > 0 && (
           <ListCard title="Starting" aside={`${starters.length} players`}>
             {starters.map((p, i) => (
-              <ListRow key={p.playerId} player={p} year={team.year} events={evs(p)} index={i} onOpen={onOpen} />
+              <ListRow key={p.playerId} player={p} year={team.year} events={evs(p)} {...rate(p)} index={i} onOpen={onOpen} />
             ))}
           </ListCard>
         )}
         {bench.length > 0 && (
           <ListCard title="Bench" muted>
             {bench.map((p, i) => (
-              <ListRow key={p.playerId} player={p} year={team.year} events={evs(p)} index={starters.length + i} onOpen={onOpen} />
+              <ListRow key={p.playerId} player={p} year={team.year} events={evs(p)} {...rate(p)} index={starters.length + i} onOpen={onOpen} />
             ))}
           </ListCard>
         )}
@@ -207,7 +238,15 @@ function TeamSheet({
                   style={{ gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))`, maxWidth: `${row.length * 5.5}rem` }}
                 >
                   {row.map((p) => (
-                    <PitchChip key={p.playerId} player={p} year={team.year} events={evs(p)} index={starters.indexOf(p)} onOpen={onOpen} />
+                    <PitchChip
+                      key={p.playerId}
+                      player={p}
+                      year={team.year}
+                      events={evs(p)}
+                      {...rate(p)}
+                      index={starters.indexOf(p)}
+                      onOpen={onOpen}
+                    />
                   ))}
                 </div>
               );
@@ -237,6 +276,9 @@ function TeamSheet({
                   >
                     <span className="relative">
                       <Face player={p} year={team.year} size={40} />
+                      {rate(p).rating !== null && (
+                        <RatingPill {...rate(p)} rating={rate(p).rating!} className="absolute -bottom-1 -left-2" />
+                      )}
                       {on && <MinuteBadge kind="on" minute={on.minute} className="absolute -top-1.5 -right-3" />}
                       <Badges events={e.filter((x) => x.kind !== "on")} className="absolute -top-1.5 -left-2" />
                     </span>
@@ -278,12 +320,16 @@ function PitchChip({
   player: p,
   year,
   events,
+  rating,
+  best,
   index,
   onOpen,
 }: {
   player: LineupPlayer;
   year: number;
   events: PlayerEvent[];
+  rating: number | null;
+  best: boolean;
   index: number;
   onOpen: (p: LineupPlayer) => void;
 }) {
@@ -299,6 +345,7 @@ function PitchChip({
       >
         <span className={cn("relative", gone && "opacity-70")}>
           <Face player={p} year={year} size={48} />
+          {rating !== null && <RatingPill rating={rating} best={best} className="absolute -bottom-1 -left-2.5" />}
           <Badges events={events.filter((e) => e.kind !== "off")} className="absolute -top-1.5 -right-2.5" />
           {off && <MinuteBadge kind="off" minute={off.minute} className="absolute -top-1.5 -left-3" />}
         </span>
@@ -323,7 +370,8 @@ function Badges({ events, className }: { events: PlayerEvent[]; className?: stri
   const yellow = count(events, "yellow");
   const red = count(events, "red");
   const motm = count(events, "motm");
-  if (!goals && !own && !assists && !yellow && !red && !motm) return null;
+  const saves = savesOf(events);
+  if (!goals && !own && !assists && !yellow && !red && !motm && !saves) return null;
   return (
     <span className={cn("flex items-center gap-0.5", className)}>
       {goals > 0 && <Dot label={`${goals} goal${goals > 1 ? "s" : ""}`} n={goals} className="bg-background text-foreground"><Ball /></Dot>}
@@ -332,6 +380,12 @@ function Badges({ events, className }: { events: PlayerEvent[]; className?: stri
       {yellow > 0 && !red && <span aria-label="Booked" className="h-3.5 w-2.5 rounded-[2px] bg-highlight shadow-sm" />}
       {red > 0 && <span aria-label="Sent off" className="h-3.5 w-2.5 rounded-[2px] bg-live shadow-sm" />}
       {motm > 0 && <Dot label="Player of the match" className="bg-highlight text-highlight-foreground"><Star className="size-2.5 fill-current" /></Dot>}
+      {saves > 0 && (
+        <span aria-label={`${saves} save${saves > 1 ? "s" : ""}`} className="flex h-4 items-center gap-px rounded-full bg-background px-1 text-[0.5625rem] font-extrabold text-foreground shadow-sm tabular-nums">
+          <Hand className="size-2.5" aria-hidden />
+          {saves}
+        </span>
+      )}
     </span>
   );
 }
@@ -341,6 +395,26 @@ function Dot({ label, n = 1, className, children }: { label: string; n?: number;
     <span aria-label={label} className={cn("flex h-4 min-w-4 items-center justify-center gap-px rounded-full px-0.5 text-[0.5625rem] font-extrabold shadow-sm", className)}>
       {children}
       {n > 1 && <span>{n}</span>}
+    </span>
+  );
+}
+
+const BAND = {
+  great: "bg-brand text-brand-foreground",
+  good: "bg-success text-background",
+  ok: "bg-background text-foreground",
+  poor: "bg-highlight text-highlight-foreground",
+} as const;
+
+/** A match rating, coloured by how good it is; the best-rated player's carries a star. */
+function RatingPill({ rating, best = false, className }: { rating: number; best?: boolean; className?: string }) {
+  return (
+    <span
+      aria-label={`Rating ${rating.toFixed(1)}${best ? ", best on the pitch" : ""}`}
+      className={cn("flex h-4 items-center gap-px rounded-full px-1 text-[0.5625rem] font-extrabold shadow-sm tabular-nums", BAND[ratingBand(rating)], className)}
+    >
+      {best && <Star className="size-2.5 fill-current" aria-hidden />}
+      {rating.toFixed(1)}
     </span>
   );
 }
@@ -397,6 +471,8 @@ const CHIP: Record<Kind, string> = {
   on: "bg-success/15 text-success",
   motm: "bg-highlight/25 text-foreground",
   pen_miss: "bg-muted text-muted-foreground",
+  save: "bg-muted text-foreground",
+  pen_save: "bg-brand-light/60 text-brand dark:text-pitch",
 };
 
 function EventChip({ e }: { e: PlayerEvent }) {
@@ -416,6 +492,7 @@ function EventIcon({ kind }: { kind: Kind }) {
   if (kind === "off") return <ArrowDown className="size-3" strokeWidth={3} aria-hidden />;
   if (kind === "on") return <ArrowUp className="size-3" strokeWidth={3} aria-hidden />;
   if (kind === "motm") return <Star className="size-3 fill-current" aria-hidden />;
+  if (kind === "save" || kind === "pen_save") return <Hand className="size-3" aria-hidden />;
   return null;
 }
 
@@ -423,16 +500,21 @@ function ListRow({
   player: p,
   year,
   events,
+  rating,
+  best,
   index,
   onOpen,
 }: {
   player: LineupPlayer;
   year: number;
   events: PlayerEvent[];
+  rating: number | null;
+  best: boolean;
   index: number;
   onOpen: (p: LineupPlayer) => void;
 }) {
   const unused = p.role === "bench" && !p.appeared;
+  const saves = savesOf(events);
   const off = events.some((e) => e.kind === "off") || p.sentOff;
   return (
     <motion.li
@@ -457,10 +539,19 @@ function ListRow({
           </span>
         </span>
         <span className="flex max-w-[45%] flex-wrap justify-end gap-1">
-          {events.map((e, i) => (
-            <EventChip key={i} e={e} />
-          ))}
+          {listed(events)
+            .filter((e) => e.kind !== "pen_save")
+            .map((e, i) => (
+              <EventChip key={i} e={e} />
+            ))}
+          {saves > 0 && (
+            <span className={cn("inline-flex h-5.5 items-center gap-1 rounded-full px-2 text-[0.6875rem] font-bold tabular-nums", CHIP.save)}>
+              <Hand className="size-3" aria-hidden />
+              {saves}
+            </span>
+          )}
         </span>
+        {rating !== null && <RatingPill rating={rating} best={best} className="h-5 px-1.5 text-[0.6875rem]" />}
       </button>
     </motion.li>
   );
@@ -477,6 +568,10 @@ function Legend() {
       <span className="flex items-center gap-1"><span className="h-3 w-2 rounded-[2px] bg-live" /> Red</span>
       <span className="flex items-center gap-1 text-live"><ArrowDown className="size-3" strokeWidth={3} /> Off</span>
       <span className="flex items-center gap-1 text-success"><ArrowUp className="size-3" strokeWidth={3} /> On</span>
+      <span className="flex items-center gap-1"><Hand className="size-3" /> Saves</span>
+      <span className="flex items-center gap-1">
+        <span className="rounded-full bg-success px-1 text-[0.5625rem] font-extrabold text-background">7.2</span> Match rating
+      </span>
     </p>
   );
 }
@@ -485,18 +580,23 @@ function PlayerSheet({
   player: p,
   year,
   events,
+  rating,
+  best,
   open,
   onOpenChange,
 }: {
   player: LineupPlayer | null;
   year: number;
   events: PlayerEvent[];
+  rating: number | null;
+  best: boolean;
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
   const goals = count(events, "goal");
   const assists = count(events, "assist");
   const cards = count(events, "yellow", "red");
+  const saves = savesOf(events);
   const off = events.find((e) => e.kind === "off");
   const on = events.find((e) => e.kind === "on");
   const status = !p
@@ -536,9 +636,12 @@ function PlayerSheet({
               </span>
             </DrawerHeader>
             <div className="flex flex-col gap-4 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 {[
-                  [goals, goals === 1 ? "Goal" : "Goals"],
+                  [rating === null ? "–" : rating.toFixed(1), best ? "Best rating" : "Rating"],
+                  ...(p.position === "GK"
+                    ? [[saves, saves === 1 ? "Save" : "Saves"]]
+                    : [[goals, goals === 1 ? "Goal" : "Goals"]]),
                   [assists, assists === 1 ? "Assist" : "Assists"],
                   [cards, cards === 1 ? "Card" : "Cards"],
                 ].map(([n, label], i) => (
@@ -556,11 +659,11 @@ function PlayerSheet({
               </div>
               <div>
                 <p className="mb-1 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">In this match</p>
-                {events.length === 0 ? (
-                  <p className="py-3 text-sm text-muted-foreground">Nothing yet.</p>
+                {listed(events).length === 0 ? (
+                  <p className="py-3 text-sm text-muted-foreground">{saves > 0 ? `${saves} saves so far.` : "Nothing yet."}</p>
                 ) : (
                   <ul>
-                    {events.map((e, i) => (
+                    {listed(events).map((e, i) => (
                       <motion.li
                         key={i}
                         initial={{ opacity: 0, x: -10 }}
