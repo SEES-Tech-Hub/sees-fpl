@@ -60,8 +60,18 @@ describe("chess round robin", () => {
     expect(rows[0].n).toBe(0);
   });
 
-  it("is safe to run twice", async () => {
-    await rerunMigration(db, MIGRATION);
+  it("won't re-pair once matches have results, and leaves them as they are", async () => {
+    // Later migrations (chess_results) record every match, so a second run must refuse.
+    await expect(rerunMigration(db, MIGRATION)).rejects.toThrow(/already has match events/);
     expect(await pairings()).toEqual(SCHEDULE);
+  });
+
+  it("enters rounds 2–5 from the organisers' scoresheet", async () => {
+    // Round 1 was entered live in production (Y2 2–0 Y5, Y4 1–1 Y3); adding
+    // it gives the sheet's final table: Y3 7, Y4 6, Y2 5, Y1 1, Y5 1.
+    const { rows } = await db.query<{ team_year: number; boards: number }>(`
+      select s.team_year, s.score_for / 2.0 as boards from public.event_standings s
+      join public.events e on e.id = s.event_id where e.slug = 'board-games-chess-men' order by s.team_year`);
+    expect(rows.map((r) => [r.team_year, Number(r.boards)])).toEqual([[1, 1], [2, 3], [3, 6], [4, 5], [5, 1]]);
   });
 });
