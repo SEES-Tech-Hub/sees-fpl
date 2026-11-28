@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { fromRecordInput, mergeEvents, type ConsoleEvent } from "@/lib/console/match-state";
+import { boardDone, boardProgress } from "@/lib/live/boards";
 import { aggregateScore, formatScore, sideName, sideYear, tieLabel } from "@/lib/live/display";
 import type { HeadToHeadEvent } from "@/lib/live/queries";
 import { subscribeToFixture, type ConnectionStatus } from "@/lib/live/realtime";
@@ -151,7 +152,9 @@ export function HeadToHeadConsole({
   );
   const decidingScore = aggregate ?? { home: match.homeScore, away: match.awayScore };
   const needsWinner = knockout && fixture.leg !== 1 && decidingScore.home === decidingScore.away;
-  const allBoardsIn = !boards || match.boardResults.size >= boards;
+  // Board games end once every board is in, or once the boards left can't
+  // change the result (Connect Four is best of three, so 2–0 needs no third).
+  const boardsDecided = !boards || boardProgress(boards, match.boardResults.values()).decided;
 
   const name = (side: Side) => sideName(fixture, side);
   const teamFor = (side: Side) => (side === "home" ? home : away);
@@ -254,7 +257,9 @@ export function HeadToHeadConsole({
         <section aria-label="Boards" className="flex flex-col gap-2">
           {Array.from({ length: boards }, (_, i) => i + 1).map((b) => {
             const r = match.boardResults.get(b);
-            const done = !!r && r.home + r.away >= 2;
+            const done = !!r && boardDone(r);
+            // Once the match is decided, a board with no result isn't played.
+            const notNeeded = !r && boardsDecided;
             const result = !r ? null : r.home === r.away ? "Draw" : `${name(r.home > r.away ? "home" : "away")} won`;
             return (
               <div key={b} className="rounded-xl bg-card p-3 shadow-card">
@@ -265,8 +270,9 @@ export function HeadToHeadConsole({
                       {result}
                     </span>
                   )}
+                  {notNeeded && <span className="text-xs font-semibold text-muted-foreground">Not needed</span>}
                 </div>
-                {canPlay && !done && (
+                {canPlay && !done && !notNeeded && (
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     <Button className="h-14 flex-col gap-0 text-sm" onClick={() => recordBoard(b, "home")}>
                       <span className="max-w-full truncate">{name("home")}</span>
@@ -309,11 +315,11 @@ export function HeadToHeadConsole({
           size="lg"
           variant="outline"
           className="h-12 gap-2 text-base"
-          disabled={!allBoardsIn}
+          disabled={!boardsDecided}
           onClick={() => setEnding(true)}
         >
           <Flag className="size-5" aria-hidden />
-          {allBoardsIn ? "End match" : `Enter all ${boards} boards first`}
+          {boardsDecided ? "End match" : "Enter the next board first"}
         </Button>
       )}
 
