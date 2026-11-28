@@ -6,7 +6,7 @@ import { FantasyTicketStub } from "@/components/fantasy/ticket-stub";
 import { RaceShare } from "@/components/live/race-share";
 import { HomeLive } from "@/components/live/home-live";
 import { getFixtureCards } from "@/lib/live/fixture-cards";
-import { getChampionshipProgress, getMedalTable } from "@/lib/live/results";
+import { sharedChampionshipProgress, sharedMedalTable } from "@/lib/live/shared-results";
 import { JsonLd } from "@/components/seo/json-ld";
 import { siteBase, SITE_DESCRIPTION } from "@/lib/seo";
 
@@ -41,7 +41,7 @@ export default function Home() {
 
 async function HomeContent() {
   await connection();
-  const [cards, medals, progress] = await Promise.all([getFixtureCards(), getMedalTable(), getChampionshipProgress()]);
+  const [cards, medals, progress] = await Promise.all([getFixtureCards(), sharedMedalTable(), sharedChampionshipProgress()]);
   const serverNow = requestTime();
   return (
     <HomeLive

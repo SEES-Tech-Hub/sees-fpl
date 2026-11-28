@@ -30,7 +30,7 @@ export type SportSummary = {
 };
 
 export async function getSports(): Promise<SportSummary[]> {
-  "use cache";
+  "use cache: remote";
   cacheLife({ stale: 60, revalidate: 300, expire: 3600 });
   cacheTag(liveTags.fixtureList);
   const { data, error } = await createPublicClient()
@@ -50,7 +50,7 @@ export async function getSports(): Promise<SportSummary[]> {
 
 /** The football table, the championship and the football stats. */
 export async function getTablesPage() {
-  "use cache";
+  "use cache: remote";
   cacheLife(TABLES_LIFE);
   cacheTag(liveTags.standings);
   const [standings, medals, scorers, assisters, totals, suspensions, cards] = await Promise.all([
@@ -106,7 +106,7 @@ export async function getTablesPage() {
 
 /** One sport: its events, fixtures, and each event's table and race results. */
 export async function getSportPage(slug: string) {
-  "use cache";
+  "use cache: remote";
   cacheLife(LIFE);
   cacheTag(liveTags.standings, liveTags.fixtureList);
   const sports = await getSports();

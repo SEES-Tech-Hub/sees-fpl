@@ -11,7 +11,7 @@ import { liveTags } from "./tags";
 // a goal with 1,000 viewers costs a handful of database reads, not 1,000.
 
 export async function getMatchPage(fixtureId: string) {
-  "use cache";
+  "use cache: remote";
   cacheLife({ stale: 4, revalidate: 4, expire: 60 });
   cacheTag(liveTags.fixture(fixtureId));
 

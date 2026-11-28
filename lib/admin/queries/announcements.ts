@@ -40,7 +40,7 @@ const toAnnouncement = (row: Row): Announcement => ({
  * If several overlap, the one that started last wins.
  */
 export async function getActiveAnnouncement(): Promise<Announcement | null> {
-  "use cache";
+  "use cache: remote";
   cacheTag(adminTags.announcements);
   cacheLife({ stale: 60, revalidate: 60, expire: 300 });
 

@@ -24,7 +24,7 @@ function fail(what: string, message: string): never {
 }
 
 export async function sharedRulesRow() {
-  "use cache";
+  "use cache: remote";
   cacheLife({ stale: 60, revalidate: 60, expire: 600 });
   cacheTag(fantasyTags.shared);
   const { data, error } = await createPublicClient().from("fantasy_rules").select("*").eq("id", 1).single();
@@ -33,7 +33,7 @@ export async function sharedRulesRow() {
 }
 
 export async function sharedDeadlineMinutes() {
-  "use cache";
+  "use cache: remote";
   cacheLife({ stale: 60, revalidate: 60, expire: 600 });
   cacheTag(fantasyTags.shared);
   const { data } = await createPublicClient().rpc("admin_deadline_rules");
@@ -42,7 +42,7 @@ export async function sharedDeadlineMinutes() {
 
 /** Matchdays and their fixtures, as stored (the caller works out what's next). */
 export async function sharedMatchdayRows() {
-  "use cache";
+  "use cache: remote";
   cacheLife({ stale: 15, revalidate: 15, expire: 300 });
   cacheTag(fantasyTags.shared, liveTags.fixtureList);
   const supabase = createPublicClient();
@@ -63,7 +63,7 @@ export async function sharedMatchdayRows() {
 
 /** Every player, and the share of managers who picked each. */
 export async function sharedPlayerRows() {
-  "use cache";
+  "use cache: remote";
   cacheLife({ stale: 30, revalidate: 30, expire: 300 });
   cacheTag(fantasyTags.shared);
   const supabase = createPublicClient();
@@ -80,7 +80,7 @@ export async function sharedPlayerRows() {
 
 /** Players' match stats for each of these matchdays, as [matchday id, rows] pairs. */
 export async function sharedMatchdayStats(matchdayIds: string[]): Promise<[string, PlayerMatchStats[]][]> {
-  "use cache";
+  "use cache: remote";
   cacheLife({ stale: 60, revalidate: 60, expire: 600 });
   cacheTag(fantasyTags.shared, liveTags.standings);
   return Promise.all(matchdayIds.map(async (id) => [id, await getPlayerMatchStats({ matchdayId: id })] as [string, PlayerMatchStats[]]));

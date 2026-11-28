@@ -29,7 +29,7 @@ type TeamRow = { id: string; name: string; short_name: string; year: number } | 
 const team = (t: TeamRow) => (t ? { id: t.id, name: t.name, shortName: t.short_name, year: t.year } : null);
 
 export async function getFixtureCards(): Promise<FixtureCard[]> {
-  "use cache";
+  "use cache: remote";
   cacheLife({ stale: 10, revalidate: 10, expire: 120 });
   cacheTag(liveTags.fixtureList);
 
