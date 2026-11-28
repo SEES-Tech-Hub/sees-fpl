@@ -111,3 +111,4 @@
 - 2026-11-28: Fix: recalculating points read only the first 1,000 picks (the API's row cap), so ~72 managers scored 0. Recalculation and rankings now page through every row (lib/supabase/fetch-all.ts).
 - 2026-11-28: Keeper saves (console Save buttons, 'save' event, saves in player_match_stats incl. penalty saves, 1 fantasy point per 3 saves), display-only match ratings on lineups, late-joiner note on the points page.
 - 2026-11-28: Chess becomes one departmental round robin on 2 boards (organisers' schedule, White first); Chess (women) removed.
+- 2026-11-28: Matchday 1 corrections from the officials' notes (Year 1's real lineup, subs and 5 saves for Inioluwa; 7 new Year 1 players; Sayf off the Y2 sheet; Boye's assist; Samuel Azubuike at 13'; 2 saves each for Jeager and Joel). Chess byes worth 2 boards.
