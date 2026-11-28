@@ -105,3 +105,4 @@
 - 2026-11-28: Match lineups revamp: team tabs, football XI on a pitch with faces, year tags and live events (goals, assists, cards, subs), bench dugout, list view for other sports, tap a player for their match so far.
 - 2026-11-28: Home: one live match shows as a ticket (score, clock, Watch live, fantasy stub); several live stay a swipeable carousel. Reactions float like YouTube live (pop, steady drift with sway, about 4 s).
 - 2026-11-28: Reaction button: smaller emoji, tighter pill.
+- 2026-11-28: Cut match-time database load: tables page and fantasy match stats cached 60 s and expired only by goals/results (not every console tap); match pages poll every 10 s.
