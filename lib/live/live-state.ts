@@ -63,7 +63,7 @@ function toState(r: StateRow): FixtureState {
 
 /** Score, status and clock of every fixture: what lists and "Live now" cards need. */
 export async function getFixtureStates(): Promise<FixtureState[]> {
-  "use cache";
+  "use cache: remote";
   cacheLife(LIFE);
   cacheTag(liveTags.fixtureList);
 
@@ -78,7 +78,7 @@ export async function getFixtureStates(): Promise<FixtureState[]> {
  * fixture itself. Pages compare versions and refresh only when it moves.
  */
 export async function getFixtureVersion(fixtureId: string): Promise<{ state: FixtureState; version: string } | null> {
-  "use cache";
+  "use cache: remote";
   cacheLife(LIFE);
   cacheTag(liveTags.fixture(fixtureId));
 

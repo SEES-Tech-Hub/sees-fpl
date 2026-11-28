@@ -5,7 +5,7 @@ import { ChampionshipStrip } from "@/components/live/championship-strip";
 import { MedalTowers } from "@/components/live/medal-towers";
 import { RaceShare } from "@/components/live/race-share";
 import { MedalTable } from "@/components/live/medal-table";
-import { getChampionshipProgress, getMedalTable } from "@/lib/live/results";
+import { sharedChampionshipProgress, sharedMedalTable } from "@/lib/live/shared-results";
 import { pageMeta } from "@/lib/seo";
 
 // The race for the championship: the race track, the medal towers and the
@@ -33,7 +33,7 @@ export default function ChampionshipPage() {
 
 async function Championship() {
   await connection();
-  const [rows, progress] = await Promise.all([getMedalTable(), getChampionshipProgress()]);
+  const [rows, progress] = await Promise.all([sharedMedalTable(), sharedChampionshipProgress()]);
   const now = requestTime();
   return (
     <>

@@ -107,3 +107,4 @@
 - 2026-11-28: Reaction button: smaller emoji, tighter pill.
 - 2026-11-28: Cut match-time database load: tables page and fantasy match stats cached 60 s and expired only by goals/results (not every console tap); match pages poll every 10 s.
 - 2026-11-28: Console reloads itself when a new deploy makes its server actions stale, so queued taps send instead of retrying forever.
+- 2026-11-28: Shared reads (fantasy stats/players/matchdays, tables, sport and match pages, fixture states, home cards, medals, announcement) moved to the shared remote cache (use cache: remote), so each slow query runs once for the whole site, not once per server.
