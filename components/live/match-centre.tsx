@@ -71,7 +71,9 @@ export function MatchCentre({ data }: { data: MatchPageData }) {
       <ReactionDock rx={rx} />
 
       {fixture.sport.resultFormat === "sets" && setScores.length > 0 && <SetBoard data={data} />}
-      {fixture.event.boards && data.boardEvents.length > 0 && <BoardResults data={data} />}
+      {fixture.event.boards && data.boardEvents.length > 0 && (
+        <BoardResults data={data} over={state.status === "full_time" || state.status === "walkover"} />
+      )}
 
       <div className="flex flex-col gap-4 px-4 lg:px-0">
         {timed && (
@@ -307,8 +309,8 @@ function HeaderTeam({
   );
 }
 
-/** Board games: each board's result. */
-function BoardResults({ data }: { data: MatchPageData }) {
+/** Board games: each board's result. A board with none after full time wasn't needed (best of three ending 2–0). */
+function BoardResults({ data, over }: { data: MatchPageData; over: boolean }) {
   const { fixture, boardEvents } = data;
   const boards = fixture.event.boards ?? 0;
   const results = Array.from({ length: boards }, (_, i) => {
@@ -330,7 +332,7 @@ function BoardResults({ data }: { data: MatchPageData }) {
           <span className="font-heading text-base font-bold">Board {r.b}</span>
           <span className="text-sm font-semibold">
             {!r.done ? (
-              <span className="text-muted-foreground">In play</span>
+              <span className="text-muted-foreground">{over ? "Not played" : "In play"}</span>
             ) : r.home === r.away ? (
               "Draw"
             ) : (

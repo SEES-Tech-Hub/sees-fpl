@@ -112,7 +112,7 @@ export const CONSOLE_HELP: Record<ConsoleKind, ConsoleHelpContent> = {
     quick: [
       "Tap “Take this match”.",
       "When a board finishes, tap who won it, or “Draw”. A win is a point; a draw is half a point each.",
-      "Enter every board, then tap “End match”.",
+      "Enter every board, then tap “End match”. Connect Four is best of three: at 2–0, Board 3 isn’t needed.",
     ],
     sections: [
       HOLDING,
@@ -125,7 +125,10 @@ export const CONSOLE_HELP: Record<ConsoleKind, ConsoleHelpContent> = {
       },
       {
         title: "At the end",
-        points: ["Once every board is in, tap “End match”. If it’s level in a knockout, it asks who won the tie-break."],
+        points: [
+          "Once every board is in, tap “End match”. If it’s level in a knockout, it asks who won the tie-break.",
+          "In a best of three (Connect Four), End match unlocks as soon as one side can’t be caught, and the boards left show “Not needed”. At 1–1, play Board 3.",
+        ],
       },
       MISTAKES,
       SIGNAL,
