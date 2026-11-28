@@ -409,7 +409,7 @@ export function ReactionDock({ rx }: { rx: Reactions }) {
             onPointerCancel={endHold}
             onContextMenu={(e) => e.preventDefault()}
             aria-label={rx.open ? `React: ${label}` : "Reactions have closed. See the final counts."}
-            className="flex size-14 touch-manipulation items-center justify-center rounded-full text-[1.75rem] leading-none outline-none select-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90 motion-safe:transition-transform"
+            className="flex h-12 w-11 touch-manipulation items-center justify-center rounded-full pl-1 text-[1.375rem] leading-none outline-none select-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90 motion-safe:transition-transform"
           >
             <span aria-hidden className={cn(!rx.open && "grayscale")}>
               {emojiFor(rx.current)}
@@ -420,7 +420,7 @@ export function ReactionDock({ rx }: { rx: Reactions }) {
             onClick={() => setTrayOpen((o) => !o)}
             aria-label={rx.open ? "Choose a reaction" : "See the final counts"}
             aria-expanded={trayOpen}
-            className="-ml-1 flex h-14 w-7 items-center justify-center rounded-r-full pr-1 text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="-ml-1.5 flex h-12 w-6 items-center justify-center rounded-r-full pr-1 text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ChevronUp aria-hidden className={cn("size-4 motion-safe:transition-transform", trayOpen && "rotate-180")} />
           </button>
