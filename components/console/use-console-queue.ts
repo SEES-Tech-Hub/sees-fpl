@@ -17,10 +17,39 @@ import { getQueueStore } from "@/lib/console/queue-store";
 
 const RETRY_EVERY_MS = 15_000;
 
+// A new deploy while the console is open: its server actions no longer
+// exist, so every send fails ("Failed to find Server Action") and taps wait
+// forever. Reload the page to pick up the new version; the queue lives in
+// IndexedDB, so the waiting taps send straight after. At most once a minute,
+// so a real outage can't put the page in a reload loop.
+const RELOADED_AT_KEY = "sees-console:stale-reload-at";
+
+function reloadIfStale(thrown: unknown) {
+  const message = thrown instanceof Error ? thrown.message : String(thrown);
+  if (!/server action/i.test(message)) return;
+  try {
+    const last = Number(sessionStorage.getItem(RELOADED_AT_KEY));
+    if (Number.isFinite(last) && Date.now() - last < 60_000) return;
+    sessionStorage.setItem(RELOADED_AT_KEY, String(Date.now()));
+  } catch {
+    // Storage refused: still reload; the browser's own limits stop a loop.
+  }
+  window.location.reload();
+}
+
+async function guarded<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (thrown) {
+    reloadIfStale(thrown);
+    throw thrown;
+  }
+}
+
 const sender: QueueSender = {
-  record: (input) => recordMatchEvent(input),
-  setLineup: (input) => setLineup(input),
-  undo: (clientEventId) => undoMatchEvent({ clientEventId }),
+  record: (input) => guarded(() => recordMatchEvent(input)),
+  setLineup: (input) => guarded(() => setLineup(input)),
+  undo: (clientEventId) => guarded(() => undoMatchEvent({ clientEventId })),
 };
 
 export type SendState = "idle" | "sending" | "offline" | "retrying";
