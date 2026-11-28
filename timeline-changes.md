@@ -102,3 +102,4 @@
 - 2026-11-27: Analytics heartbeat (online now) switched off to save Supabase disk IO.
 - 2026-11-27: Transfers: year, price and sort filters work in the replacement picker, blocked players show greyed out with the reason, and the screen animates like Pick Team (celebration on confirm).
 - 2026-11-27: Photo for Success (Year 4).
+- 2026-11-28: Match lineups revamp: team tabs, football XI on a pitch with faces, year tags and live events (goals, assists, cards, subs), bench dugout, list view for other sports, tap a player for their match so far.
