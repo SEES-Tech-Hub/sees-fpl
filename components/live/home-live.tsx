@@ -12,7 +12,8 @@ import { EmptyState } from "@/components/brand/empty-state";
 import { useLiveFixtures } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
 import { FixtureRow, LiveCard, gameName } from "./fixture-card";
-import { LivePulse, ReconnectingPill, teamColour } from "./live-bits";
+import { LivePulse, MatchStatus, ReconnectingPill, RollingScore, teamColour, useClock, useGoalFlash } from "./live-bits";
+import { formatScore, sideName } from "@/lib/live/display";
 import { YearCrest } from "@/components/brand/year-crest";
 import { FixturePhoto, hasPhoto } from "./fixture-photo";
 import { useMagnetic, useTilt } from "./use-pointer-motion";
@@ -64,7 +65,9 @@ export function HomeLive({
     <>
       <ReconnectingPill show={status === "reconnecting"} />
 
-      {live.length > 0 ? (
+      {live.length === 1 ? (
+        <LiveTicket card={live[0]} state={stateOf(live[0])} fantasy={fantasy} />
+      ) : live.length > 1 ? (
         <section aria-labelledby="live-now" className="flex flex-col gap-3">
           <h2 id="live-now" className="flex items-center gap-2 px-4 font-heading text-xl font-bold uppercase lg:px-0">
             <LivePulse /> Live now
@@ -147,6 +150,106 @@ export function HomeLive({
         </section>
       )}
     </>
+  );
+}
+
+/**
+ * One match live: the same ticket as Next up, with the live score and clock
+ * in the middle (rolling digits, a flash in the scorer's colour on a goal)
+ * and the fantasy stub torn off underneath. Several live: the swipeable
+ * carousel above instead. Scores arrive through useLiveFixtures, so the
+ * ticket updates the moment the official records a goal.
+ */
+function LiveTicket({ card, state, fantasy }: { card: FixtureCard; state: FixtureState; fantasy?: ReactNode }) {
+  const tilt = useTilt<HTMLElement>();
+  const magnet = useMagnetic<HTMLAnchorElement>();
+  const clock = useClock({ state, periodMinutes: card.event.periodMinutes, extraPeriodMinutes: card.event.extraPeriodMinutes });
+  const flash = useGoalFlash(state.homeScore, state.awayScore);
+  const flashTeam = flash === "home" ? card.home : flash === "away" ? card.away : null;
+  const photo = hasPhoto(card.sport.slug);
+  return (
+    <section
+      ref={tilt}
+      aria-label="Live now"
+      className={cn(
+        "relative mx-4 overflow-hidden rounded-2xl bg-pitch text-brand-foreground shadow-raised transition-transform duration-300 ease-out lg:mx-0",
+        photo && "sees-on-photo",
+      )}
+    >
+      <FixturePhoto sport={card.sport.slug} homeYear={card.home?.year} awayYear={card.away?.year} priority />
+      {photo ? (
+        <span aria-hidden className="sees-glare" />
+      ) : (
+        <>
+          <CircuitPattern />
+          <span
+            aria-hidden
+            className="absolute inset-0 opacity-30"
+            style={{
+              background: `linear-gradient(110deg, ${teamColour(card.home?.year)} 0 18%, transparent 40% 60%, ${teamColour(card.away?.year)} 82% 100%)`,
+            }}
+          />
+        </>
+      )}
+      {flashTeam && (
+        <span
+          aria-hidden
+          className="absolute inset-0 motion-safe:animate-in motion-safe:fade-in"
+          style={{ boxShadow: `inset 0 0 0 3px ${teamColour(flashTeam.year)}, inset 0 0 64px ${teamColour(flashTeam.year)}` }}
+        />
+      )}
+      <div className="relative flex flex-col items-center gap-4 px-5 pt-5 pb-5 text-center">
+        <p className={cn("flex items-center gap-2 text-xs font-semibold tracking-[0.08em] text-brand-light uppercase", ENTER, "motion-safe:slide-in-from-top-2 motion-safe:duration-500")}>
+          <LivePulse /> Live now · {gameName(card)}
+          {card.matchdayNumber ? ` · Matchday ${card.matchdayNumber}` : ""}
+        </p>
+        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <Side name={card.home?.name} short={card.home?.shortName} year={card.home?.year} from="left" />
+          <div className={cn("flex flex-col items-center gap-2", ENTER, "motion-safe:zoom-in-75 motion-safe:duration-500 motion-safe:delay-300")}>
+            <div className="flex items-baseline gap-2 font-heading text-score font-bold">
+              <RollingScore value={state.homeScore} text={formatScore(state.homeScore, card.event.boards)} />
+              <span className="text-2xl opacity-60">–</span>
+              <RollingScore value={state.awayScore} text={formatScore(state.awayScore, card.event.boards)} />
+            </div>
+            <MatchStatus clock={clock} kickoffAt={card.kickoffAt} className="bg-background/90" />
+          </div>
+          <Side name={card.away?.name} short={card.away?.shortName} year={card.away?.year} from="right" />
+        </div>
+        <div className="flex h-6 items-center text-sm text-brand-foreground/85">
+          {flashTeam ? (
+            <span
+              className="inline-block rounded-full px-3 py-0.5 font-heading text-sm font-bold tracking-wide text-team-foreground uppercase motion-safe:animate-in motion-safe:zoom-in-50"
+              style={{ background: teamColour(flashTeam.year) }}
+            >
+              {card.sport.resultFormat === "timed" ? "Goal" : "Point"} {flash ? sideName(card, flash) : flashTeam.shortName}!
+            </span>
+          ) : (
+            card.venue
+          )}
+        </div>
+        <Link
+          ref={magnet}
+          href={`/matches/${card.id}`}
+          prefetch
+          className={cn(
+            "inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-brand-foreground text-[0.9375rem] font-bold text-brand shadow-raised transition-[translate,scale] duration-200 ease-out outline-none focus-visible:ring-3 focus-visible:ring-brand-light active:scale-[0.98] sm:max-w-xs",
+            ENTER,
+            "motion-safe:slide-in-from-bottom-4 motion-safe:duration-700 motion-safe:delay-500",
+          )}
+        >
+          Watch live <ChevronRight className="size-4" aria-hidden />
+        </Link>
+      </div>
+      {fantasy && (
+        <>
+          <div aria-hidden className="relative mx-4 border-t-2 border-dashed border-brand-foreground/25">
+            <span className="absolute -top-[13px] -left-[29px] size-6 rounded-full bg-background" />
+            <span className="absolute -top-[13px] -right-[29px] size-6 rounded-full bg-background" />
+          </div>
+          {fantasy}
+        </>
+      )}
+    </section>
   );
 }
 

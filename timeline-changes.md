@@ -103,3 +103,4 @@
 - 2026-11-27: Transfers: year, price and sort filters work in the replacement picker, blocked players show greyed out with the reason, and the screen animates like Pick Team (celebration on confirm).
 - 2026-11-27: Photo for Success (Year 4).
 - 2026-11-28: Match lineups revamp: team tabs, football XI on a pitch with faces, year tags and live events (goals, assists, cards, subs), bench dugout, list view for other sports, tap a player for their match so far.
+- 2026-11-28: Home: one live match shows as a ticket (score, clock, Watch live, fantasy stub); several live stay a swipeable carousel. Reactions float like YouTube live (pop, steady drift with sway, about 4 s).
