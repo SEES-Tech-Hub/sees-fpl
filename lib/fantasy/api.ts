@@ -26,6 +26,7 @@ import type {
 } from "./engine-types";
 import { fantasyError, parseRpcError } from "./errors";
 import { aggregatePlayerStats, calculateManagerMatchdayScore, calculatePlayerPoints } from "./scoring";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import type {
   ActionResult,
   FantasyRules,
@@ -268,9 +269,13 @@ export const getMatchdayState = cache(async (): Promise<MatchdayState> => {
 /** Every manager, with the name from their public profile. Small: one per student. */
 const getAllManagers = cache(async () => {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("managers")
-    .select("id, user_id, team_name, year_group, total_points, overall_rank, created_at");
+  const { data, error } = await fetchAll((from, to) =>
+    supabase
+      .from("managers")
+      .select("id, user_id, team_name, year_group, total_points, overall_rank, created_at")
+      .order("id")
+      .range(from, to),
+  );
   if (error) fail(error.message, "managers");
   const ids = data.map((m) => m.user_id);
   const names = new Map<string, string>();
@@ -451,9 +456,14 @@ export async function getTransferHistory(user: FantasyUser): Promise<TransferRec
 
 const getPointsRows = cache(async () => {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("manager_matchday_points")
-    .select("manager_id, matchday_id, gross_points, transfer_cost, net_points, is_provisional, breakdown");
+  const { data, error } = await fetchAll((from, to) =>
+    supabase
+      .from("manager_matchday_points")
+      .select("manager_id, matchday_id, gross_points, transfer_cost, net_points, is_provisional, breakdown")
+      .order("manager_id")
+      .order("matchday_id")
+      .range(from, to),
+  );
   if (error) fail(error.message, "points");
   return data;
 });
