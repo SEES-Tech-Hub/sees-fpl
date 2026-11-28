@@ -14,9 +14,10 @@ import { parseTotals, type ReactionTotals } from "./reactions";
 //   reports "reconnecting" for a "Reconnecting…" pill.
 //
 // With the CDN holding each response for 4 s, a viewer is at most about
-// POLL_MS + 4 s behind.
+// POLL_MS + 4 s behind. 10 s (not 6) keeps match-time load down on the free
+// database: every open match page polls.
 
-export const POLL_MS = 6000;
+export const POLL_MS = 10_000;
 const MAX_BACKOFF_MS = 60_000;
 
 export type LiveStatus = "live" | "reconnecting";

@@ -10,8 +10,15 @@ import type { ResultFormat } from "./types";
 // Cached reads for the public tables and sport pages. Short lifetimes and
 // the live tags, so console writes show at once on this server and within
 // 10 s everywhere; open pages refresh when /api/live reports a change.
+//
+// The tables page adds up every player's stats across the games, the
+// heaviest read we have. It refreshes once a minute and when a goal, a
+// result or an admin correction lands (liveTags.standings), but not on every
+// console tap (cards, subs, half-time), which used to redo it many times a
+// match on the free database.
 
 const LIFE = { stale: 10, revalidate: 10, expire: 120 } as const;
+const TABLES_LIFE = { stale: 60, revalidate: 60, expire: 600 } as const;
 
 export type SportSummary = {
   id: string;
@@ -44,8 +51,8 @@ export async function getSports(): Promise<SportSummary[]> {
 /** The football table, the championship and the football stats. */
 export async function getTablesPage() {
   "use cache";
-  cacheLife(LIFE);
-  cacheTag(liveTags.standings, liveTags.fixtureList);
+  cacheLife(TABLES_LIFE);
+  cacheTag(liveTags.standings);
   const [standings, medals, scorers, assisters, totals, suspensions, cards] = await Promise.all([
     getFootballStandings(),
     getMedalTable(),

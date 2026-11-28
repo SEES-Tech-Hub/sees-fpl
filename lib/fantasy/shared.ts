@@ -10,10 +10,12 @@ import type { PlayerMatchStats } from "@/lib/live/types";
 // shared by every manager for a short while, instead of once per page view.
 // They read as the public (no cookies), which row-level security allows.
 //
-// Fixtures and match stats carry liveTags.fixtureList, which every console
-// write expires, so a goal shows at once; the rest refresh on their own
-// every 30–60 s (rules and prices barely change during a matchday, and the
-// "picked by" percentages can lag a little).
+// Fixtures carry liveTags.fixtureList, which every console write expires,
+// so a kick-off or a result shows at once. Players' match stats (the heavy
+// read behind live fantasy points) refresh once a minute and on a goal or a
+// result (liveTags.standings), not on every card or sub. The rest refresh on
+// their own every 30–60 s (rules and prices barely change during a matchday,
+// and the "picked by" percentages can lag a little).
 
 export const fantasyTags = { shared: "fantasy:shared" } as const;
 
@@ -79,7 +81,7 @@ export async function sharedPlayerRows() {
 /** Players' match stats for each of these matchdays, as [matchday id, rows] pairs. */
 export async function sharedMatchdayStats(matchdayIds: string[]): Promise<[string, PlayerMatchStats[]][]> {
   "use cache";
-  cacheLife({ stale: 15, revalidate: 15, expire: 300 });
-  cacheTag(fantasyTags.shared, liveTags.fixtureList);
+  cacheLife({ stale: 60, revalidate: 60, expire: 600 });
+  cacheTag(fantasyTags.shared, liveTags.standings);
   return Promise.all(matchdayIds.map(async (id) => [id, await getPlayerMatchStats({ matchdayId: id })] as [string, PlayerMatchStats[]]));
 }
