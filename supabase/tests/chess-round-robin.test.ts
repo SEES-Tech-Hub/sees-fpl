@@ -74,4 +74,59 @@ describe("chess round robin", () => {
       join public.events e on e.id = s.event_id where e.slug = 'board-games-chess-men' order by s.team_year`);
     expect(rows.map((r) => [r.team_year, Number(r.boards)])).toEqual([[1, 1], [2, 3], [3, 6], [4, 5], [5, 1]]);
   });
+
+  it("gives medals to the top three once every match is over (no final needed)", async () => {
+    const medals = () =>
+      db.query<{ medal: string; year: number }>(`
+        select m.medal, t.year from public.event_medals m
+        join public.events e on e.id = m.event_id join public.teams t on t.id = m.team_id
+        where e.slug = 'board-games-chess-men' order by m.place`);
+    // Round 1 isn't played here yet, so no medals.
+    expect((await medals()).rows).toEqual([]);
+
+    // Play round 1 as it went in production: Y2 won both boards against Y5; Y4 v Y3 drew both.
+    const { rows: r1 } = await db.query<{ id: string; home: number; home_team: string; away_team: string }>(`
+      select f.id, h.year as home, f.home_team_id as home_team, f.away_team_id as away_team from public.fixtures f
+      join public.events e on e.id = f.event_id join public.teams h on h.id = f.home_team_id
+      where e.slug = 'board-games-chess-men' and not exists (select 1 from public.match_events m where m.fixture_id = f.id)`);
+    for (const f of r1) {
+      const point = (team: string, side: string, points: number, board: number) =>
+        db.query(
+          `insert into public.match_events (fixture_id, client_event_id, type, team_id, side, points, board, occurred_at)
+           values ($1, gen_random_uuid(), 'point', $2, $3, $4, $5, now())`,
+          [f.id, team, side, points, board],
+        );
+      for (const board of [1, 2]) {
+        if (f.home === 2) await point(f.home_team, "home", 2, board);
+        else {
+          await point(f.home_team, "home", 1, board);
+          await point(f.away_team, "away", 1, board);
+        }
+      }
+      await db.query(
+        `insert into public.match_events (fixture_id, client_event_id, type, occurred_at) values ($1, gen_random_uuid(), 'full_time', now() + interval '1 second')`,
+        [f.id],
+      );
+    }
+    const { rows } = await medals();
+    expect(rows).toEqual([
+      { medal: "gold", year: 3 },
+      { medal: "silver", year: 4 },
+      { medal: "bronze", year: 2 },
+    ]);
+  });
+});
+
+describe("official placings (Connect Four)", () => {
+  it("give Connect Four's medals from the organisers' final table", async () => {
+    const { rows } = await db.query<{ medal: string; year: number; has_fixture: boolean }>(`
+      select m.medal, t.year, m.fixture_id is not null as has_fixture from public.event_medals m
+      join public.events e on e.id = m.event_id join public.teams t on t.id = m.team_id
+      where e.slug = 'board-games-connect-four' order by m.place`);
+    expect(rows).toEqual([
+      { medal: "gold", year: 5, has_fixture: true },
+      { medal: "silver", year: 4, has_fixture: true },
+      { medal: "bronze", year: 3, has_fixture: true },
+    ]);
+  });
 });
