@@ -178,6 +178,12 @@ export function parseRecordEventInput(input: unknown): Parsed<RecordEventInput> 
       return { ok: true, data: { ...base, type, teamId, takerId, savedById } };
     }
 
+    case "save": {
+      const { teamId, playerId } = input;
+      if (!isUuid(teamId) || !isUuid(playerId)) return invalid("A save needs teamId and the goalkeeper's playerId.");
+      return { ok: true, data: { ...base, type, teamId, playerId } };
+    }
+
     case "shootout_kick": {
       const { teamId, takerId, scored } = input;
       if (!isUuid(teamId)) return invalid("A shootout kick needs teamId.");
@@ -267,6 +273,10 @@ export function toRecordEventArgs(input: RecordEventInput): RecordEventRpcArgs {
       args.p_team_id = input.teamId;
       args.p_player_id = input.takerId;
       if (input.savedById) args.p_other_player_id = input.savedById;
+      break;
+    case "save":
+      args.p_team_id = input.teamId;
+      args.p_player_id = input.playerId;
       break;
     case "shootout_kick":
       args.p_team_id = input.teamId;

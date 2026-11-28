@@ -30,6 +30,7 @@ export type ScoringKey =
   | "clean_sheet"
   | "goals_conceded_2"
   | "penalty_saved"
+  | "saves"
   | "penalty_missed"
   | "yellow_card"
   | "red_card"

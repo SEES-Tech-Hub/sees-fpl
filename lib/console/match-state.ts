@@ -152,6 +152,10 @@ export function fromRecordInput(input: RecordEventInput, pending: boolean): Cons
       event.playerId = input.takerId;
       event.otherPlayerId = input.savedById ?? null;
       break;
+    case "save":
+      event.teamId = input.teamId;
+      event.playerId = input.playerId;
+      break;
     case "shootout_kick":
       event.teamId = input.teamId;
       event.playerId = input.takerId ?? null;
@@ -298,6 +302,7 @@ export function deriveMatchState(input: MatchInput): MatchState {
         state.motmPlayerId = event.playerId;
         break;
       case "penalty_miss":
+      case "save":
         break;
     }
   }

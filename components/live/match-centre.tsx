@@ -96,7 +96,8 @@ export function MatchCentre({ data }: { data: MatchPageData }) {
           >
             {tab === "timeline" ? (
               <Timeline
-                entries={timeline}
+                // Saves count for stats and fantasy but aren't timeline moments.
+                entries={timeline.filter((e) => e.type !== "save")}
                 home={fixture.home}
                 away={fixture.away}
                 state={state}

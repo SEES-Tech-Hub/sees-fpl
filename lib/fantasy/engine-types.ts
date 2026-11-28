@@ -12,6 +12,7 @@ export type ScoringKey =
   | "clean_sheet"
   | "goals_conceded_2"
   | "penalty_saved"
+  | "saves"
   | "penalty_missed"
   | "yellow_card"
   | "red_card"
@@ -66,6 +67,9 @@ export type FantasyRules = {
   pts_goals_conceded_mid: number;
   pts_goals_conceded_fwd: number;
   pts_penalty_save: number;
+  /** Points for every pts_saves_step saves (FPL: 1 per 3). Missing before the saves migration. */
+  pts_saves?: number;
+  pts_saves_step?: number;
   pts_penalty_miss: number;
   pts_yellow_card: number;
   pts_red_card: number;
@@ -123,6 +127,8 @@ export type PlayerMatchStats = {
   redCards: number;
   penaltiesMissed: number;
   penaltiesSaved: number;
+  /** Saves made, penalties saved included. */
+  saves: number;
   manOfTheMatch: boolean;
   walkover: boolean;
   fixtureFinished: boolean;
