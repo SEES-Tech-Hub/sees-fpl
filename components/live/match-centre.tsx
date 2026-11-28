@@ -11,7 +11,7 @@ import { SportIcon } from "@/components/ui/shared/SportIcon";
 import { teamColour } from "@/lib/design/team-colour";
 import type { FixtureState } from "@/lib/live/live-state-types";
 import type { MatchPageData } from "@/lib/live/match-page";
-import type { LineupPlayer, TeamSummary, TimelineEntry } from "@/lib/live/types";
+import type { TeamSummary, TimelineEntry } from "@/lib/live/types";
 import { aggregateScore, formatScore, sideName, sideYear, tieLabel } from "@/lib/live/display";
 import { useLiveFixture } from "@/lib/live/use-live";
 import { cn, formatWAT } from "@/lib/utils";
@@ -20,6 +20,7 @@ import { NotifyBell } from "./notify-bell";
 import { MatchShare } from "./match-share";
 import { shareCards } from "@/lib/live/match-share";
 import { RaceView } from "./race-view";
+import { Lineups } from "./lineups";
 import { CheerBar, CheerCrest, ReactionDock, useReactions, type Reactions } from "./reactions";
 import { EmptyIllustration } from "@/components/brand/empty-art";
 import { EmptyState } from "@/components/brand/empty-state";
@@ -103,7 +104,7 @@ export function MatchCentre({ data }: { data: MatchPageData }) {
                 kind={fixture.event.boards ? "boards" : fixture.sport.resultFormat}
               />
             ) : (
-              <Lineups players={lineups} home={fixture.home} away={fixture.away} />
+              <Lineups players={lineups} timeline={timeline} home={fixture.home} away={fixture.away} pitch={fixture.sport.slug.startsWith("football")} />
             )}
           </motion.div>
         </AnimatePresence>
@@ -677,76 +678,5 @@ function PreMatch({
         Tap the bell above for alerts on this match: the start, {kind === "timed" ? "goals, cards " : "the big moments "}and the result.
       </p>
     </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Lineups
-// ---------------------------------------------------------------------------
-
-function Lineups({ players, home, away }: { players: LineupPlayer[]; home: TeamSummary | null; away: TeamSummary | null }) {
-  if (players.length === 0) {
-    return (
-      <EmptyState
-        art="board"
-        title="Team sheets not in yet"
-        description="The officials set both lineups before kickoff. Check back then to see who starts."
-      />
-    );
-  }
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {[home, away].map((team) =>
-        team ? <TeamSheet key={team.id} team={team} players={players.filter((p) => p.teamId === team.id)} /> : null,
-      )}
-    </div>
-  );
-}
-
-const ORDER = { GK: 0, DEF: 1, MID: 2, FWD: 3 } as const;
-
-function TeamSheet({ team, players }: { team: TeamSummary; players: LineupPlayer[] }) {
-  const sorted = [...players].sort((a, b) => ORDER[a.position] - ORDER[b.position] || (a.shirtNumber ?? 99) - (b.shirtNumber ?? 99));
-  const starters = sorted.filter((p) => p.role === "starter");
-  const bench = sorted.filter((p) => p.role === "bench");
-  return (
-    <section className="overflow-hidden rounded-xl bg-card shadow-card">
-      <h3 className="flex items-center gap-2 px-3 py-2.5 font-heading text-lg font-bold" style={{ boxShadow: `inset 4px 0 0 ${teamColour(team.year)}` }}>
-        {team.name}
-      </h3>
-      <ul className="divide-y divide-border border-t border-border">
-        {starters.map((p) => (
-          <PlayerLine key={p.playerId} player={p} />
-        ))}
-      </ul>
-      {bench.length > 0 && (
-        <>
-          <p className="bg-muted px-3 py-1.5 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">Bench</p>
-          <ul className="divide-y divide-border">
-            {bench.map((p) => (
-              <PlayerLine key={p.playerId} player={p} />
-            ))}
-          </ul>
-        </>
-      )}
-    </section>
-  );
-}
-
-function PlayerLine({ player: p }: { player: LineupPlayer }) {
-  const subbedOff = p.role === "starter" && p.appeared && !p.onPitch && !p.sentOff;
-  const cameOn = p.role === "bench" && p.appeared;
-  return (
-    <li className={cn("flex min-h-11 items-center gap-3 px-3 py-1.5", p.role === "bench" && !p.appeared && "text-muted-foreground")}>
-      <span className="w-6 text-center font-heading text-sm font-bold tabular-nums">{p.shirtNumber ?? "–"}</span>
-      <span className="flex-1 truncate text-[0.9375rem]">{p.name}</span>
-      <span className="flex items-center gap-1">
-        {p.yellowCards > 0 && <span aria-label="Booked" className="h-3.5 w-2.5 rounded-[2px] bg-highlight" />}
-        {p.sentOff && <span aria-label="Sent off" className="h-3.5 w-2.5 rounded-[2px] bg-live" />}
-        {subbedOff && <ArrowDown className="size-3.5 text-live" aria-label="Subbed off" />}
-        {cameOn && <ArrowUp className="size-3.5 text-success" aria-label="Came on" />}
-        <span className="w-8 text-right text-xs font-semibold text-muted-foreground">{p.position}</span>
-      </span>
-    </li>
   );
 }
