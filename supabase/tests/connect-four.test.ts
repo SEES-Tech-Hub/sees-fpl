@@ -7,7 +7,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { asUser, createTestDb, errorCode, rerunMigration } from "./db";
 
-const MIGRATION = "20261128124648_connect_four_best_of_three.sql";
+const MIGRATION = "20261128130828_connect_four_best_of_three.sql";
 
 let db: PGlite;
 let admin: string;
