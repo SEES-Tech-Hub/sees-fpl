@@ -161,7 +161,7 @@ export function useReactions({
         own,
         x: Math.round(Math.random() * 28 - 20),
         sway: Math.round(Math.random() * 36 - 18),
-        ms: 1800 + Math.round(Math.random() * 500),
+        ms: 3400 + Math.round(Math.random() * 900),
       };
       setBubbles((list) => {
         if (list.length < REACTION_LIMITS.onScreen) return [...list, bubble];
@@ -265,11 +265,22 @@ export function useReactions({
 // ---------------------------------------------------------------------------
 
 const MOTION_CSS = `
+/* Like YouTube live: each reaction pops out of the button, drifts up at an
+   even pace while it sways from side to side, and fades only near the top. */
 @keyframes sees-react-rise {
-  0%   { transform: translate3d(0, 0, 0) scale(0.5); opacity: 0; }
-  12%  { transform: translate3d(0, -2.5rem, 0) scale(1.1); opacity: 1; }
-  55%  { transform: translate3d(var(--sway), -32vh, 0) scale(1); opacity: 1; }
-  100% { transform: translate3d(calc(var(--sway) * -0.6), -58vh, 0) scale(0.85); opacity: 0; }
+  0%   { transform: translate3d(0, 0, 0); opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: translate3d(0, -42vh, 0); opacity: 0; }
+}
+@keyframes sees-react-sway {
+  from { transform: translate3d(calc(var(--sway) * -1), 0, 0) rotate(-6deg); }
+  to   { transform: translate3d(var(--sway), 0, 0) rotate(6deg); }
+}
+@keyframes sees-react-pop {
+  0%   { transform: scale(0.2); }
+  55%  { transform: scale(1.3); }
+  80%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
 }
 @keyframes sees-cheer-plus {
   0%   { transform: translate3d(-50%, 0, 0) scale(0.6); opacity: 0; }
@@ -424,7 +435,7 @@ export function ReactionDock({ rx }: { rx: Reactions }) {
   );
 }
 
-/** Reactions rising up the right edge from the button, about 2 s each, at most 40 at once. */
+/** Reactions drifting up the right edge from the button, about 4 s each, at most 40 at once. */
 function BubbleLayer({ rx }: { rx: Reactions }) {
   if (rx.reducedMotion || rx.bubbles.length === 0) return null;
   return (
@@ -432,17 +443,25 @@ function BubbleLayer({ rx }: { rx: Reactions }) {
       {rx.bubbles.map((b) => (
         <span
           key={b.id}
-          onAnimationEnd={() => rx.bubbleDone(b.id)}
+          onAnimationEnd={(e) => {
+            if (e.target === e.currentTarget) rx.bubbleDone(b.id);
+          }}
           className={cn("absolute bottom-0 left-1/2 -ml-4 text-[2rem] leading-none will-change-transform", !b.own && "text-[1.625rem]")}
-          style={
-            {
-              "--sway": `${b.sway}px`,
-              marginLeft: `${b.x - 16}px`,
-              animation: `sees-react-rise ${b.ms}ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards`,
-            } as CSSProperties
-          }
+          style={{ marginLeft: `${b.x - 16}px`, animation: `sees-react-rise ${b.ms}ms linear forwards` }}
         >
-          {emojiFor(b.kind)}
+          <span
+            className="block will-change-transform"
+            style={
+              {
+                "--sway": `${Math.max(8, Math.abs(b.sway))}px`,
+                animation: `sees-react-sway ${700 + (b.id % 5) * 110}ms ease-in-out ${-(b.id % 7) * 90}ms infinite alternate`,
+              } as CSSProperties
+            }
+          >
+            <span className="block" style={{ animation: "sees-react-pop 380ms cubic-bezier(0.3, 1.4, 0.5, 1) both" }}>
+              {emojiFor(b.kind)}
+            </span>
+          </span>
         </span>
       ))}
     </div>
